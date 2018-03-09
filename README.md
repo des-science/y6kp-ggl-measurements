@@ -25,3 +25,5 @@ The tests included in this pipeline are (in parenthesis the subclass it belongs 
 - PSF residuals around lenses and randoms (TestPSF)
 - Split size and snr (TestSizeSNR)
 - Split in observing conditions, such as airmass, seeing, etc (TestSysMaps)
+
+Please contact Carles Sanchez (carles.sanchez.alonso@gmail.com) or Judit Prat (jpratmarti@gmail.com) for comments or questions. 
