@@ -1,4 +1,5 @@
 # Galaxy-galaxy lensing measurements and tests
+Credit: Judit Prat, Carles Sanchez, ... (add your name here)
 
 This pipeline runs galaxy-galaxy lensing measurements using TreeCorr in a fast way, by parallelizing the runs with different jackknife regions. 
 Steps of the run function (will depend on test, but generally):
