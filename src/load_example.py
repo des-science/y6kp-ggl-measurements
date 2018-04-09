@@ -1,6 +1,10 @@
-import destest
+import sys
 import yaml
+sys.path.append('../../destest/')
+import destest
+
 param_file = './destest_metacal.yaml'
+print param_file
 params_mcal = yaml.load(open(param_file))
 source_mcal = destest.H5Source(params_mcal)
 selector_mcal = destest.Selector(params_mcal,source_mcal)
