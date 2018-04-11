@@ -5,14 +5,10 @@ import pyfits as pf
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 cmap = cm.Spectral
-from skymapper import *
+#from skymapper import *
+from info import config
 
-def jk_centers(paths, config):
-	#Loading random subsample for kmeans generation 
-	data = pf.getdata(paths['redmagic',config['redmagic_v'],'hidens_randoms'])
-	ra_r = data['ra']
-	dec_r = data['dec']
-
+def jk_centers(ra_r, dec_r, path):
 	np.random.seed(0)
 	rand = np.random.random(len(ra_r))  
 	maskr = rand>0.999
@@ -31,14 +27,13 @@ def jk_centers(paths, config):
 	assert km.converged > 0, 'Kmeans did not converge! Try more iterations.'
 
 	#Saving the kmeans centers
-	np.savetxt(os.path.join(paths['redmagic',config['redmagic_v']],'jk_centers'),km.centers)
+	np.savetxt('%s/jk_centers'%path,km.centers)
 
-
-def jk(paths, config, ra, dec):
+def jk(ra, dec, path):
 	#Loading the jk centers
-	fname = os.path.join(paths['redmagic',config['redmagic_v']],'jk_centers')
+	fname = '%s/jk_centers'%path
 	if os.path.isfile(fname): centers = np.loadtxt(fname)
-	else: jk_centers(paths,config)
+	else: return 0
 
 	#Filling radec array...
 	radec = np.zeros((len(ra),2))
