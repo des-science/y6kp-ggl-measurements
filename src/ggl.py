@@ -71,16 +71,25 @@ class GGL(object):
         source['bpz_zmc'] = selector_bpz.get_col('bpz_zmc_sof')
 
         calibrator = destest.MetaCalib(params_mcal,selector_mcal)
-        source['Rgamma'] = calibrator.calibrate('e', return_wRg=True)
+        R11, _, _ = calibrator.calibrate('e1')
+        R22, _, _ = calibrator.calibrate('e2')
+        source['Rmean'] = np.mean([R11, R22])
         
-        return source
+        return source, calibrator
 
-    def load_metacal_bin(source, zlim_low, zlim_high):
+    def load_metacal_bin(source, calibrator, zlim_low, zlim_high):
         """
         source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
+        calibrator: class to compute the response. Taken from baseline selection. 
         zlim_low, zlim_high: limits to select the tomographic bin. 
         """
         photoz_mask = (source['bpz_mean']>zlim_low)&(source['bpz_mean']<zlim_high)
+        source_bin = source[photoz_mask]
+        R11, _, _ = calibrator.calibrate('e1', mask = photoz_mask)
+        R22, _, _ = calibrator.calibrate('e2', mask = photoz_mask)
+        source['Rmean'] = np.mean([R11, R22])
+        return source
+
 
     def get_lens(self, lens):
         """
@@ -583,14 +592,14 @@ class Measurement(GGL):
     def run(self):
         lens_all = pf.getdata(self.paths['y1'] + 'lens.fits')
         random_all = pf.getdata(self.paths['y1'] + 'random.fits')
+        source_all, calibrator = self.load_metacal()
         
         for sbin in zbins['sbins']:
         
             print 'Running measurement for source %s.'%sbin
-            source = self.load_metacal()
-            #source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
-	    R = self.run_responses_mean_tomo(source['Rgamma'], sbin)
-        
+            source = self.load_metacal_bin(source, calibrator, zlim_low = zbins[sbin][0], zlim_high = zbins[sbin][1])
+            R = source['Rmean']
+
             for lbin in zbins['lbins']:
         
         	    print 'Running measurement for lens %s.'%lbin
