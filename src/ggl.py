@@ -14,6 +14,10 @@ import twopoint
 from scipy import interpolate
 import functions
 from info import paths, config, zbins, plotting, source_nofz_pars, sysmaps
+import sys
+import yaml
+sys.path.append('../../destest/')
+import destest
 
 def make_directory(directory):
     if not os.path.exists(directory):
@@ -31,6 +35,52 @@ class GGL(object):
     def __init__(self, config, paths):
         self.config = config
         self.paths = paths
+
+    def load_metacal():
+        """
+        Loads metacal data for Y3 catalog using h5 interface. 
+        Combines with Gold and BPZ. 
+        Returns: dictionary for the sources, with all the relevant columns. 
+        """
+
+        param_file = './destest_metacal.yaml'
+        params_mcal = yaml.load(open(param_file))
+        source_mcal = destest.H5Source(params_mcal)
+        selector_mcal = destest.Selector(params_mcal,source_mcal)
+
+        param_file = './destest_bpz.yaml'
+        params_bpz = yaml.load(open(param_file))
+        source_bpz = destest.H5Source(params_bpz)
+        selector_bpz = destest.Selector(params_bpz,source_bpz,inherit=selector_mcal)
+
+        param_file = './destest_gold.yaml'
+        params_gold = yaml.load(open(param_file))
+        source_gold = destest.H5Source(params_gold)
+        selector_gold  = destest.Selector(params_gold,source_gold,inherit=selector_mcal)
+
+        source = {}
+        source['ra'] = selector_gold.get_col('ra') 
+        source['dec'] = selector_gold.get_col('dec') 
+        source['e1'] = selector_mcal.get_col('e1')
+        source['e2'] = selector_mcal.get_col('e2')
+        source['psf_e1'] = selector_mcal.get_col('psf_e1')
+        source['psf_e2'] = selector_mcal.get_col('psf_e2')
+        source['snr'] = selector_mcal.get_col('snr')
+        source['size'] = selector_mcal.get_col('size')
+        source['bpz_mean'] = selector_bpz.get_col('bpz_zmean_sof')
+        source['bpz_zmc'] = selector_bpz.get_col('bpz_zmc_sof')
+
+        calibrator = destest.MetaCalib(params_mcal,selector_mcal)
+        source['Rgamma'] = calibrator.calibrate('e', return_wRg=True)
+        
+        return source
+
+    def load_metacal_bin(source, zlim_low, zlim_high):
+        """
+        source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
+        zlim_low, zlim_high: limits to select the tomographic bin. 
+        """
+        photoz_mask = (source['bpz_mean']>zlim_low)&(source['bpz_mean']<zlim_high)
 
     def get_lens(self, lens):
         """
@@ -433,6 +483,7 @@ class GGL(object):
         plt.savefig(self.paths['plots_config'] + '%s.pdf'%name_plot,bbox_inches='tight')
         plt.savefig(self.paths['plots_config'] + '%s.png'%name_plot,bbox_inches='tight', dpi=400)
 
+
     def append_sourcebins(self):
         """
         Appends source bins and saves them to a single file. 
@@ -536,7 +587,8 @@ class Measurement(GGL):
         for sbin in zbins['sbins']:
         
             print 'Running measurement for source %s.'%sbin
-            source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
+            source = self.load_metacal()
+            #source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
 	    R = self.run_responses_mean_tomo(source['Rgamma'], sbin)
         
             for lbin in zbins['lbins']:
