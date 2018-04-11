@@ -82,14 +82,15 @@ class GGL(object):
         source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
         calibrator: class to compute the response. Taken from baseline selection. 
         zlim_low, zlim_high: limits to select the tomographic bin. 
+        Obtains 5 masks (unsheared, sheared 1p, 1m, 2p, 2m) to obtain the new selection response.
+        Returns: Source dictionary masked with the unsheared mask and with the mean response updated.
         """
-        photoz_mask = (source['bpz_mean']>zlim_low)&(source['bpz_mean']<zlim_high)
-        source_bin = source[photoz_mask]
-        R11, _, _ = calibrator.calibrate('e1', mask = photoz_mask)
-        R22, _, _ = calibrator.calibrate('e2', mask = photoz_mask)
+        photoz_masks = [(source['bpz_mean'][i]>zlim_low)&(source['bpz_mean'][i]<zlim_high) for range in(5)]
+        source_bin = source[photoz_masks[0]]
+        R11, _, _ = calibrator.calibrate('e1', mask = photoz_masks)
+        R22, _, _ = calibrator.calibrate('e2', mask = photoz_masks)
         source['Rmean'] = np.mean([R11, R22])
         return source
-
 
     def get_lens(self, lens):
         """
