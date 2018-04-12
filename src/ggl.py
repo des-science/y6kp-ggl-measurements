@@ -640,15 +640,6 @@ class Measurement(GGL):
         cmap_step = 0.25
         title_source = self.plotting['metacal']
 
-        # Load theory metacal
-        th = np.loadtxt(self.paths['y1base'] + 'theory/data_vector-1/2pt_angle.txt')
-        bin1 = np.loadtxt(self.paths['y1base'] + 'theory/data_vector-1/2pt_bin1.txt')
-        bin2 = np.loadtxt(self.paths['y1base'] + '/theory/data_vector-1/2pt_bin2.txt')
-        theory = np.loadtxt(self.paths['y1base'] + '/theory/data_vector-1/2pt_theory.txt')
-        bin1 = bin1[400:-100]
-        bin2 = bin2[400:-100]
-        gt_theory = theory[400:-100]
-
         # Figure
         fig, ax = plt.subplots(2,3,figsize=(10,6),sharey=False,sharex=False, gridspec_kw = {'height_ratios':[1, 1]})
         fig.subplots_adjust(hspace=0.0,wspace=0.00)
@@ -673,8 +664,6 @@ class Measurement(GGL):
                 ax[j][l%3].errorbar(th[mask_pos]*(1+0.05*s), gt[mask_pos], err[mask_pos], fmt = 'o', color = plt.get_cmap(cmap)(cmap_step*s), 
                                     mec = plt.get_cmap(cmap)(cmap_step*s), label = self.plotting['redshift_s'][s])
                 
-                ax[j][l%3].plot(th*(1+0.05*s), gt_theory[l*80+20*s:l*80+20*(s+1)], ls='-', color = plt.get_cmap(cmap)(cmap_step*s))
-
                 ax[j][l%3].set_xlim(2.5, 300)
                 ax[j][l%3].set_ylim(10**(-6), 10**(-2))
                 ax[j][l%3].set_xscale('log')
