@@ -67,8 +67,8 @@ class GGL(object):
         source['psf_e2'] = selector_mcal.get_col('psf_e2')
         source['snr'] = selector_mcal.get_col('snr')
         source['size'] = selector_mcal.get_col('size')
-        source['bpz_mean'] = selector_bpz.get_col('bpz_zmean_sof')
-        source['bpz_zmc'] = selector_bpz.get_col('bpz_zmc_sof')
+        source['bpz_mean'] = selector_bpz.get_col('zmean_sof')
+        source['bpz_zmc'] = selector_bpz.get_col('zmc_sof')
 
         calibrator = destest.MetaCalib(params_mcal,selector_mcal)
         R11, _, _ = calibrator.calibrate('e1')
@@ -85,7 +85,7 @@ class GGL(object):
         Obtains 5 masks (unsheared, sheared 1p, 1m, 2p, 2m) to obtain the new selection response.
         Returns: Source dictionary masked with the unsheared mask and with the mean response updated.
         """
-        photoz_masks = [(source['bpz_mean'][i]>zlim_low)&(source['bpz_mean'][i]<zlim_high) for range in(5)]
+        photoz_masks = [(source['bpz_mean'][i]>zlim_low)&(source['bpz_mean'][i]<zlim_high) for i in range(5)]
         source_bin = source[photoz_masks[0]]
         R11, _, _ = calibrator.calibrate('e1', mask = photoz_masks)
         R22, _, _ = calibrator.calibrate('e2', mask = photoz_masks)
@@ -553,7 +553,7 @@ class Measurement(GGL):
         for sbin in zbins['sbins']:
         
             print 'Running measurement for source %s.'%sbin
-            source = self.load_metacal_bin(source, calibrator, zlim_low = zbins[sbin][0], zlim_high = zbins[sbin][1])
+            source = self.load_metacal_bin(source_all, calibrator, zlim_low = zbins[sbin][0], zlim_high = zbins[sbin][1])
             R = source['Rmean']
 
             for lbin in zbins['lbins']:
