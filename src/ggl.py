@@ -28,7 +28,6 @@ plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 
 
-print 'running'
 class GGL(object):
     
     """
@@ -470,9 +469,6 @@ class GGL(object):
         ndf = len(mean)
     
         std = np.sqrt((len(all)-1.))*np.std(all, axis=0)
-        print '(len(all)', len(all)
-        print 'err', err
-        print 'std', std
 
         # Hartlap factor
         N = len(all) # number of jackknife regions
