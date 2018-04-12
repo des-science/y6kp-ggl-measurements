@@ -36,7 +36,7 @@ class GGL(object):
         self.config = config
         self.paths = paths
 
-    def load_metacal():
+    def load_metacal(self):
         """
         Loads metacal data for Y3 catalog using h5 interface. 
         Combines with Gold and BPZ. 
@@ -77,7 +77,7 @@ class GGL(object):
         
         return source, calibrator
 
-    def load_metacal_bin(source, calibrator, zlim_low, zlim_high):
+    def load_metacal_bin(self, source, calibrator, zlim_low, zlim_high):
         """
         source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
         calibrator: class to compute the response. Taken from baseline selection. 
@@ -1657,22 +1657,23 @@ class TestSysMaps(GGL):
 T = True
 F = False
 
-run_measurement = F
+run_measurement = T
 run_responses_nk = F
 run_stars = F
 run_psf = F
-run_size_snr = T
+run_size_snr = F
 run_sysmaps = F
 
 if run_measurement:
+    print 'Running measurement...'
     gglensing = GGL(config, paths)
     measurement = Measurement(config, paths, zbins, plotting)
     measurement.run()
-    measurement.save_boostfactors_2pointfile()
-    measurement.plot()
-    measurement.plot_boostfactors()
-    measurement.plot_randoms()
-    measurement.plot_gammax()
+    #measurement.save_boostfactors_2pointfile()
+    #measurement.plot()
+    #measurement.plot_boostfactors()
+    #measurement.plot_randoms()
+    #measurement.plot_gammax()
 
 if run_responses_nk:
     responses = Responses(config, paths, zbins, plotting)

@@ -1,6 +1,6 @@
 import numpy as np
 import os
-from colormaps import plasma
+from colormaps import plasma,viridis
 
 '''
 Information about paths and parameters used in pipeline. 
@@ -10,7 +10,7 @@ paths = {}
 
 paths['runs'] =  '../runs/' 
 paths['redmagic'] = '../lens_cats/redmagic/'
-paths['redmagic', 'chi5_bright'] = '../lens_cats/redmagic/chi5_bright'
+paths['redmagic', 'chi5_bright'] = '../lens_cats/redmagic/chi5_bright/'
 paths['plots'] = '../plots/'
 
 config = {

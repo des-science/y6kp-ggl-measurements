@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
-import cosmology
-from iminuit import Minuit
+#import cosmology
+#from iminuit import Minuit
 
 def inv_sigma_crit_eff(zlbin, zsbin, nzl, nzs, omegam = 0.3):
     '''
