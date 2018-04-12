@@ -2,6 +2,7 @@ import sys
 import yaml
 sys.path.append('../../destest/')
 import destest
+import numpy as np
 
 param_file = './destest_metacal.yaml'
 params_mcal = yaml.load(open(param_file))
