@@ -27,6 +27,8 @@ def make_directory(directory):
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 
+
+print 'running'
 class GGL(object):
     
     """
@@ -60,14 +62,14 @@ class GGL(object):
         selector_gold  = destest.Selector(params_gold,source_gold,inherit=selector_mcal)
 
         source = {}
-        source['ra'] = selector_gold.get_col('ra') 
-        source['dec'] = selector_gold.get_col('dec') 
-        source['e1'] = selector_mcal.get_col('e1')
-        source['e2'] = selector_mcal.get_col('e2')
-        source['psf_e1'] = selector_mcal.get_col('psf_e1')
-        source['psf_e2'] = selector_mcal.get_col('psf_e2')
-        source['snr'] = selector_mcal.get_col('snr')
-        source['size'] = selector_mcal.get_col('size')
+        source['ra'] = selector_gold.get_col('ra')[0]
+        source['dec'] = selector_gold.get_col('dec')[0] 
+        source['e1'] = selector_mcal.get_col('e1')[0]
+        source['e2'] = selector_mcal.get_col('e2')[0]
+        source['psf_e1'] = selector_mcal.get_col('psf_e1')[0]
+        source['psf_e2'] = selector_mcal.get_col('psf_e2')[0]
+        source['snr'] = selector_mcal.get_col('snr')[0]
+        source['size'] = selector_mcal.get_col('size')[0]
         source['bpz_mean'] = selector_bpz.get_col('zmean_sof')
         source['bpz_zmc'] = selector_bpz.get_col('zmc_sof')
 
@@ -87,10 +89,7 @@ class GGL(object):
         Returns: Source dictionary masked with the unsheared mask and with the mean response updated.
         """
         photoz_masks = [(source['bpz_mean'][i]>zlim_low)&(source['bpz_mean'][i]<zlim_high) for i in range(5)]
-        print photoz_masks
-        print len(photoz_masks)
-        print photoz_masks[0]
-        print len(photoz_masks[0])
+        source_bin = {}
         source_bin['ra'] = source['ra'][photoz_masks[0]]
         source_bin['dec'] = source['dec'][photoz_masks[0]]
         source_bin['e1'] = source['e1'][photoz_masks[0]]
@@ -99,8 +98,8 @@ class GGL(object):
         source_bin['psf_e1'] = source['psf_e1'][photoz_masks[0]]
         source_bin['snr'] = source['snr'][photoz_masks[0]]
         source_bin['size'] = source['size'][photoz_masks[0]]
-        source_bin['bpz_mean'] = source['bpz_mean'][photoz_masks[0]]
-        source_bin['bpz_zmc'] = source['bpz_zmc'][photoz_masks[0]]
+        source_bin['bpz_mean'] = source['bpz_mean'][0][photoz_masks[0]]
+        source_bin['bpz_zmc'] = source['bpz_zmc'][0][photoz_masks[0]]
 
         R11, _, _ = calibrator.calibrate('e1', mask = photoz_masks)
         R22, _, _ = calibrator.calibrate('e2', mask = photoz_masks)
@@ -240,7 +239,7 @@ class GGL(object):
         gxs = [manager.list() for x in range(self.config['njk'])]
         errs = [manager.list() for x in range(self.config['njk'])]
     
-        p =  mp.Pool(self.config['ncpu'], worker_init)
+        p =  mp.Pool(1, worker_init)
         p.map(run_jki, range(self.config['njk']))
         p.close()
     
