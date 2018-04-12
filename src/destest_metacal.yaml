@@ -13,7 +13,7 @@ output_exists : True
 
 use_mpi       : False
 
-param_file : './destest_metacal.yaml'
+param_file : 'destest_metacal.yaml'
 
 # Tests to run
 # Calculate general statistics for all columns
