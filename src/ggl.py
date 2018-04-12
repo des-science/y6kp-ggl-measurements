@@ -93,6 +93,8 @@ class GGL(object):
         source_bin['dec'] = source['dec'][photoz_masks[0]]
         source_bin['e1'] = source['e1'][photoz_masks[0]]
         source_bin['e2'] = source['e2'][photoz_masks[0]]
+        print 'e1', source_bin['e1']
+        print 'e2', source_bin['e2']
         source_bin['psf_e1'] = source['psf_e1'][photoz_masks[0]]
         source_bin['psf_e1'] = source['psf_e1'][photoz_masks[0]]
         source_bin['snr'] = source['snr'][photoz_masks[0]]
@@ -103,6 +105,8 @@ class GGL(object):
         R11, _, _ = calibrator.calibrate('e1', mask = photoz_masks)
         R22, _, _ = calibrator.calibrate('e2', mask = photoz_masks)
         source_bin['Rmean'] = np.mean([R11, R22])
+        print 'Rmean = ', source_bin['Rmean'] 
+
         return source_bin
 
     def get_lens(self, lens):
@@ -318,29 +322,6 @@ class GGL(object):
         path_save = os.path.join(self.paths['runs'], 'metacal_%s'%self.config['metacal_v'], 'zbinsource_%s'%self.config['zbinsource_v']) + '/'
         np.savetxt(path_save + 'responses_mean_%s'%sbin, responses.reshape(1, responses.shape[0]), header='R_mean, Rgamma_mean, Rs_mean')
         return R_mean        
-
-    def run_responses_mean_tomo(self, Rgamma, sbin):
-        """
-        Rgamma: (R11 + R22)/2 for each galaxy.
-        sbin: String relative to which source bin it is. 
-        Averages Rgamma in each source bin and computes and averages R_s in each bin too.
-        Then it computes the mean of R_total in each source bin. 
-        Saves R_total, Rgamma, R_s in file and returns R_total. 
-        """
-        
-        print 'Be aware: Y1 mode of responses. Not dividing by dgamma here.'
-        e_ix = {} # ellipticities for component i for a given selection s, divided by Delta gamma.
-        # x: p, m
-        components = ['1p', '1m', '2p', '2m']
-        for comp in components:
-            source_selection = pf.getdata(self.paths['y1'] + 'metacal_sel_responses/metacal_sel_responses_sa%s_%s.fits'%(sbin[1],comp))
-            e_ix[comp] = np.mean(source_selection['Riisx'])
-    
-        Rgamma_mean = np.mean(Rgamma)
-        Rs_mean = self.compute_Rs(e_ix)
-        R_mean = self.save_responses_mean(Rgamma_mean, Rs_mean, sbin)
-
-        return R_mean
 
     def run_responses_nk_tomo(self, lens, source, sbin):
         """
