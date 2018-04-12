@@ -87,10 +87,21 @@ class GGL(object):
         """
         photoz_masks = [(source['bpz_mean'][i]>zlim_low)&(source['bpz_mean'][i]<zlim_high) for i in range(5)]
         source_bin = source[photoz_masks[0]]
+        source_bin['ra'] = source['ra'][photoz_masks[0]]
+        source_bin['dec'] = source['dec'][photoz_masks[0]]
+        source_bin['e1'] = source['e1'][photoz_masks[0]]
+        source_bin['e2'] = source['e2'][photoz_masks[0]]
+        source_bin['psf_e1'] = source['psf_e1'][photoz_masks[0]]
+        source_bin['psf_e1'] = source['psf_e1'][photoz_masks[0]]
+        source_bin['snr'] = source['snr'][photoz_masks[0]]
+        source_bin['size'] = source['size'][photoz_masks[0]]
+        source_bin['bpz_mean'] = source['bpz_mean'][photoz_masks[0]]
+        source_bin['bpz_zmc'] = source['bpz_zmc'][photoz_masks[0]]
+
         R11, _, _ = calibrator.calibrate('e1', mask = photoz_masks)
         R22, _, _ = calibrator.calibrate('e2', mask = photoz_masks)
-        source['Rmean'] = np.mean([R11, R22])
-        return source
+        source_bin['Rmean'] = np.mean([R11, R22])
+        return source_bin
 
     def get_lens(self, lens):
         """
