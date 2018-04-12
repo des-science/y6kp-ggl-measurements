@@ -1,4 +1,5 @@
 import os
+import ipdb
 import numpy as np
 import pyfits as pf
 import pathos.multiprocessing as mp
@@ -86,7 +87,10 @@ class GGL(object):
         Returns: Source dictionary masked with the unsheared mask and with the mean response updated.
         """
         photoz_masks = [(source['bpz_mean'][i]>zlim_low)&(source['bpz_mean'][i]<zlim_high) for i in range(5)]
-        source_bin = source[photoz_masks[0]]
+        print photoz_masks
+        print len(photoz_masks)
+        print photoz_masks[0]
+        print len(photoz_masks[0])
         source_bin['ra'] = source['ra'][photoz_masks[0]]
         source_bin['dec'] = source['dec'][photoz_masks[0]]
         source_bin['e1'] = source['e1'][photoz_masks[0]]
