@@ -494,51 +494,6 @@ class GGL(object):
         plt.savefig(self.paths['plots_config'] + '%s.png'%name_plot,bbox_inches='tight', dpi=400)
 
 
-    def append_sourcebins(self):
-        """
-        Appends source bins and saves them to a single file. 
-        """
-        ra_s = np.zeros(0)
-        dec_s = np.zeros(0)
-        e1 = np.zeros(0)
-        e2 = np.zeros(0)
-        e1_psf = np.zeros(0)
-        e2_psf = np.zeros(0)
-        Rgamma = np.zeros(0)
-        size = np.zeros(0)
-        snr = np.zeros(0)
-        z_mc = np.zeros(0)
-
-        for sbin in zbins['sbins']:    
-            print 'Appending source bin %s'%sbin
-            sourcei = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
-            ra_s = np.append(ra_s,sourcei['ra'])
-            dec_s = np.append(dec_s,sourcei['dec'])
-            e1 = np.append(e1,sourcei['e1'])
-            e2 = np.append(e2,sourcei['e2'])
-            e1_psf = np.append(e1_psf,sourcei['e1_psf'])
-            e2_psf = np.append(e2_psf,sourcei['e2_psf'])
-            Rgamma = np.append(Rgamma,sourcei['Rgamma'])
-            size = np.append(size,sourcei['size'])
-            snr = np.append(snr,sourcei['snr'])
-            z_mc = np.append(z_mc,sourcei['z_mc'])
-            
-        c1 = pf.Column(name='RA', format='E', array=ra_s)
-        c2 = pf.Column(name='DEC', format='E', array=dec_s)
-        c3 = pf.Column(name='E1', format='E', array=e1)
-        c4 = pf.Column(name='E2', format='E', array=e2)
-        c5 = pf.Column(name='E1_PSF', format='E', array=e1_psf)
-        c6 = pf.Column(name='E2_PSF', format='E', array=e2_psf)
-        c7 = pf.Column(name='SNR', format='E', array=snr)
-        c8 = pf.Column(name='SIZE', format='E', array=size)
-        c9 = pf.Column(name='Z_MC', format='E', array=z_mc)
-        c10 = pf.Column(name='Rgamma', format='E', array=Rgamma)
-
-        CC = [c1,c2,c3,c4,c5,c6,c7,c8,c9,c10]
-        hdu = pf.new_table(CC, nrows=len(ra_s))
-        hdu.writeto(self.paths['y1'] + 'metacal_sel_allbins.fits', clobber=True)
-
-
     def load_sims(self): 
         """
 	Loads the simulation measurements and covariance used to fit an amplitude to the data measurements.
@@ -591,8 +546,8 @@ class Measurement(GGL):
 	return os.path.join(self.paths['runs_config'], 'measurement') + '/' 
 
     def run(self):
-        lens_all = pf.getdata(self.paths['y1'] + 'lens.fits')
-        random_all = pf.getdata(self.paths['y1'] + 'random.fits')
+        lens_all = pf.getdata(self.paths['lens'])
+        random_all = pf.getdata(self.paths['randoms'])
         source_all, calibrator = self.load_metacal()
         
         for sbin in zbins['sbins']:
