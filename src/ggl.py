@@ -14,7 +14,7 @@ import signal
 import twopoint
 from scipy import interpolate
 import functions
-from info import paths, config, zbins, plotting, source_nofz_pars, sysmaps
+from info import paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode
 import sys
 import yaml
 
@@ -1873,10 +1873,10 @@ class TestSysMaps(GGL):
 T = True
 F = False
 
-run_measurement = F
+run_measurement = T
 run_responses_nk = F
 run_stars = F
-run_psf = T
+run_psf = F
 run_size_snr = F
 run_sysmaps = F
 

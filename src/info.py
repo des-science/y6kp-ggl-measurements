@@ -53,12 +53,12 @@ paths['y3_exp'] = '../../ggl_data/'
 paths['lens'] = paths['redmagic', '%s'%config_data['redmagic_v']] + 'lens.fits'
 paths['randoms'] = paths['redmagic', '%s'%config_data['redmagic_v']] + 'random.fits'
 
-paths['config_data'] = os.path_join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
+paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
                         'redmagic_%s'%config_data['redmagic_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
                         'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
                         'bslop_%0.1g'%config_data['bslop']) 
 
-paths['config_mice'] = os.path_join('mice', 'v_%s'%config_mice['version'], 'zslim_%s'%config_mice['zslim_v'], 'zs_%s'%config_mice['zs_v'],
+paths['config_mice'] = os.path.join('mice', 'v_%s'%config_mice['version'], 'zslim_%s'%config_mice['zslim_v'], 'zs_%s'%config_mice['zs_v'],
                         'redmagic_%s'%config_mice['redmagic_v'], 'zllim_%s'%config_mice['zllim_v'], 'njk_%d'%config_mice['njk'],
                         'thbin_%0.1f_%d_%d'%(config_mice['thlims'][0], config_mice['thlims'][1], config_mice['nthbins']),
                         'bslop_%0.1g'%config_mice['bslop']) 
