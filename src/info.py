@@ -4,20 +4,16 @@ from colormaps import plasma,viridis
 
 '''
 Information about paths and parameters used in pipeline. 
+Define running on data (mode = data) or running or sims,
+for now implemented on mice simulations (mode = mice).
+Config and corresponding paths will be automatically
+defined depending on the mode used. 
 '''
 
-paths = {}
+mode = 'data'
+#mode = 'mice'
 
-paths['runs'] =  '../runs/' 
-paths['redmagic'] = '../lens_cats/redmagic/'
-paths['redmagic', 'chi5_bright'] = '../lens_cats/redmagic/chi5_bright/'
-paths['plots'] = '../plots/'
-
-paths['y3'] = '../../ggl_results/'
-paths['y3_exp'] = '../../ggl_data/'
-
-
-config = {
+config_data = {
     'njk': 100,
     'bslop': 0.1,
     'nthbins': 20,
@@ -29,19 +25,47 @@ config = {
     'zllim_v': 'y1'
     }
 
+config_mice = {
+    'njk': 300,
+    'bslop': 0.1,
+    'nthbins': 20,
+    'thlims': np.array([2.5,250.]),
+    'version': '2',
+    'redmagic_v': 'y1',
+    'zslim_v': 'y1',
+    'zs_v': 'bpz',
+    'zllim_v': 'y1'
+    }
 
-paths['lens'] = paths['redmagic', '%s'%config['redmagic_v']] + 'lens.fits'
-paths['randoms'] = paths['redmagic', '%s'%config['redmagic_v']] + 'random.fits'
 
-paths['runs_config'] = os.path.join(paths['runs'], 'mastercat_%s'%config['mastercat_v'], 'zslim_%s'%config['zslim_v'], 'zs_%s'%config['zs_v'],
-                        'redmagic_%s'%config['redmagic_v'], 'zllim_%s'%config['zllim_v'], 'njk_%d'%config['njk'],
-                        'thbin_%0.1f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
-                        'bslop_%0.1g'%config['bslop']) + '/'
+if mode == 'data':
+    config = config_data
+if mode == 'mice':
+    config = config_mice
 
-paths['plots_config'] = os.path.join(paths['plots'], 'mastercat_%s'%config['mastercat_v'], 'zslim_%s'%config['zslim_v'], 'zs_%s'%config['zs_v'],
-                        'redmagic_%s'%config['redmagic_v'], 'zllim_%s'%config['zllim_v'], 'njk_%d'%config['njk'],
-                        'thbin_%0.1f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
-                        'bslop_%0.1g'%config['bslop']) + '/'
+paths = {}
+paths['runs'] =  '../runs/' 
+paths['redmagic'] = '../lens_cats/redmagic/'
+paths['redmagic', 'chi5_bright'] = '../lens_cats/redmagic/chi5_bright/'
+paths['plots'] = '../plots/'
+paths['y3'] = '../../ggl_results/'
+paths['y3_exp'] = '../../ggl_data/'
+paths['lens'] = paths['redmagic', '%s'%config_data['redmagic_v']] + 'lens.fits'
+paths['randoms'] = paths['redmagic', '%s'%config_data['redmagic_v']] + 'random.fits'
+
+paths['config_data'] = os.path_join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
+                        'redmagic_%s'%config_data['redmagic_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
+                        'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
+                        'bslop_%0.1g'%config_data['bslop']) 
+
+paths['config_mice'] = os.path_join('mice', 'v_%s'%config_mice['version'], 'zslim_%s'%config_mice['zslim_v'], 'zs_%s'%config_mice['zs_v'],
+                        'redmagic_%s'%config_mice['redmagic_v'], 'zllim_%s'%config_mice['zllim_v'], 'njk_%d'%config_mice['njk'],
+                        'thbin_%0.1f_%d_%d'%(config_mice['thlims'][0], config_mice['thlims'][1], config_mice['nthbins']),
+                        'bslop_%0.1g'%config_mice['bslop']) 
+
+paths['runs_config'] = os.path.join(paths['runs'], paths['config_%s'%mode]) + '/'
+paths['plots_config'] = os.path.join(paths['plots'], paths['config_%s'%mode]) + '/'
+
 
 zbins = {}
 zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5']
@@ -60,8 +84,11 @@ zbins['s4'] = [0.90, 1.30]
 
 
 plotting = {}
-plotting['metacal'] = r'\textsc{Metacalibration}'
-plotting['im3shape'] = r'\textsc{im3shape}'
+if mode == 'data':
+    plotting['catname'] = r'\textsc{Metacalibration}'
+if mode == 'mice':
+    plotting['catname'] = r'\textsc{MICE}'
+
 plotting['cmap'] = viridis
 plotting['redshift_l'] = [r'$0.15 < z_l < 0.30 $', r'$0.30 < z_l < 0.45$', r'$0.45 < z_l < 0.60$', r'$0.60 < z_l < 0.75 $', r'$0.75 < z_l < 0.90 $']
 plotting['redshift_s'] = [r'$0.20 < z_s < 0.43$', r'$0.43 < z_s < 0.63  $', r'$0.63 < z_s < 0.90  $', r'$0.90 < z_s < 1.30  $']

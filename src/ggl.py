@@ -1,8 +1,8 @@
 import os
-# import ipdb
+import ipdb
 import numpy as np
 import pyfits as pf
-# import pathos.multiprocessing as mp
+import pathos.multiprocessing as mp
 from multiprocessing import Manager
 import matplotlib.pyplot as plt
 from matplotlib import ticker
@@ -11,15 +11,15 @@ import healpy as hp
 import treecorr
 import itertools
 import signal
-# import twopoint
+import twopoint
 from scipy import interpolate
 import functions
 from info import paths, config, zbins, plotting, source_nofz_pars, sysmaps
 import sys
 import yaml
 
-# sys.path.append('../../destest/')
-# import destest
+sys.path.append('../../destest/')
+import destest
 
 
 def make_directory(directory):
@@ -546,16 +546,27 @@ class Measurement(GGL):
         return os.path.join(self.paths['runs_config'], 'measurement') + '/'
 
     def run(self):
-        lens_all = pf.getdata(self.paths['lens'])
-        random_all = pf.getdata(self.paths['randoms'])
-        source_all, calibrator = self.load_metacal()
+
+        if mode == 'data':
+            lens_all = pf.getdata(self.paths['lens'])
+            random_all = pf.getdata(self.paths['randoms'])
+            source_all, calibrator = self.load_metacal()
 
         for sbin in zbins['sbins']:
 
             print 'Running measurement for source %s.' % sbin
-            source = self.load_metacal_bin(source_all, calibrator, zlim_low=zbins[sbin][0], zlim_high=zbins[sbin][1])
-            R = source['Rmean']
 
+            if mode == 'data':
+                source = self.load_metacal_bin(source_all, calibrator, zlim_low=zbins[sbin][0], zlim_high=zbins[sbin][1])
+                R = source['Rmean']
+
+            if mode == 'mice':
+                """
+                In this case there are no responses, so we set it to one.
+                """
+                R = 1.
+                source = self.load_mice_bin()
+                
             for lbin in zbins['lbins']:
                 print 'Running measurement for lens %s.' % lbin
                 path_test = self.get_path_test(lbin, sbin)
@@ -626,7 +637,7 @@ class Measurement(GGL):
 
         cmap = self.plotting['cmap']
         cmap_step = 0.25
-        title_source = self.plotting['metacal']
+        title_source = self.plotting['catname']
 
         # Figure
         fig, ax = plt.subplots(2, 3, figsize=(10, 6), sharey=False, sharex=False, gridspec_kw={'height_ratios': [1, 1]})
@@ -730,7 +741,7 @@ class Measurement(GGL):
         Makes plot of the tangential shear around random points.
         """
 
-        labels = [plotting['metacal'], plotting['im3shape']]
+        labels = [plotting['catname']]
         c = 0  # If adding im3shape, s=1
         markers = ['o', '^']
         fs = 18  # fontsize
@@ -779,7 +790,7 @@ class Measurement(GGL):
         Bottom panel: chi2 distribution from all lens-source combinations. 
         """
 
-        labels = [plotting['metacal'], plotting['im3shape']]
+        labels = [plotting['catname']]
         c = 0  # for metacal
         markers = ['o', '^']
         fs = 12  # fontsize
@@ -989,7 +1000,7 @@ class TestStars(GGL):
         styles = ['o', '^']
         shifts = [0, 1, 2, 3]
         colors = [plt.get_cmap(self.plotting['cmap'])(0), plt.get_cmap(self.plotting['cmap'])(0.7)]
-        titles_c = [self.plotting['metacal'], self.plotting['im3shape']]
+        titles_c = [self.plotting['catname']]
         s = 0  # If adding im3shape, s=1
 
         fig, ax = plt.subplots(1, 1, figsize=(5., 5.), sharey=False, sharex=False)
@@ -1541,7 +1552,7 @@ class TestSizeSNR(GGL):
         cmap = plotting['cmap']
         cmap_step = 0.25
         lss = ['-', ':']
-        labels_c = [r'\textsc{Metacalibration}', r'\textsc{im3shape}']
+        labels_c = [self.plotting['catname']]
         tests = ['snr', 'size']
         labels_t = [r'S/N', r'Size']
 
@@ -1838,7 +1849,7 @@ class TestSysMaps(GGL):
             color, x = c1, 1
 
             ax[f][c].errorbar(x, data, data_err, fmt='o', color=color, mec=color,
-                              label='%s' % (self.plotting['metacal']))
+                              label='%s' % (self.plotting['catname']))
             x_lin = [x - 0.2, x, x + 0.2]
             ax[f][c].fill_between(x_lin, np.array([theory - theory_err for i in x_lin]),
                                   np.array([theory + theory_err for i in x_lin]), alpha=0.4, edgecolor=color,
