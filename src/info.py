@@ -13,6 +13,10 @@ paths['redmagic'] = '../lens_cats/redmagic/'
 paths['redmagic', 'chi5_bright'] = '../lens_cats/redmagic/chi5_bright/'
 paths['plots'] = '../plots/'
 
+paths['y3'] = '../../ggl_results/'
+paths['y3_exp'] = '../../ggl_data/'
+
+
 config = {
     'njk': 100,
     'bslop': 0.1,
