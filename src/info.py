@@ -10,8 +10,8 @@ Config and corresponding paths will be automatically
 defined depending on the mode used. 
 '''
 
-mode = 'data'
-#mode = 'mice'
+#mode = 'data'
+mode = 'mice'
 
 config_data = {
     'njk': 100,
@@ -52,6 +52,9 @@ paths['y3'] = '../../ggl_results/'
 paths['y3_exp'] = '../../ggl_data/'
 paths['lens'] = paths['redmagic', '%s'%config_data['redmagic_v']] + 'lens.fits'
 paths['randoms'] = paths['redmagic', '%s'%config_data['redmagic_v']] + 'random.fits'
+paths['mice'] = '../../../y1_shear_tests/sims/mice/'
+paths['lens_mice'] = paths['mice'] + 'lens.fits'
+paths['randoms_mice'] = paths['mice'] + 'random.fits'
 
 paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
                         'redmagic_%s'%config_data['redmagic_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
@@ -65,7 +68,6 @@ paths['config_mice'] = os.path.join('mice', 'v_%s'%config_mice['version'], 'zsli
 
 paths['runs_config'] = os.path.join(paths['runs'], paths['config_%s'%mode]) + '/'
 paths['plots_config'] = os.path.join(paths['plots'], paths['config_%s'%mode]) + '/'
-
 
 zbins = {}
 zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5']

@@ -111,6 +111,7 @@ class GGL(object):
 
         return source_bin
 
+
     def get_lens(self, lens):
         """
         Given a lens sample, returns ra, dec, jk and weight, in case it exists.
@@ -552,6 +553,10 @@ class Measurement(GGL):
             random_all = pf.getdata(self.paths['randoms'])
             source_all, calibrator = self.load_metacal()
 
+        if mode == 'mice':
+            lens_all = pf.getdata(self.paths['lens_mice'])
+            random_all = pf.getdata(self.paths['randoms_mice'])
+
         for sbin in zbins['sbins']:
 
             print 'Running measurement for source %s.' % sbin
@@ -565,7 +570,7 @@ class Measurement(GGL):
                 In this case there are no responses, so we set it to one.
                 """
                 R = 1.
-                source = self.load_mice_bin()
+                source = pf.getdata(self.paths['mice'] + 'mice2_shear_bin%d.fits'%sbin[-1])
                 
             for lbin in zbins['lbins']:
                 print 'Running measurement for lens %s.' % lbin
