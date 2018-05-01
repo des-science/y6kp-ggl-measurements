@@ -1,3 +1,4 @@
+import psutil
 import os
 import ipdb
 import numpy as np
@@ -18,8 +19,8 @@ from info import paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode
 import sys
 import yaml
 
-sys.path.append('../../destest/')
-import destest
+#sys.path.append('../../destest/')
+#import destest
 
 
 def make_directory(directory):
@@ -213,8 +214,12 @@ class GGL(object):
                 bool_s = np.in1d(pix, pixsjk)
 
                 cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
-                cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s], w=w[bool_s],
-                                         ra_units='deg', dec_units='deg')
+                if mode == 'data':
+                    cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s], w=w[bool_s],
+                                             ra_units='deg', dec_units='deg')
+                if mode == 'mice':
+                    cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=-e1[bool_s], g2=e2[bool_s], w=w[bool_s],
+                                             ra_units='deg', dec_units='deg')
                 corr.process(cat_l, cat_s)
 
                 if jk == 0: theta.append(np.exp(corr.logr))
@@ -570,9 +575,9 @@ class Measurement(GGL):
                 In this case there are no responses, so we set it to one.
                 """
                 R = 1.
-                source = pf.getdata(self.paths['mice'] + 'mice2_shear_bin%d.fits'%sbin[-1])
+                source = pf.getdata(self.paths['mice'] + 'mice2_shear_bin%s.fits'%sbin[-1])
                 
-            for lbin in zbins['lbins']:
+            for l, lbin in enumerate(zbins['lbins']):
                 print 'Running measurement for lens %s.' % lbin
                 path_test = self.get_path_test(lbin, sbin)
                 make_directory(path_test)
@@ -583,7 +588,10 @@ class Measurement(GGL):
                 self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
                 gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
 
-                random = random_all[(random_all['z'] > zbins[lbin][0]) & (random_all['z'] < zbins[lbin][1])]
+                if mode == 'data':
+                    random = random_all[(random_all['z'] > zbins[lbin][0]) & (random_all['z'] < zbins[lbin][1])]
+                if mode == 'mice':
+                    random = random_all[l*len(random_all)/5:(l+1)*len(random_all)/5]
 
                 theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
                 self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, True)

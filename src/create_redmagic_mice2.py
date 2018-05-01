@@ -33,8 +33,8 @@ ra_min = 0.
 dec_min = 0.
 ra_max = 90.
 dec_max = 90.
-n_rand = len(ra)*10
-ra_r, dec_r = randsphere(n_rand, ra_range=[ra_min,ra_max], dec_range=[dec_min, dec_max])
+n_rand = len(ra)
+ra_r, dec_r = randsphere(n_rand*2, ra_range=[ra_min,ra_max], dec_range=[dec_min, dec_max])
 
 jk_l = jk.jk(ra,dec,path_mice)
 if type(jk_l) is int: 
