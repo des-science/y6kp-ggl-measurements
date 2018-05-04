@@ -10,15 +10,17 @@ Config and corresponding paths will be automatically
 defined depending on the mode used. 
 '''
 
-#mode = 'data'
-mode = 'mice'
+filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v1_4_6_18_subsampled.h5'
+
+mode = 'data'
+#mode = 'mice'
 
 config_data = {
     'njk': 100,
     'bslop': 0.1,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
-    'mastercat_v': 'v1_4_6_18', 
+    'mastercat_v': filename_mastercat[53:-3], 
     'redmagic_v': 'chi5_bright',
     'zslim_v': 'y1',
     'zs_v': 'bpz',

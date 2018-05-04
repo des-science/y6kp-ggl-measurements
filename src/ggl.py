@@ -19,8 +19,8 @@ from info import paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode
 import sys
 import yaml
 
-#sys.path.append('../../destest/')
-#import destest
+sys.path.append('../../destest/')
+import destest
 
 
 def make_directory(directory):

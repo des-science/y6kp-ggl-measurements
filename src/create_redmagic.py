@@ -23,6 +23,7 @@ z_l = z_l[maskzl]
 ra_l = selector_rm.get_col('ra')[0][maskzl]
 dec_l = selector_rm.get_col('dec')[0][maskzl] 
 zerr_l = selector_rm.get_col('zredmagic_e')[0][maskzl] 
+ids = selector_rm.get_col('coadd_object_id')[0][maskzl]
 w_l = np.ones(len(ra_l))
 
 param_file = 'destest_randoms.yaml'
@@ -68,7 +69,9 @@ c3 = pf.Column(name='Z', format='E', array=z_l)
 c4 = pf.Column(name='ZERR', format='E', array=zerr_l)
 c5 = pf.Column(name='JK', format='K', array=jk_l)
 c6 = pf.Column(name='W', format='E', array=w_l)
-CC = [c1,c2,c3,c4,c5,c6]
+c7 = pf.Column(name='ID', format='K', array=ids)
+
+CC = [c1,c2,c3,c4,c5,c6,c7]
 hdu = pf.new_table(CC, nrows=len(ra_l))
 hdu.writeto('%s/lens.fits'%path, clobber=True)
 
