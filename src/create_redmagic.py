@@ -53,7 +53,8 @@ ra_r = np.concatenate([ra_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i 
 dec_r = np.concatenate([dec_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i in range(len(zbins)-1)]) 
 z_r = np.concatenate([z_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i in range(len(zbins)-1)]) 
 
-path = '../lens_cats/redmagic'
+path = '../lens_cats/redmagic/%s'%params_rm['table'][0]
+os.system('mkdir %s'%path)
 with open("%s/version_name"%path, "w") as text_file:
     text_file.write("%s"%params_rm['filename'])
 
