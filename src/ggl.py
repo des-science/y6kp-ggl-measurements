@@ -213,6 +213,7 @@ class GGL(object):
                 pixsjk = np.append(pixsjk, pixjk)
                 bool_s = np.in1d(pix, pixsjk)
 
+                print 'jk, nlens, nsource = ', jk, len(ra_l_jk), len(ra_s[bool_s])
                 cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
                 if mode == 'data':
                     cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s], w=w[bool_s],
@@ -583,7 +584,6 @@ class Measurement(GGL):
                 make_directory(path_test)
 
                 lens = lens_all[(lens_all['z'] > zbins[lbin][0]) & (lens_all['z'] < zbins[lbin][1])]
-
                 theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
                 self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
                 gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)

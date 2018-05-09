@@ -36,7 +36,7 @@ cal_type   : 'mcal'
 # Type of data source. Currently only works for 'hdf5'
 source     : 'hdf5'
 # name of file
-filename   : '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v1_4_6_18_subsampled.h5'
+filename   : '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v1_4_6_18.h5'
 # For hdf5, group name
 group      : 'catalog/metacal'
 # if metacalibrating, include array of five tables: unsehared, 1p, 1m, 2p, 2m

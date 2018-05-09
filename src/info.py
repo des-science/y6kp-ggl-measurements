@@ -10,7 +10,7 @@ Config and corresponding paths will be automatically
 defined depending on the mode used. 
 '''
 
-filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v1_4_6_18_subsampled.h5'
+filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v1_4_6_18.h5'
 
 mode = 'data'
 #mode = 'mice'
