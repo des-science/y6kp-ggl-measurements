@@ -2,7 +2,7 @@ import psutil
 import os
 import ipdb
 import numpy as np
-import pyfits as pf
+import astropy.io.fits as pf
 import pathos.multiprocessing as mp
 from multiprocessing import Manager
 import matplotlib.pyplot as plt
