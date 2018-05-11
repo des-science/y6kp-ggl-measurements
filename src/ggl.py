@@ -576,7 +576,7 @@ class Measurement(GGL):
                 In this case there are no responses, so we set it to one.
                 """
                 R = 1.
-                source = pf.getdata(self.paths['mice'] + 'mice2_shear_bin%s.fits'%sbin[-1])
+                source = pf.getdata(self.paths['mice'] + 'mice2_shear_fullsample_bin%s.fits'%sbin[-1])
                 
             for l, lbin in enumerate(zbins['lbins']):
                 print 'Running measurement for lens %s.' % lbin

@@ -54,7 +54,7 @@ paths['y3'] = '../../ggl_results/'
 paths['y3_exp'] = '../../ggl_data/'
 paths['lens'] = paths['redmagic', '%s'%config_data['redmagic_v']] + 'lens.fits'
 paths['randoms'] = paths['redmagic', '%s'%config_data['redmagic_v']] + 'random.fits'
-paths['mice'] = '../../../y1_shear_tests/sims/mice/'
+paths['mice'] = '/global/project/projectdirs/des/y3-bias/mice2/' 
 paths['lens_mice'] = paths['mice'] + 'lens.fits'
 paths['randoms_mice'] = paths['mice'] + 'random.fits'
 
