@@ -570,6 +570,9 @@ class Measurement(GGL):
             if mode == 'data':
                 source = self.load_metacal_bin(source_all, calibrator, zlim_low=zbins[sbin][0], zlim_high=zbins[sbin][1])
                 R = source['Rmean']
+		rr = np.random.rand(len(source['ra']))
+		np.savetxt('radec',zip(source['ra'][rr<0.05],source['dec'][rr<0.05]))
+		print jhdas
 
             if mode == 'mice':
                 """
