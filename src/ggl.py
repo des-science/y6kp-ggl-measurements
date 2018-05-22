@@ -5,6 +5,8 @@ import numpy as np
 import astropy.io.fits as pf
 import pathos.multiprocessing as mp
 from multiprocessing import Manager
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 import scipy.stats
@@ -28,7 +30,7 @@ def make_directory(directory):
         os.makedirs(directory)
 
 
-plt.rc('text', usetex=True)
+plt.rc('text', usetex=False)
 plt.rc('font', family='serif')
 
 
@@ -668,44 +670,45 @@ class Measurement(GGL):
             for s in range(len(zbins['sbins'])):
 
                 path_test = self.get_path_test(zbins['lbins'][l], zbins['sbins'][s])
-                th, gt, err = np.loadtxt(path_test + 'mean_gt', unpack=True)
+                if os.path.isfile(path_test + 'mean_gt'):
+                    th, gt, err = np.loadtxt(path_test + 'mean_gt', unpack=True)
 
-                mask_neg = gt < 0
-                mask_pos = gt > 0
+                    mask_neg = gt < 0
+                    mask_pos = gt > 0
 
-                chi2, ndf = self.get_chi2(path_test, 'gt')
-                ax[j][l % 3].errorbar(th[mask_neg] * (1 + 0.05 * s), -gt[mask_neg], err[mask_neg], fmt='o', mfc='None',
-                                      mec=plt.get_cmap(cmap)(cmap_step * s), ecolor=plt.get_cmap(cmap)(cmap_step * s))
-                ax[j][l % 3].errorbar(th[mask_pos] * (1 + 0.05 * s), gt[mask_pos], err[mask_pos], fmt='o',
-                                      color=plt.get_cmap(cmap)(cmap_step * s),
-                                      mec=plt.get_cmap(cmap)(cmap_step * s), label=self.plotting['redshift_s'][s])
+                    chi2, ndf = self.get_chi2(path_test, 'gt')
+                    ax[j][l % 3].errorbar(th[mask_neg] * (1 + 0.05 * s), -gt[mask_neg], err[mask_neg], fmt='o', mfc='None',
+                                          mec=plt.get_cmap(cmap)(cmap_step * s), ecolor=plt.get_cmap(cmap)(cmap_step * s))
+                    ax[j][l % 3].errorbar(th[mask_pos] * (1 + 0.05 * s), gt[mask_pos], err[mask_pos], fmt='o',
+                                          color=plt.get_cmap(cmap)(cmap_step * s),
+                                          mec=plt.get_cmap(cmap)(cmap_step * s), label=self.plotting['redshift_s'][s])
 
-                ax[j][l % 3].set_xlim(2.5, 300)
-                ax[j][l % 3].set_ylim(10 ** (-6), 10 ** (-2))
-                ax[j][l % 3].set_xscale('log')
-                ax[j][l % 3].set_yscale('log')
+                    ax[j][l % 3].set_xlim(2.5, 300)
+                    ax[j][l % 3].set_ylim(10 ** (-6), 10 ** (-2))
+                    ax[j][l % 3].set_xscale('log')
+                    ax[j][l % 3].set_yscale('log')
 
-                ax[j][l % 3].text(0.5, 0.85, self.plotting['redshift_l'][l], horizontalalignment='center',
-                                  verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
-                ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
-                                  verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
+                    ax[j][l % 3].text(0.5, 0.85, self.plotting['redshift_l'][l], horizontalalignment='center',
+                                      verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
+                    ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
+                                      verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
 
-                if l % 3 > 0:  # In case we want to keep labels on the left y-axis
-                    ax[j][l % 3].yaxis.set_ticklabels([])  # to remove the ticks labels
-                if l < 2:
-                    ax[0][l].xaxis.set_ticklabels([])  # to remove the ticks labels
+                    if l % 3 > 0:  # In case we want to keep labels on the left y-axis
+                        ax[j][l % 3].yaxis.set_ticklabels([])  # to remove the ticks labels
+                    if l < 2:
+                        ax[0][l].xaxis.set_ticklabels([])  # to remove the ticks labels
 
-                ax[j][l % 3].set_xlabel(r'$\theta$ [arcmin]', size='large')
-                ax[j][0].set_ylabel(r'$\gamma_t (\theta)$', size='large')
-                ax[j][l % 3].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%d$'))
+                    ax[j][l % 3].set_xlabel(r'$\theta$ [arcmin]', size='large')
+                    ax[j][0].set_ylabel(r'$\gamma_t (\theta)$', size='large')
+                    ax[j][l % 3].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%d$'))
 
-                """
-                # Chi2
-                ax[j][l%3].text(0.25,0.3,r'Null $\chi^2$/ndf',
-                                horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 10)
-                ax[j][l%3].text(0.25,0.23 -0.06*s,r'$%0.1f/%d$'%(chi2, ndf),
-                         horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 12, color = plt.get_cmap(cmap)(cmap_step*s))
-                """
+                    """
+                    # Chi2
+                    ax[j][l%3].text(0.25,0.3,r'Null $\chi^2$/ndf',
+                                    horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 10)
+                    ax[j][l%3].text(0.25,0.23 -0.06*s,r'$%0.1f/%d$'%(chi2, ndf),
+                             horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 12, color = plt.get_cmap(cmap)(cmap_step*s))
+                    """
 
         ax[1][0].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
         ax[1][1].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
@@ -1900,9 +1903,9 @@ if run_measurement:
     print 'Running measurement...'
     gglensing = GGL(config, paths)
     measurement = Measurement(config, paths, zbins, plotting)
-    measurement.run()
+    #measurement.run()
     # measurement.save_boostfactors_2pointfile()
-    # measurement.plot()
+    measurement.plot()
     # measurement.plot_boostfactors()
     # measurement.plot_randoms()
     # measurement.plot_gammax()
