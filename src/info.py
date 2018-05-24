@@ -21,7 +21,7 @@ config_data = {
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'mastercat_v': filename_mastercat[53:-3], 
-    'redmagic_v': 'chi5_bright',
+    'redmagic_v': 'y1',
     'zslim_v': 'y1',
     'zs_v': 'bpz',
     'zllim_v': 'y1'
@@ -49,6 +49,9 @@ paths = {}
 paths['runs'] =  '../runs/' 
 paths['redmagic'] = '../lens_cats/redmagic/'
 paths['redmagic', 'chi5_bright'] = '../lens_cats/redmagic/chi5_bright/'
+paths['redmagic', 'highdens'] = '../lens_cats/redmagic/highdens/'
+paths['redmagic', 'highdens_original'] = '../lens_cats/redmagic/highdens_original/'
+paths['redmagic', 'y1'] = '../lens_cats/redmagic/y1/'
 paths['plots'] = '../plots/'
 paths['y3'] = '../../ggl_results/'
 paths['y3_exp'] = '../../ggl_data/'

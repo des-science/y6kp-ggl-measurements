@@ -218,7 +218,8 @@ class GGL(object):
                 print 'jk, nlens, nsource = ', jk, len(ra_l_jk), len(ra_s[bool_s])
                 cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
                 if mode == 'data':
-                    cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s], w=w[bool_s],
+                    if jk == 0: print 'Changing sign!'
+                    cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=-e1[bool_s], g2=e2[bool_s], w=w[bool_s],
                                              ra_units='deg', dec_units='deg')
                 if mode == 'mice':
                     cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=-e1[bool_s], g2=e2[bool_s], w=w[bool_s],
@@ -566,51 +567,50 @@ class Measurement(GGL):
             random_all = pf.getdata(self.paths['randoms_mice'])
 
         for sbin in zbins['sbins']:
-
-            print 'Running measurement for source %s.' % sbin
-
-            if mode == 'data':
-                source = self.load_metacal_bin(source_all, calibrator, zlim_low=zbins[sbin][0], zlim_high=zbins[sbin][1])
-                R = source['Rmean']
-		rr = np.random.rand(len(source['ra']))
-		np.savetxt('radec',zip(source['ra'][rr<0.05],source['dec'][rr<0.05]))
-		print jhdas
-
-            if mode == 'mice':
-                """
-                In this case there are no responses, so we set it to one.
-                """
-                R = 1.
-                source = pf.getdata(self.paths['mice'] + 'mice2_shear_fullsample_bin%s.fits'%sbin[-1])
-                
-            for l, lbin in enumerate(zbins['lbins']):
-                print 'Running measurement for lens %s.' % lbin
-                path_test = self.get_path_test(lbin, sbin)
-                make_directory(path_test)
-
-                lens = lens_all[(lens_all['z'] > zbins[lbin][0]) & (lens_all['z'] < zbins[lbin][1])]
-                theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
-                self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
-                gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
+            if sbin == 's3':
+                print 'Running measurement for source %s.' % sbin
 
                 if mode == 'data':
-                    random = random_all[(random_all['z'] > zbins[lbin][0]) & (random_all['z'] < zbins[lbin][1])]
+                    source = self.load_metacal_bin(source_all, calibrator, zlim_low=zbins[sbin][0], zlim_high=zbins[sbin][1])
+                    R = source['Rmean']
+                    rr = np.random.rand(len(source['ra']))
+                    np.savetxt('radec',zip(source['ra'][rr<0.05],source['dec'][rr<0.05]))
+
                 if mode == 'mice':
-                    random = random_all[l*len(random_all)/5:(l+1)*len(random_all)/5]
+                    """
+                    In this case there are no responses, so we set it to one.
+                    """
+                    R = 1.
+                    source = pf.getdata(self.paths['mice'] + 'mice2_shear_fullsample_bin%s.fits'%sbin[-1])
 
-                theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
-                self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, True)
-                gtnum_r, gxnum_r, wnum_r = self.numerators_jackknife(gts, gxs, weights)
+                for l, lbin in enumerate(zbins['lbins']):
+                    print 'Running measurement for lens %s.' % lbin
+                    path_test = self.get_path_test(lbin, sbin)
+                    make_directory(path_test)
 
-                gt_all = (gtnum / wnum) / R - (gtnum_r / wnum_r) / R
-                gx_all = (gxnum / wnum) / R - (gxnum_r / wnum_r) / R
+                    lens = lens_all[(lens_all['z'] > zbins[lbin][0]) & (lens_all['z'] < zbins[lbin][1])]
+                    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
+                    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
+                    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
 
-                bf_all = self.compute_boost_factor(lens['jk'], random['jk'], wnum, wnum_r)
+                    if mode == 'data':
+                        random = random_all[(random_all['z'] > zbins[lbin][0]) & (random_all['z'] < zbins[lbin][1])]
+                    if mode == 'mice':
+                        random = random_all[l*len(random_all)/5:(l+1)*len(random_all)/5]
 
-                self.process_run(gt_all, theta, path_test, 'gt')
-                self.process_run(gx_all, theta, path_test, 'gx')
-                self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
-                self.process_run(bf_all, theta, path_test, 'boost_factor')
+                    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
+                    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, True)
+                    gtnum_r, gxnum_r, wnum_r = self.numerators_jackknife(gts, gxs, weights)
+
+                    gt_all = (gtnum / wnum) / R - (gtnum_r / wnum_r) / R
+                    gx_all = (gxnum / wnum) / R - (gxnum_r / wnum_r) / R
+
+                    bf_all = self.compute_boost_factor(lens['jk'], random['jk'], wnum, wnum_r)
+
+                    self.process_run(gt_all, theta, path_test, 'gt')
+                    self.process_run(gx_all, theta, path_test, 'gx')
+                    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
+                    self.process_run(bf_all, theta, path_test, 'boost_factor')
 
     def save_boostfactors_2pointfile(self):
         """
@@ -1900,12 +1900,12 @@ run_size_snr = F
 run_sysmaps = F
 
 if run_measurement:
-    print 'Running measurement...'
+    print 'Starting measurement class...'
     gglensing = GGL(config, paths)
     measurement = Measurement(config, paths, zbins, plotting)
-    #measurement.run()
+    measurement.run()
     # measurement.save_boostfactors_2pointfile()
-    measurement.plot()
+    #measurement.plot()
     # measurement.plot_boostfactors()
     # measurement.plot_randoms()
     # measurement.plot_gammax()

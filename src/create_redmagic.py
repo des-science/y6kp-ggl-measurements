@@ -18,6 +18,7 @@ selector_rm = destest.Selector(params_rm,source_rm)
 
 zbins = zbins['lims']
 z_l = selector_rm.get_col('zredmagic')[0] 
+print len(z_l)
 maskzl = ((z_l>zbins[0])&(z_l<zbins[-1]))
 z_l = z_l[maskzl]
 ra_l = selector_rm.get_col('ra')[0][maskzl]
@@ -25,6 +26,7 @@ dec_l = selector_rm.get_col('dec')[0][maskzl]
 zerr_l = selector_rm.get_col('zredmagic_e')[0][maskzl] 
 ids = selector_rm.get_col('coadd_object_id')[0][maskzl]
 w_l = np.ones(len(ra_l))
+print len(z_l)
 
 param_file = 'destest_randoms.yaml'
 params_rmr = yaml.load(open(param_file))
@@ -64,6 +66,9 @@ if type(jk_l) is int:
 	jk_l = jk.jk(ra_l,dec_l,path)
 jk_r = jk.jk(ra_r,dec_r,path)
 
+
+print len(ra_l)
+print sjldf
 c1 = pf.Column(name='RA', format='E', array=ra_l)
 c2 = pf.Column(name='DEC', format='E', array=dec_l)
 c3 = pf.Column(name='Z', format='E', array=z_l)
