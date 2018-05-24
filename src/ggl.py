@@ -21,8 +21,8 @@ from info import paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode
 import sys
 import yaml
 
-sys.path.append('../../destest/')
-import destest
+#sys.path.append('../../destest/')
+#import destest
 
 
 def make_directory(directory):
@@ -217,9 +217,8 @@ class GGL(object):
 
                 print 'jk, nlens, nsource = ', jk, len(ra_l_jk), len(ra_s[bool_s])
                 cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
-                if mode == 'data':
-                    if jk == 0: print 'Changing sign!'
-                    cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=-e1[bool_s], g2=e2[bool_s], w=w[bool_s],
+                if mode == 'data' or mode=='data_y1sources':
+                    cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s], w=w[bool_s],
                                              ra_units='deg', dec_units='deg')
                 if mode == 'mice':
                     cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=-e1[bool_s], g2=e2[bool_s], w=w[bool_s],
@@ -262,7 +261,7 @@ class GGL(object):
         gxs = [manager.list() for x in range(self.config['njk'])]
         errs = [manager.list() for x in range(self.config['njk'])]
 
-        p = mp.Pool(1, worker_init)
+        p = mp.Pool(10, worker_init)
         p.map(run_jki, range(self.config['njk']))
         p.close()
 
@@ -562,6 +561,10 @@ class Measurement(GGL):
             random_all = pf.getdata(self.paths['randoms'])
             source_all, calibrator = self.load_metacal()
 
+        if mode == 'data_y1sources':
+            lens_all = pf.getdata(self.paths['lens'])
+            random_all = pf.getdata(self.paths['randoms'])
+
         if mode == 'mice':
             lens_all = pf.getdata(self.paths['lens_mice'])
             random_all = pf.getdata(self.paths['randoms_mice'])
@@ -575,6 +578,10 @@ class Measurement(GGL):
                     R = source['Rmean']
                     rr = np.random.rand(len(source['ra']))
                     np.savetxt('radec',zip(source['ra'][rr<0.05],source['dec'][rr<0.05]))
+
+                if mode == 'data_y1sources':
+                    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
+                    R = 1.
 
                 if mode == 'mice':
                     """

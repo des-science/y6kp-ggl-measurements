@@ -12,7 +12,8 @@ defined depending on the mode used.
 
 filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v1_4_6_18.h5'
 
-mode = 'data'
+#mode = 'data'
+mode = 'data_y1sources'
 #mode = 'mice'
 
 config_data = {
@@ -20,8 +21,9 @@ config_data = {
     'bslop': 0.1,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
-    'mastercat_v': filename_mastercat[53:-3], 
-    'redmagic_v': 'y1',
+    #'mastercat_v': filename_mastercat[53:-3], 
+    'mastercat_v': 'y1sources', 
+    'redmagic_v': 'highdens_original',
     'zslim_v': 'y1',
     'zs_v': 'bpz',
     'zllim_v': 'y1'
@@ -42,10 +44,13 @@ config_mice = {
 
 if mode == 'data':
     config = config_data
+if mode == 'data_y1sources':
+    config = config_data
 if mode == 'mice':
     config = config_mice
 
 paths = {}
+paths['y1'] = '/Volumes/Data/y1_shear_tests/cats/jk/test_mcal_bpzmof_unblind/'
 paths['runs'] =  '../runs/' 
 paths['redmagic'] = '../lens_cats/redmagic/'
 paths['redmagic', 'chi5_bright'] = '../lens_cats/redmagic/chi5_bright/'
@@ -70,9 +75,12 @@ paths['config_mice'] = os.path.join('mice', 'v_%s'%config_mice['version'], 'zsli
                         'redmagic_%s'%config_mice['redmagic_v'], 'zllim_%s'%config_mice['zllim_v'], 'njk_%d'%config_mice['njk'],
                         'thbin_%0.1f_%d_%d'%(config_mice['thlims'][0], config_mice['thlims'][1], config_mice['nthbins']),
                         'bslop_%0.1g'%config_mice['bslop']) 
-
-paths['runs_config'] = os.path.join(paths['runs'], paths['config_%s'%mode]) + '/'
-paths['plots_config'] = os.path.join(paths['plots'], paths['config_%s'%mode]) + '/'
+if mode != 'data_y1sources': 
+    paths['runs_config'] = os.path.join(paths['runs'], paths['config_%s'%mode]) + '/'
+    paths['plots_config'] = os.path.join(paths['plots'], paths['config_%s'%mode]) + '/'
+if mode == 'data_y1sources': 
+    paths['runs_config'] = os.path.join(paths['runs'], paths['config_data']) + '/'
+    paths['plots_config'] = os.path.join(paths['plots'], paths['config_data']) + '/'
 
 zbins = {}
 zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5']
