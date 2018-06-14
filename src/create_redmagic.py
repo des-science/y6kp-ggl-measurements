@@ -10,25 +10,49 @@ import kmeans_radec
 import os
 import jk
 
-param_file = 'destest_redmagic.yaml'
-params_rm = yaml.load(open(param_file))
-params_rm['param_file'] = param_file
-source_rm = destest.H5Source(params_rm)
-selector_rm = destest.Selector(params_rm,source_rm)
+mcal_file = 'destest_mcal.yaml'
+params_mcal = yaml.load(open(mcal_file))
+params_mcal['param_file'] = mcal_file
+source_mcal = destest.H5Source(params_mcal)
+source_selector = destest.Selector(params_mcal,source_mcal)
+source_calibrator = destest.MetaCalib(params_mcal,source_selector)
+
+gold_file = 'destest_gold.yaml'
+params_gold = yaml.load(open(gold_file))
+params_gold['param_file'] = gold_file
+source_gold = destest.H5Source(params_gold)
+gold_selector = destest.Selector(params_gold,source_gold,inherit=source_selector)
+
+lens_file = 'destest_redmagic.yaml'
+params_lens = yaml.load(open(lens_file))
+params_lens['param_file'] = lens_file
+source_lens = destest.H5Source(params_lens)
+lens_selector = destest.Selector(params_lens,source_lens)
+lens_calibrator = destest.NoCalib(params_lens,lens_selector)
+
+w_l = lens_calibrator.calibrate('x',weight_only=True)
+gmask = lens_calibrator.selector.get_match()
+# ra, dec from Gold have better precision
+# They have same ordering as the redmagic columns
+ra_l = gold_selector.source.read('ra')[0][gmask]
+dec_l = gold_selector.source.read('dec')[0][gmask]
+z_l = lens_selector.get_col('zredmagic')[0]
+zerr_l = lens_selector.get_col('zredmagic_e')[0]
+ids = lens_selector.get_col('coadd_object_id')[0]
+assert len(ra_l)==len(ids), 'Something is wrong.' 
 
 zbins = zbins['lims']
-z_l = selector_rm.get_col('zredmagic')[0] 
-print len(z_l)
 maskzl = ((z_l>zbins[0])&(z_l<zbins[-1]))
+ra_l = ra_l[maskzl]
+dec_l = dec_l[maskzl]
 z_l = z_l[maskzl]
-ra_l = selector_rm.get_col('ra')[0][maskzl]
-dec_l = selector_rm.get_col('dec')[0][maskzl] 
-zerr_l = selector_rm.get_col('zredmagic_e')[0][maskzl] 
-ids = selector_rm.get_col('coadd_object_id')[0][maskzl]
-w_l = np.ones(len(ra_l))
-print len(z_l)
+zerr_l = zerr_l[maskzl]
+ids = ids[maskzl]
+if w_l==1:
+    w_l = [w_l]*len(ra_l)
+    print w_l
 
-param_file = 'destest_randoms.yaml'
+param_file = 'destest_random.yaml'
 params_rmr = yaml.load(open(param_file))
 params_rmr['param_file'] = param_file
 source_rmr = destest.H5Source(params_rmr)
@@ -55,10 +79,10 @@ ra_r = np.concatenate([ra_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i 
 dec_r = np.concatenate([dec_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i in range(len(zbins)-1)]) 
 z_r = np.concatenate([z_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i in range(len(zbins)-1)]) 
 
-path = '../lens_cats/redmagic/%s'%params_rm['table'][0]
+path = '../lens_cats/redmagic/%s'%params_lens['table'][0]
 os.system('mkdir %s'%path)
 with open("%s/version_name"%path, "w") as text_file:
-    text_file.write("%s"%params_rm['filename'])
+    text_file.write("%s"%params_lens['filename'])
 
 jk_l = jk.jk(ra_l,dec_l,path)
 if type(jk_l) is int: 
@@ -67,8 +91,8 @@ if type(jk_l) is int:
 jk_r = jk.jk(ra_r,dec_r,path)
 
 
-print len(ra_l)
-print sjldf
+print 'Number of lenses:', len(ra_l)
+
 c1 = pf.Column(name='RA', format='E', array=ra_l)
 c2 = pf.Column(name='DEC', format='E', array=dec_l)
 c3 = pf.Column(name='Z', format='E', array=z_l)

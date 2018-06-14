@@ -20,9 +20,8 @@ import functions
 from info import paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode
 import sys
 import yaml
-
-#sys.path.append('../../destest/')
-#import destest
+sys.path.append('../../destest/')
+import destest
 
 
 def make_directory(directory):
@@ -50,34 +49,38 @@ class GGL(object):
         Returns: dictionary for the sources, with all the relevant columns. 
         """
 
-        param_file = './destest_metacal.yaml'
-        params_mcal = yaml.load(open(param_file))
+        mcal_file = 'destest_mcal.yaml'
+        params_mcal = yaml.load(open(mcal_file))
+        params_mcal['param_file'] = mcal_file
         source_mcal = destest.H5Source(params_mcal)
-        selector_mcal = destest.Selector(params_mcal, source_mcal)
+        source_selector = destest.Selector(params_mcal,source_mcal)
+        source_calibrator = destest.MetaCalib(params_mcal,source_selector)
 
-        param_file = './destest_bpz.yaml'
-        params_bpz = yaml.load(open(param_file))
-        source_bpz = destest.H5Source(params_bpz)
-        selector_bpz = destest.Selector(params_bpz, source_bpz, inherit=selector_mcal)
-
-        param_file = './destest_gold.yaml'
-        params_gold = yaml.load(open(param_file))
+        gold_file = 'destest_gold.yaml'
+        params_gold = yaml.load(open(gold_file))
+        params_gold['param_file'] = gold_file
         source_gold = destest.H5Source(params_gold)
-        selector_gold = destest.Selector(params_gold, source_gold, inherit=selector_mcal)
+        gold_selector = destest.Selector(params_gold,source_gold,inherit=source_selector)
+
+        param_file = './destest_pz.yaml'
+        params_pz = yaml.load(open(param_file))
+        source_pz = destest.H5Source(params_pz)
+        pz_selector = destest.Selector(params_pz, source_pz, inherit=source_selector)
+
 
         source = {}
-        source['ra'] = selector_gold.get_col('ra')[0]
-        source['dec'] = selector_gold.get_col('dec')[0]
-        source['e1'] = selector_mcal.get_col('e1')[0]
-        source['e2'] = selector_mcal.get_col('e2')[0]
-        source['psf_e1'] = selector_mcal.get_col('psf_e1')[0]
-        source['psf_e2'] = selector_mcal.get_col('psf_e2')[0]
-        source['snr'] = selector_mcal.get_col('snr')[0]
-        source['size'] = selector_mcal.get_col('size')[0]
-        source['bpz_mean'] = selector_bpz.get_col('zmean_sof')
-        source['bpz_zmc'] = selector_bpz.get_col('zmc_sof')
+        source['ra'] = gold_selector.get_col('ra')[0]
+        source['dec'] = gold_selector.get_col('dec')[0]
+        source['e1'] = source_selector.get_col('e1')[0]
+        source['e2'] = source_selector.get_col('e2')[0]
+        source['psf_e1'] = source_selector.get_col('psf_e1')[0]
+        source['psf_e2'] = source_selector.get_col('psf_e2')[0]
+        source['snr'] = source_selector.get_col('snr')[0]
+        source['size'] = source_selector.get_col('size')[0]
+        source['bpz_mean'] = pz_selector.get_col('zmean_sof')
+        source['bpz_zmc'] = pz_selector.get_col('zmc_sof')
 
-        calibrator = destest.MetaCalib(params_mcal, selector_mcal)
+        calibrator = destest.MetaCalib(params_mcal, source_selector)
         R11, _, _ = calibrator.calibrate('e1')
         R22, _, _ = calibrator.calibrate('e2')
         source['Rmean'] = np.mean([R11, R22])
@@ -576,8 +579,8 @@ class Measurement(GGL):
                 if mode == 'data':
                     source = self.load_metacal_bin(source_all, calibrator, zlim_low=zbins[sbin][0], zlim_high=zbins[sbin][1])
                     R = source['Rmean']
-                    rr = np.random.rand(len(source['ra']))
-                    np.savetxt('radec',zip(source['ra'][rr<0.05],source['dec'][rr<0.05]))
+                    #rr = np.random.rand(len(source['ra']))
+                    #np.savetxt('radec',zip(source['ra'][rr<0.05],source['dec'][rr<0.05]))
 
                 if mode == 'data_y1sources':
                     source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])

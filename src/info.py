@@ -10,20 +10,17 @@ Config and corresponding paths will be automatically
 defined depending on the mode used. 
 '''
 
-filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v1_4_6_18.h5'
-
-#mode = 'data'
-mode = 'data_y1sources'
-#mode = 'mice'
+filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v1_6_8_18_subsampled.h5'
+print filename_mastercat
+mode = 'data'
 
 config_data = {
     'njk': 100,
     'bslop': 0.1,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
-    #'mastercat_v': filename_mastercat[53:-3], 
-    'mastercat_v': 'y1sources', 
-    'redmagic_v': 'highdens_original',
+    'mastercat_v': filename_mastercat[53:-3], 
+    'redmagic_v': 'chi5_bright',
     'zslim_v': 'y1',
     'zs_v': 'bpz',
     'zllim_v': 'y1'
@@ -48,6 +45,8 @@ if mode == 'data_y1sources':
     config = config_data
 if mode == 'mice':
     config = config_mice
+
+print config
 
 paths = {}
 paths['y1'] = '/Volumes/Data/y1_shear_tests/cats/jk/test_mcal_bpzmof_unblind/'
