@@ -50,7 +50,6 @@ zerr_l = zerr_l[maskzl]
 ids = ids[maskzl]
 if w_l==1:
     w_l = [w_l]*len(ra_l)
-    print w_l
 
 param_file = 'destest_random.yaml'
 params_rmr = yaml.load(open(param_file))

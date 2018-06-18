@@ -99,7 +99,7 @@ zbins['s4'] = [0.90, 1.30]
 
 plotting = {}
 if mode == 'data':
-    plotting['catname'] = r'\textsc{Metacalibration}'
+    plotting['catname'] = r'Metacalibration'
 if mode == 'mice':
     plotting['catname'] = r'\textsc{MICE}'
 

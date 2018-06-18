@@ -558,7 +558,6 @@ class Measurement(GGL):
         return os.path.join(self.paths['runs_config'], 'measurement') + '/'
 
     def run(self):
-
         if mode == 'data':
             lens_all = pf.getdata(self.paths['lens'])
             random_all = pf.getdata(self.paths['randoms'])
@@ -573,54 +572,53 @@ class Measurement(GGL):
             random_all = pf.getdata(self.paths['randoms_mice'])
 
         for sbin in zbins['sbins']:
-            if sbin == 's3':
-                print 'Running measurement for source %s.' % sbin
+		print 'Running measurement for source %s.' % sbin
 
-                if mode == 'data':
-                    source = self.load_metacal_bin(source_all, calibrator, zlim_low=zbins[sbin][0], zlim_high=zbins[sbin][1])
-                    R = source['Rmean']
-                    #rr = np.random.rand(len(source['ra']))
-                    #np.savetxt('radec',zip(source['ra'][rr<0.05],source['dec'][rr<0.05]))
+		if mode == 'data':
+		    source = self.load_metacal_bin(source_all, calibrator, zlim_low=zbins[sbin][0], zlim_high=zbins[sbin][1])
+		    R = source['Rmean']
+		    #rr = np.random.rand(len(source['ra']))
+		    #np.savetxt('radec',zip(source['ra'][rr<0.05],source['dec'][rr<0.05]))
 
-                if mode == 'data_y1sources':
-                    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
-                    R = 1.
+		if mode == 'data_y1sources':
+		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
+		    R = 1.
 
-                if mode == 'mice':
-                    """
-                    In this case there are no responses, so we set it to one.
-                    """
-                    R = 1.
-                    source = pf.getdata(self.paths['mice'] + 'mice2_shear_fullsample_bin%s.fits'%sbin[-1])
+		if mode == 'mice':
+		    """
+		    In this case there are no responses, so we set it to one.
+		    """
+		    R = 1.
+		    source = pf.getdata(self.paths['mice'] + 'mice2_shear_fullsample_bin%s.fits'%sbin[-1])
 
-                for l, lbin in enumerate(zbins['lbins']):
-                    print 'Running measurement for lens %s.' % lbin
-                    path_test = self.get_path_test(lbin, sbin)
-                    make_directory(path_test)
+		for l, lbin in enumerate(zbins['lbins']):
+		    print 'Running measurement for lens %s.' % lbin
+		    path_test = self.get_path_test(lbin, sbin)
+		    make_directory(path_test)
 
-                    lens = lens_all[(lens_all['z'] > zbins[lbin][0]) & (lens_all['z'] < zbins[lbin][1])]
-                    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
-                    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
-                    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
+		    lens = lens_all[(lens_all['z'] > zbins[lbin][0]) & (lens_all['z'] < zbins[lbin][1])]
+		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
+		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
+		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
 
-                    if mode == 'data':
-                        random = random_all[(random_all['z'] > zbins[lbin][0]) & (random_all['z'] < zbins[lbin][1])]
-                    if mode == 'mice':
-                        random = random_all[l*len(random_all)/5:(l+1)*len(random_all)/5]
+		    if mode == 'data':
+			random = random_all[(random_all['z'] > zbins[lbin][0]) & (random_all['z'] < zbins[lbin][1])]
+		    if mode == 'mice':
+			random = random_all[l*len(random_all)/5:(l+1)*len(random_all)/5]
 
-                    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
-                    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, True)
-                    gtnum_r, gxnum_r, wnum_r = self.numerators_jackknife(gts, gxs, weights)
+		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
+		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, True)
+		    gtnum_r, gxnum_r, wnum_r = self.numerators_jackknife(gts, gxs, weights)
 
-                    gt_all = (gtnum / wnum) / R - (gtnum_r / wnum_r) / R
-                    gx_all = (gxnum / wnum) / R - (gxnum_r / wnum_r) / R
+		    gt_all = (gtnum / wnum) / R - (gtnum_r / wnum_r) / R
+		    gx_all = (gxnum / wnum) / R - (gxnum_r / wnum_r) / R
 
-                    bf_all = self.compute_boost_factor(lens['jk'], random['jk'], wnum, wnum_r)
+		    bf_all = self.compute_boost_factor(lens['jk'], random['jk'], wnum, wnum_r)
 
-                    self.process_run(gt_all, theta, path_test, 'gt')
-                    self.process_run(gx_all, theta, path_test, 'gx')
-                    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
-                    self.process_run(bf_all, theta, path_test, 'boost_factor')
+		    self.process_run(gt_all, theta, path_test, 'gt')
+		    self.process_run(gx_all, theta, path_test, 'gx')
+		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
+		    self.process_run(bf_all, theta, path_test, 'boost_factor')
 
     def save_boostfactors_2pointfile(self):
         """
@@ -698,13 +696,13 @@ class Measurement(GGL):
                     ax[j][l % 3].set_xscale('log')
                     ax[j][l % 3].set_yscale('log')
 
-                    ax[j][l % 3].text(0.5, 0.85, self.plotting['redshift_l'][l], horizontalalignment='center',
+                    ax[j][l % 3].text(0.5, 0.9, self.plotting['redshift_l'][l], horizontalalignment='center',
                                       verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
-                    ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
-                                      verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
+                    #ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
+                    #                  verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
 
-                    if l % 3 > 0:  # In case we want to keep labels on the left y-axis
-                        ax[j][l % 3].yaxis.set_ticklabels([])  # to remove the ticks labels
+                    #if l % 3 > 0:  # In case we want to keep labels on the left y-axis
+                    ax[j][l % 3].yaxis.set_ticklabels([])  # to remove the ticks labels
                     if l < 2:
                         ax[0][l].xaxis.set_ticklabels([])  # to remove the ticks labels
 
@@ -1854,7 +1852,8 @@ class TestSysMaps(GGL):
         Plots measurments compared to expected theory.
         Set up for four maps, and a single band.
         """
-        labels_cshort = r'\textsc{Metacal}'
+        #labels_cshort = r'\textsc{Metacal}'
+        labels_cshort = 'Metacal'
         fontsize = 16
         maps = ['airmass', 'fwhm', 'maglimit', 'skybrite']
         band = 'r'
@@ -1913,9 +1912,9 @@ if run_measurement:
     print 'Starting measurement class...'
     gglensing = GGL(config, paths)
     measurement = Measurement(config, paths, zbins, plotting)
-    measurement.run()
+    #measurement.run()
     # measurement.save_boostfactors_2pointfile()
-    #measurement.plot()
+    measurement.plot()
     # measurement.plot_boostfactors()
     # measurement.plot_randoms()
     # measurement.plot_gammax()
