@@ -1912,7 +1912,7 @@ if run_measurement:
     print 'Starting measurement class...'
     gglensing = GGL(config, paths)
     measurement = Measurement(config, paths, zbins, plotting)
-    #measurement.run()
+    measurement.run()
     # measurement.save_boostfactors_2pointfile()
     measurement.plot()
     # measurement.plot_boostfactors()

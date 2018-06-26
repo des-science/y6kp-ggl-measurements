@@ -10,17 +10,17 @@ Config and corresponding paths will be automatically
 defined depending on the mode used. 
 '''
 
-filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v1_6_8_18_subsampled.h5'
+filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v1_6_20_18_subsampled.h5'
 print filename_mastercat
 mode = 'data'
 
 config_data = {
-    'njk': 100,
+    'njk': 20,
     'bslop': 0.1,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'mastercat_v': filename_mastercat[53:-3], 
-    'redmagic_v': 'chi5_bright',
+    'redmagic_v': 'combined_sample_fid',
     'zslim_v': 'y1',
     'zs_v': 'bpz',
     'zllim_v': 'y1'
@@ -55,6 +55,7 @@ paths['redmagic'] = '../lens_cats/redmagic/'
 paths['redmagic', 'chi5_bright'] = '../lens_cats/redmagic/chi5_bright/'
 paths['redmagic', 'highdens'] = '../lens_cats/redmagic/highdens/'
 paths['redmagic', 'highdens_original'] = '../lens_cats/redmagic/highdens_original/'
+paths['redmagic', 'combined_sample_fid'] = '../lens_cats/redmagic/combined_sample_fid/' 
 paths['redmagic', 'y1'] = '../lens_cats/redmagic/y1/'
 paths['plots'] = '../plots/'
 paths['y3'] = '../../ggl_results/'
