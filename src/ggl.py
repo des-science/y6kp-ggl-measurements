@@ -76,7 +76,7 @@ class GGL(object):
         source['psf_e1'] = source_selector.get_col('psf_e1')[0]
         source['psf_e2'] = source_selector.get_col('psf_e2')[0]
         source['snr'] = source_selector.get_col('snr')[0]
-        source['size'] = source_selector.get_col('size')[0]
+        source['size'] = source_selector.get_col('T')[0]
         source['bpz_mean'] = pz_selector.get_col('zmean_sof')
         source['bpz_zmc'] = pz_selector.get_col('zmc_sof')
 
@@ -577,6 +577,7 @@ class Measurement(GGL):
 		if mode == 'data':
 		    source = self.load_metacal_bin(source_all, calibrator, zlim_low=zbins[sbin][0], zlim_high=zbins[sbin][1])
 		    R = source['Rmean']
+                    print 'R',  R
 		    #rr = np.random.rand(len(source['ra']))
 		    #np.savetxt('radec',zip(source['ra'][rr<0.05],source['dec'][rr<0.05]))
 

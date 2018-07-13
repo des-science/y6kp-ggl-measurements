@@ -34,7 +34,7 @@ cal_type   : 'None'
 # Type of data source. Currently only works for 'hdf5'
 source     : 'hdf5'
 # name of file
-filename   : '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v1_6_20_18_subsampled.h5'
+filename   : '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v2_6_20_18_subsampled.h5'
 # For hdf5, group name
 group      : 'randoms/redmagic' #change HERE! this changes the path inside the HDF5 file
 # if metacalibrating, include array of five tables: unsehared, 1p, 1m, 2p, 2m
@@ -45,7 +45,7 @@ table      : ['combined_sample_fid']
 
 # Selection 
 # optional direct path to select flags
-select_path : none
+select_path : 'index/redmagic/combined_sample_fid/random_select'
 # columns with which to mask the catalog
 select_cols : ['snr','snr','size_ratio','flags']
 # expressions by which to mask (must match 1-1 the list of select_cols)
@@ -54,7 +54,7 @@ select_exp   : ['10<col','col<100','col>0.5','col==0']
 
 # Catalog dicts
 # len 2 array with column names for ellipticity
-e           : ['e1','e2'] # Must exist at least as an empty list
+e           : ['e_1','e_2'] # Must exist at least as an empty list
 # len 2 array with column names for shear response (or m)
 Rg          : ['R11','R22']
 # len 2 array with column names for c (additive correction)

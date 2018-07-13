@@ -5,7 +5,7 @@ sys.path.append('../../destest/')
 sys.path.append('../../kmeans_radec/')
 import destest
 import pyfits as pf
-from info import zbins
+from info import zbins, config, filename_mastercat
 import kmeans_radec
 import os
 import jk
@@ -34,11 +34,13 @@ w_l = lens_calibrator.calibrate('x',weight_only=True)
 gmask = lens_calibrator.selector.get_match()
 # ra, dec from Gold have better precision
 # They have same ordering as the redmagic columns
-ra_l = gold_selector.source.read('ra')[0][gmask]
-dec_l = gold_selector.source.read('dec')[0][gmask]
+ra_l = gold_selector.source.read('ra')[0][gmask][lens_calibrator.selector.get_mask()[0]]
+dec_l = gold_selector.source.read('dec')[0][gmask][lens_calibrator.selector.get_mask()[0]]
+print len(ra_l)
 z_l = lens_selector.get_col('zredmagic')[0]
 zerr_l = lens_selector.get_col('zredmagic_e')[0]
 ids = lens_selector.get_col('coadd_object_id')[0]
+print len(ids)
 assert len(ra_l)==len(ids), 'Something is wrong.' 
 
 zbins = zbins['lims']
@@ -61,6 +63,7 @@ ra_r = selector_rmr.get_col('ra')[0]
 dec_r = selector_rmr.get_col('dec')[0] 
 z_r = selector_rmr.get_col('z')[0] 
 w_r = selector_rmr.get_col('weight')[0] 
+print 'w_r', w_r
 
 # Number of galaxies in each lens bin
 n_lens = np.array([len(ra_l[(z_l<zbins[i+1])&(z_l>zbins[i])]) for i in range(len(zbins)-1)])
@@ -78,10 +81,10 @@ ra_r = np.concatenate([ra_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i 
 dec_r = np.concatenate([dec_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i in range(len(zbins)-1)]) 
 z_r = np.concatenate([z_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i in range(len(zbins)-1)]) 
 
-path = '../lens_cats/redmagic/%s'%params_lens['table'][0]
-os.system('mkdir %s'%path)
-with open("%s/version_name"%path, "w") as text_file:
-    text_file.write("%s"%params_lens['filename'])
+path = '../lens_cats/redmagic/%s/%s/njk_%d/'%(filename_mastercat[53:-3], params_lens['table'][0],config['njk'])
+os.system('mkdir -p %s'%path)
+#with open("%s/version_name"%path, "w") as text_file:
+#    text_file.write("%s"%params_lens['filename'])
 
 jk_l = jk.jk(ra_l,dec_l,path)
 if type(jk_l) is int: 
