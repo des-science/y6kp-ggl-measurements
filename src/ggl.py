@@ -49,20 +49,20 @@ class GGL(object):
         Returns: dictionary for the sources, with all the relevant columns. 
         """
 
-        mcal_file = 'destest_mcal.yaml'
+        mcal_file = self.paths['yaml'] + 'destest_mcal.yaml'
         params_mcal = yaml.load(open(mcal_file))
         params_mcal['param_file'] = mcal_file
         source_mcal = destest.H5Source(params_mcal)
         source_selector = destest.Selector(params_mcal,source_mcal)
         source_calibrator = destest.MetaCalib(params_mcal,source_selector)
 
-        gold_file = 'destest_gold.yaml'
+        gold_file = self.paths['yaml'] + 'destest_gold.yaml'
         params_gold = yaml.load(open(gold_file))
         params_gold['param_file'] = gold_file
         source_gold = destest.H5Source(params_gold)
         gold_selector = destest.Selector(params_gold,source_gold,inherit=source_selector)
 
-        param_file = './destest_pz.yaml'
+        param_file = self.paths['yaml'] + './destest_pz.yaml'
         params_pz = yaml.load(open(param_file))
         source_pz = destest.H5Source(params_pz)
         pz_selector = destest.Selector(params_pz, source_pz, inherit=source_selector)

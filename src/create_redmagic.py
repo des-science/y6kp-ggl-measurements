@@ -5,25 +5,25 @@ sys.path.append('../../destest/')
 sys.path.append('../../kmeans_radec/')
 import destest
 import pyfits as pf
-from info import zbins, config, filename_mastercat
+from info import zbins, config, filename_mastercat, paths
 import kmeans_radec
 import os
 import jk
 
-mcal_file = 'destest_mcal.yaml'
+mcal_file = paths['yaml'] + 'destest_mcal.yaml'
 params_mcal = yaml.load(open(mcal_file))
 params_mcal['param_file'] = mcal_file
 source_mcal = destest.H5Source(params_mcal)
 source_selector = destest.Selector(params_mcal,source_mcal)
 source_calibrator = destest.MetaCalib(params_mcal,source_selector)
 
-gold_file = 'destest_gold.yaml'
+gold_file = paths['yaml'] + 'destest_gold.yaml'
 params_gold = yaml.load(open(gold_file))
 params_gold['param_file'] = gold_file
 source_gold = destest.H5Source(params_gold)
 gold_selector = destest.Selector(params_gold,source_gold,inherit=source_selector)
 
-lens_file = 'destest_redmagic.yaml'
+lens_file = paths['yaml'] + 'destest_redmagic.yaml'
 params_lens = yaml.load(open(lens_file))
 params_lens['param_file'] = lens_file
 source_lens = destest.H5Source(params_lens)
@@ -53,7 +53,7 @@ ids = ids[maskzl]
 if w_l==1:
     w_l = [w_l]*len(ra_l)
 
-param_file = 'destest_random.yaml'
+param_file = paths['yaml'] + 'destest_random.yaml'
 params_rmr = yaml.load(open(param_file))
 params_rmr['param_file'] = param_file
 source_rmr = destest.H5Source(params_rmr)
