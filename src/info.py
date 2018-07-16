@@ -61,7 +61,7 @@ paths['randoms'] = paths['redmagic', '%s'%config_data['redmagic_v']] + 'random.f
 paths['mice'] = '/global/project/projectdirs/des/y3-bias/mice2/' 
 paths['lens_mice'] = paths['mice'] + 'lens.fits'
 paths['randoms_mice'] = paths['mice'] + 'random.fits'
-
+paths['yaml'] = destest + config['mastercat_v'] 
 paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
                         'redmagic_%s'%config_data['redmagic_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
                         'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
