@@ -1914,11 +1914,11 @@ if run_measurement:
     gglensing = GGL(config, paths)
     measurement = Measurement(config, paths, zbins, plotting)
     measurement.run()
-    # measurement.save_boostfactors_2pointfile()
+    measurement.save_boostfactors_2pointfile()
     measurement.plot()
-    # measurement.plot_boostfactors()
-    # measurement.plot_randoms()
-    # measurement.plot_gammax()
+    measurement.plot_boostfactors()
+    measurement.plot_randoms()
+    measurement.plot_gammax()
 
 if run_responses_nk:
     responses = Responses(config, paths, zbins, plotting)
