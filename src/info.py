@@ -10,7 +10,7 @@ Config and corresponding paths will be automatically
 defined depending on the mode used. 
 '''
 
-filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v1_6_20_18_subsampled.h5'
+filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v2_6_20_18_subsampled.h5'
 print filename_mastercat
 mode = 'data'
 

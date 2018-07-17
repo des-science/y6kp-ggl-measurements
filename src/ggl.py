@@ -71,8 +71,12 @@ class GGL(object):
         source = {}
         source['ra'] = gold_selector.get_col('ra')[0]
         source['dec'] = gold_selector.get_col('dec')[0]
-        source['e1'] = source_selector.get_col('e1')[0]
-        source['e2'] = source_selector.get_col('e2')[0]
+        if 'v1' in self.config['mastercat_v']:
+            source['e1'] = source_selector.get_col('e1')[0]
+            source['e2'] = source_selector.get_col('e2')[0]
+        if 'v2' in self.config['mastercat_v']:
+            source['e1'] = source_selector.get_col('e_1')[0]
+            source['e2'] = source_selector.get_col('e_2')[0]
         source['psf_e1'] = source_selector.get_col('psf_e1')[0]
         source['psf_e2'] = source_selector.get_col('psf_e2')[0]
         source['snr'] = source_selector.get_col('snr')[0]
@@ -81,8 +85,12 @@ class GGL(object):
         source['bpz_zmc'] = pz_selector.get_col('zmc_sof')
 
         calibrator = destest.MetaCalib(params_mcal, source_selector)
-        R11, _, _ = calibrator.calibrate('e1')
-        R22, _, _ = calibrator.calibrate('e2')
+        if 'v1' in self.config['mastercat_v']:
+            R11, _, _ = calibrator.calibrate('e1')
+            R22, _, _ = calibrator.calibrate('e2')
+        if 'v2' in self.config['mastercat_v']:
+            R11, _, _ = calibrator.calibrate('e_1')
+            R22, _, _ = calibrator.calibrate('e_2')
         source['Rmean'] = np.mean([R11, R22])
 
         return source, calibrator
@@ -110,8 +118,12 @@ class GGL(object):
         source_bin['bpz_mean'] = source['bpz_mean'][0][photoz_masks[0]]
         source_bin['bpz_zmc'] = source['bpz_zmc'][0][photoz_masks[0]]
 
-        R11, _, _ = calibrator.calibrate('e1', mask=photoz_masks)
-        R22, _, _ = calibrator.calibrate('e2', mask=photoz_masks)
+        if 'v1' in self.config['mastercat_v']:
+            R11, _, _ = calibrator.calibrate('e1', mask=photoz_masks)
+            R22, _, _ = calibrator.calibrate('e2', mask=photoz_masks)
+        if 'v2' in self.config['mastercat_v']:
+            R11, _, _ = calibrator.calibrate('e_1', mask=photoz_masks)
+            R22, _, _ = calibrator.calibrate('e_2', mask=photoz_masks)
         source_bin['Rmean'] = np.mean([R11, R22])
         print 'Rmean = ', source_bin['Rmean']
 
@@ -1914,7 +1926,7 @@ if run_measurement:
     gglensing = GGL(config, paths)
     measurement = Measurement(config, paths, zbins, plotting)
     measurement.run()
-    measurement.save_boostfactors_2pointfile()
+    #measurement.save_boostfactors_2pointfile()
     measurement.plot()
     measurement.plot_boostfactors()
     measurement.plot_randoms()
