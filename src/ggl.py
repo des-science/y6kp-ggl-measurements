@@ -633,6 +633,42 @@ class Measurement(GGL):
 		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
 		    self.process_run(bf_all, theta, path_test, 'boost_factor')
 
+    def save_gammat_2pointfile(self):
+        """
+        Save the gammat measurements into the 2point format file.
+        """
+
+        gt_length = self.config['nthbins'] * len(self.zbins['lbins']) * len(self.zbins['sbins'])
+        gt_values = np.zeros(gt_length, dtype=float)
+        bin1 = np.zeros(gt_length, dtype=int)
+        bin2 = np.zeros_like(bin1)
+        angular_bin = np.zeros_like(bin1)
+        angle = np.zeros_like(gt_values)
+        dv_start = 0
+
+        for l in range(0, len(zbins['lbins'])):
+            for s in range(len(zbins['sbins'])):
+                path_test = self.get_path_test(zbins['lbins'][l], zbins['sbins'][s])
+                theta, gt, gt_err = np.loadtxt(path_test + 'mean_gt', unpack=True)
+
+                bin_pair_inds = np.arange(dv_start, dv_start + self.config['nthbins'])
+                gt_values[bin_pair_inds] = gt
+                bin1[bin_pair_inds] = l
+                bin2[bin_pair_inds] = s
+                angular_bin[bin_pair_inds] = np.arange(self.config['nthbins'])
+                angle[bin_pair_inds] = theta
+                dv_start += self.config['nthbins']
+
+        gammat = twopoint.SpectrumMeasurement('gammat', (bin1, bin2),
+                                                     (twopoint.Types.galaxy_position_real,
+                                                      twopoint.Types.galaxy_shear_plus_real),
+                                                     ['no_nz', 'no_nz'], 'SAMPLE', angular_bin, gt_values,
+                                                     angle=angle, angle_unit='arcmin')#, extra_cols=None)
+
+        path_save = self.get_path_test_allzbins()
+        filename = 'gammat.fits'
+        (gammat.to_fits()).writeto(path_save + filename)
+
     def save_boostfactors_2pointfile(self):
         """
         Save the boost factors into the 2point format file.
@@ -873,7 +909,7 @@ class Measurement(GGL):
                 chi2s.append(chi2)
         chi2s = np.array(chi2s)
         print len(chi2s)
-        ax[1].hist(chi2s, bins=6, color=colors[c], ec=colors[c], lw=2, normed=True, histtype='step', alpha=1,
+        ax[1].hist(chi2s, bins=10, color=colors[c], ec=colors[c], lw=2, normed=True, histtype='step', alpha=1,
                    label=labels[c])
 
         # Chi2 distribution
@@ -1925,12 +1961,13 @@ if run_measurement:
     print 'Starting measurement class...'
     gglensing = GGL(config, paths)
     measurement = Measurement(config, paths, zbins, plotting)
-    measurement.run()
+    #measurement.run()
     #measurement.save_boostfactors_2pointfile()
-    measurement.plot()
-    measurement.plot_boostfactors()
-    measurement.plot_randoms()
-    measurement.plot_gammax()
+    measurement.save_gammat_2pointfile()
+    #measurement.plot()
+    #measurement.plot_boostfactors()
+    #measurement.plot_randoms()
+    #measurement.plot_gammax()
 
 if run_responses_nk:
     responses = Responses(config, paths, zbins, plotting)
