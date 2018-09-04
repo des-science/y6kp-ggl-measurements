@@ -10,7 +10,7 @@ Config and corresponding paths will be automatically
 defined depending on the mode used. 
 '''
 
-filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v1_6_20_18.h5'
+filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v2_6_20_18.h5'
 print filename_mastercat
 mode = 'data'
 
@@ -51,7 +51,11 @@ print config
 paths = {}
 paths['y1'] = '/Volumes/Data/y1_shear_tests/cats/jk/test_mcal_bpzmof_unblind/'
 paths['runs'] =  '../runs/' 
-paths['redmagic', config['redmagic_v']] = '../lens_cats/redmagic/%s/%s/njk_%d/'%(config['mastercat_v'], config['redmagic_v'], config['njk'])
+if config['mastercat_v']=='v1_6_20_18': lens_filepath = 'v1_6_20_18' #it is because v1 and v2 only differ for the source sample
+if config['mastercat_v']=='v2_6_20_18': lens_filepath = 'v1_6_20_18' #it is because v1 and v2 only differ for the source sample
+# it is better to use the same exact file so jackknife regions are exactly the same
+paths['redmagic', config['redmagic_v']] = '../lens_cats/redmagic/%s/%s/njk_%d/'%(lens_filepath, config['redmagic_v'], config['njk'])
+print 'Lens file path used:', paths['redmagic', config['redmagic_v']]
 paths['redmagic', 'y1'] = '../lens_cats/redmagic/y1/'
 paths['plots'] = '../plots/'
 paths['y3'] = '../../ggl_results/'
