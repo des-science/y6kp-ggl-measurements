@@ -17,7 +17,7 @@ import signal
 import twopoint
 from scipy import interpolate
 import functions
-from info import paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode
+from info import paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode, filename_mastercat
 import sys
 import yaml
 sys.path.append('../../destest/')
@@ -52,6 +52,7 @@ class GGL(object):
         mcal_file = self.paths['yaml'] + 'destest_mcal.yaml'
         params_mcal = yaml.load(open(mcal_file))
         params_mcal['param_file'] = mcal_file
+        params_mcal['filename'] = filename_mastercat
         source_mcal = destest.H5Source(params_mcal)
         source_selector = destest.Selector(params_mcal,source_mcal)
         source_calibrator = destest.MetaCalib(params_mcal,source_selector)
@@ -59,14 +60,15 @@ class GGL(object):
         gold_file = self.paths['yaml'] + 'destest_gold.yaml'
         params_gold = yaml.load(open(gold_file))
         params_gold['param_file'] = gold_file
+        params_gold['filename'] = filename_mastercat
         source_gold = destest.H5Source(params_gold)
         gold_selector = destest.Selector(params_gold,source_gold,inherit=source_selector)
 
         param_file = self.paths['yaml'] + './destest_pz.yaml'
         params_pz = yaml.load(open(param_file))
+        params_pz['filename'] = filename_mastercat
         source_pz = destest.H5Source(params_pz)
         pz_selector = destest.Selector(params_pz, source_pz, inherit=source_selector)
-
 
         source = {}
         source['ra'] = gold_selector.get_col('ra')[0]
@@ -91,8 +93,9 @@ class GGL(object):
         if 'v2' in self.config['mastercat_v']:
             R11, _, _ = calibrator.calibrate('e_1')
             R22, _, _ = calibrator.calibrate('e_2')
+            
         source['Rmean'] = np.mean([R11, R22])
-
+        print 'Response full sample', source['Rmean']
         return source, calibrator
 
     def load_metacal_bin(self, source, calibrator, zlim_low, zlim_high):
@@ -125,6 +128,7 @@ class GGL(object):
             R11, _, _ = calibrator.calibrate('e_1', mask=photoz_masks)
             R22, _, _ = calibrator.calibrate('e_2', mask=photoz_masks)
         source_bin['Rmean'] = np.mean([R11, R22])
+        print 'Bin metacal'
         print 'Rmean = ', source_bin['Rmean']
 
         return source_bin
@@ -515,7 +519,7 @@ class GGL(object):
         make_directory(self.paths['plots_config'])
         plt.savefig(self.paths['plots_config'] + '%s.pdf' % name_plot, bbox_inches='tight')
         plt.savefig(self.paths['plots_config'] + '%s.png' % name_plot, bbox_inches='tight', dpi=400)
-
+        
     def load_sims(self):
         """
 	Loads the simulation measurements and covariance used to fit an amplitude to the data measurements.
@@ -610,6 +614,12 @@ class Measurement(GGL):
 		    make_directory(path_test)
 
 		    lens = lens_all[(lens_all['z'] > zbins[lbin][0]) & (lens_all['z'] < zbins[lbin][1])]
+                    plt.hist(lens['z']) 
+                    self.save_plot('lens_z' + lbin + sbin)
+                    plt.close()
+                    print lens['z']
+                    print lens['z'].shape
+
 		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
 		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
 		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
@@ -1962,10 +1972,10 @@ if run_measurement:
     gglensing = GGL(config, paths)
     measurement = Measurement(config, paths, zbins, plotting)
     #measurement.run()
-    #measurement.save_boostfactors_2pointfile()
-    measurement.save_gammat_2pointfile()
+    #measurement.save_boostfactors_2pointfile() #there is a bug here now
+    #measurement.save_gammat_2pointfile()
     #measurement.plot()
-    #measurement.plot_boostfactors()
+    measurement.plot_boostfactors()
     #measurement.plot_randoms()
     #measurement.plot_gammax()
 
