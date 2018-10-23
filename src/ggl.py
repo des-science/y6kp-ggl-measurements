@@ -614,11 +614,6 @@ class Measurement(GGL):
 		    make_directory(path_test)
 
 		    lens = lens_all[(lens_all['z'] > zbins[lbin][0]) & (lens_all['z'] < zbins[lbin][1])]
-                    plt.hist(lens['z']) 
-                    self.save_plot('lens_z' + lbin + sbin)
-                    plt.close()
-                    print lens['z']
-                    print lens['z'].shape
 
 		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
 		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
@@ -744,11 +739,11 @@ class Measurement(GGL):
                     mask_pos = gt > 0
 
                     chi2, ndf = self.get_chi2(path_test, 'gt')
-                    ax[j][l % 3].errorbar(th[mask_neg] * (1 + 0.05 * s), -gt[mask_neg], err[mask_neg], fmt='o', mfc='None',
-                                          mec=plt.get_cmap(cmap)(cmap_step * s), ecolor=plt.get_cmap(cmap)(cmap_step * s))
-                    ax[j][l % 3].errorbar(th[mask_pos] * (1 + 0.05 * s), gt[mask_pos], err[mask_pos], fmt='o',
+                    ax[j][l % 3].errorbar(th[mask_neg] * (1 + 0.05 * s), -gt[mask_neg], err[mask_neg], fmt='.', mfc='None',
+                                          mec=plt.get_cmap(cmap)(cmap_step * s), ecolor=plt.get_cmap(cmap)(cmap_step * s), capsize=2)
+                    ax[j][l % 3].errorbar(th[mask_pos] * (1 + 0.05 * s), gt[mask_pos], err[mask_pos], fmt='.',
                                           color=plt.get_cmap(cmap)(cmap_step * s),
-                                          mec=plt.get_cmap(cmap)(cmap_step * s), label=self.plotting['redshift_s'][s])
+                                          mec=plt.get_cmap(cmap)(cmap_step * s), label=self.plotting['redshift_s'][s], capsize=2)
 
                     ax[j][l % 3].set_xlim(2.5, 300)
                     ax[j][l % 3].set_ylim(10 ** (-6), 10 ** (-2))
@@ -802,7 +797,7 @@ class Measurement(GGL):
                 theta, bf, bf_err = np.loadtxt(path_test + 'mean_boost_factor', unpack=True)
 
                 ax[s][l].axhline(y=1, ls=':', color='k', alpha=1)
-                ax[s][l].errorbar(theta, bf, bf_err, fmt='o', color=c1, mec=c1, markersize=4)
+                ax[s][l].errorbar(theta, bf, bf_err, fmt='.', color=c1, mec=c1, capsize=2)
                 ax[s][l].set_xscale('log')
                 ax[s][l].set_xlim(self.config['thlims'][0], self.config['thlims'][1])
                 ax[s][l].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%0.0f$'))
@@ -908,7 +903,7 @@ class Measurement(GGL):
                    verticalalignment='center', transform=ax[0].transAxes, fontsize=12)
         ax[0].text(0.5, 0.92, self.plotting['redshift_s'][s], horizontalalignment='center',
                    verticalalignment='center', transform=ax[0].transAxes, fontsize=12)
-        ax[0].legend(frameon=False, fancybox=True, prop={'size': 13}, numpoints=1, loc='lower left')
+        ax[0].legend(frameon=False, fancybox=True, prop={'size': 10}, numpoints=1, loc='lower left')
 
         # BOTTOM panel
         chi2s = []
@@ -919,7 +914,7 @@ class Measurement(GGL):
                 chi2s.append(chi2)
         chi2s = np.array(chi2s)
         print len(chi2s)
-        ax[1].hist(chi2s, bins=10, color=colors[c], ec=colors[c], lw=2, normed=True, histtype='step', alpha=1,
+        ax[1].hist(chi2s, bins=7, color=colors[c], ec=colors[c], lw=2, normed=True, histtype='step', alpha=1,
                    label=labels[c])
 
         # Chi2 distribution
@@ -928,7 +923,7 @@ class Measurement(GGL):
         ax[1].fill_between(t, 0, scipy.stats.chi2.pdf(t, ndf), color='gray', alpha=0.5,
                            label='$\chi^2$ pdf (ndf$ = %d$)' % ndf)
         ax[1].set_ylim(0, 0.1)
-        ax[1].legend(frameon=False, fancybox=True, prop={'size': 13}, numpoints=1, loc='upper right')
+        ax[1].legend(frameon=False, fancybox=True, prop={'size': 10}, numpoints=1, loc='best')
         ax[1].set_xlabel(r'$\chi^2_\mathrm{Null}$')
         self.save_plot('plot_gammax')
 
@@ -1974,10 +1969,10 @@ if run_measurement:
     #measurement.run()
     #measurement.save_boostfactors_2pointfile() #there is a bug here now
     #measurement.save_gammat_2pointfile()
-    #measurement.plot()
+    measurement.plot()
     measurement.plot_boostfactors()
-    #measurement.plot_randoms()
-    #measurement.plot_gammax()
+    measurement.plot_randoms()
+    measurement.plot_gammax()
 
 if run_responses_nk:
     responses = Responses(config, paths, zbins, plotting)
