@@ -26,4 +26,11 @@ The tests included in this pipeline are (in parenthesis the subclass it belongs 
 - Split size and snr (TestSizeSNR)
 - Split in observing conditions, such as airmass, seeing, etc (TestSysMaps)
 
+Workflow: 
+1. Run `create_redmagic.py` (This creates the lens.fits and random.fits files, which are then used by `ggl.py`. These files contain the lens and random samples split into jackknife regions.)
+2. Run `ggl.py` (check the end of the file to change which tests to run). 
+
+Plot of 100 jackknife regions for Y3: 
+![alt text](jackknife_regions_lens.png)
+
 Please contact Carles Sanchez (carles.sanchez.alonso@gmail.com) or Judit Prat (jpratmarti@gmail.com) for comments or questions. 
