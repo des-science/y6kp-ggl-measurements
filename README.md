@@ -26,9 +26,13 @@ The tests included in this pipeline are (in parenthesis the subclass it belongs 
 - Split size and snr (TestSizeSNR)
 - Split in observing conditions, such as airmass, seeing, etc (TestSysMaps)
 
-Workflow: 
-1. Run `create_redmagic.py` (This creates the lens.fits and random.fits files, which are then used by `ggl.py`. These files contain the lens and random samples split into jackknife regions.)
-2. Run `ggl.py` (check the end of the file to change which tests to run). 
+Getting started: 
+1. Clone this repo at NERSC. It is strongly recommended that you run this at NERSC because the Y3 catalogs are there. Another option would be to download them to your local computer but the files are huge and they might get updated a few times. 
+2. Install the dependencies. In particular, it needs to have `destest` installed, which is another DES repo that handles the Y3 catalogs interface which can be cloned here: https://github.com/des-science/destest. It also needs `twopoint`: https://github.com/joezuntz/2point/tree/master, and other packages such as TreeCorr and other basic ones. 
+3. Run `create_redmagic.py`. This creates the lens.fits and random.fits files, which are then used by `ggl.py`. These files contain the lens and random samples split into jackknife regions.
+4. Run `ggl.py`. Check the end of the file to change which tests to run. For instance, if you only want to run the measurements and corresponding plots set the other tests to False. 
+5. If you want to push any changes, do it on the `develop` branch (to go to the develop branch you can do: git checkout develop), and when you are sure they are stable you can merge them to `master`. 
+
 
 Plot of 100 jackknife regions for Y3: 
 ![alt text](jackknife_regions_lens.png)
