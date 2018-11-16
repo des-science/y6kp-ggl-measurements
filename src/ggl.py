@@ -35,7 +35,7 @@ plt.rc('font', family='serif')
 
 class GGL(object):
     """
-    Basic class that has all the functions shared for several tests. 
+    Basic class that has all the functions shared for several tests.
     """
 
     def __init__(self, config, paths):
@@ -44,9 +44,9 @@ class GGL(object):
 
     def load_metacal(self):
         """
-        Loads metacal data for Y3 catalog using h5 interface. 
-        Combines with Gold and BPZ. 
-        Returns: dictionary for the sources, with all the relevant columns. 
+        Loads metacal data for Y3 catalog using h5 interface.
+        Combines with Gold and BPZ.
+        Returns: dictionary for the sources, with all the relevant columns.
         """
 
         mcal_file = self.paths['yaml'] + 'destest_mcal.yaml'
@@ -93,7 +93,7 @@ class GGL(object):
         if 'v2' in self.config['mastercat_v']:
             R11, _, _ = calibrator.calibrate('e_1')
             R22, _, _ = calibrator.calibrate('e_2')
-            
+
         source['Rmean'] = np.mean([R11, R22])
         print 'Response full sample', source['Rmean']
         return source, calibrator
@@ -101,8 +101,8 @@ class GGL(object):
     def load_metacal_bin(self, source, calibrator, zlim_low, zlim_high):
         """
         source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
-        calibrator: class to compute the response. Taken from baseline selection. 
-        zlim_low, zlim_high: limits to select the tomographic bin. 
+        calibrator: class to compute the response. Taken from baseline selection.
+        zlim_low, zlim_high: limits to select the tomographic bin.
         Obtains 5 masks (unsheared, sheared 1p, 1m, 2p, 2m) to obtain the new selection response.
         Returns: Source dictionary masked with the unsheared mask and with the mean response updated.
         """
@@ -115,7 +115,7 @@ class GGL(object):
         print 'e1', source_bin['e1']
         print 'e2', source_bin['e2']
         source_bin['psf_e1'] = source['psf_e1'][photoz_masks[0]]
-        source_bin['psf_e1'] = source['psf_e1'][photoz_masks[0]]
+        source_bin['psf_e2'] = source['psf_e2'][photoz_masks[0]]
         source_bin['snr'] = source['snr'][photoz_masks[0]]
         source_bin['size'] = source['size'][photoz_masks[0]]
         source_bin['bpz_mean'] = source['bpz_mean'][0][photoz_masks[0]]
@@ -169,12 +169,12 @@ class GGL(object):
 
     def run_treecorr_jackknife(self, lens, source, type_corr):
         """
-        Function that runs treecorr for a given lens and source sample, 
-        and a given configuration, and paralalizes the measurements 
+        Function that runs treecorr for a given lens and source sample,
+        and a given configuration, and paralalizes the measurements
         in different jackknife patches for the lenses and randoms.
-        Returns the measurements for each jackknife patch. 
+        Returns the measurements for each jackknife patch.
         type_corr: string, type of correlation, i.e. NG, NN.
-        NG for gammat, NN for wtheta. 
+        NG for gammat, NN for wtheta.
         """
         assert type_corr == 'NG' or type_corr == 'NN', 'This type_corr of correlation is not accepted by this function.'
 
@@ -182,7 +182,7 @@ class GGL(object):
 
         def worker_init():
             """
-            Function to easily kill the run when there is multiprocessing. 
+            Function to easily kill the run when there is multiprocessing.
             """
 
             def sig_int(signal_num, frame):
@@ -202,7 +202,7 @@ class GGL(object):
         def run_jki(jk):
             """
             Function we use for mutiprocessing.
-            jk: Region we run in each core. 
+            jk: Region we run in each core.
             """
 
             ra_l_jk = ra_l[jk_l == jk]
@@ -308,8 +308,8 @@ class GGL(object):
     def run_nk(self, lens, source):
         """
         Uses TreeCorr to compute the NK correlation between lens and source.
-        Used to compute scale dependece responses. 
-        Returns theta and R_nk. 
+        Used to compute scale dependece responses.
+        Returns theta and R_nk.
         """
 
         ra_l, dec_l, jk_l, w_l = self.get_lens(lens)
@@ -330,9 +330,9 @@ class GGL(object):
     def compute_Rs(self, e_ix):
         """
         Computes R_s.
-        e_ix: Dictionary per each component 1p, 1m, 2p, 2m. 
-        It can be averaged over all angular scales, or averaged in angular bins using NK correlation. 
-        Note: In Y1, e_ix is already divided by dgamma in another script, that's why we don't do it here, but might need to be changed for Y3. 
+        e_ix: Dictionary per each component 1p, 1m, 2p, 2m.
+        It can be averaged over all angular scales, or averaged in angular bins using NK correlation.
+        Note: In Y1, e_ix is already divided by dgamma in another script, that's why we don't do it here, but might need to be changed for Y3.
         """
         Rs11_mean = e_ix['1p'] - e_ix['1m']
         Rs22_mean = e_ix['2p'] - e_ix['2m']
@@ -352,8 +352,8 @@ class GGL(object):
 
     def save_responses_mean(self, Rgamma_mean, Rs_mean, sbin):
         """
-        Puts together Rgamma and Rs and saves them. 
-        Returns R_total. 
+        Puts together Rgamma and Rs and saves them.
+        Returns R_total.
         """
         R_mean = Rgamma_mean + Rs_mean
         responses = np.array([R_mean, Rgamma_mean, Rs_mean])
@@ -396,7 +396,7 @@ class GGL(object):
         Rgamma: (R11 + R22)/2 for each galaxy.
         Averages Rgamma in combination of all source bins and computes and averages R_s too.
         Then it computes the mean of R_total.
-        Saves R_total, Rgamma, R_s in file and returns R_total. 
+        Saves R_total, Rgamma, R_s in file and returns R_total.
         """
 
         print 'Be aware: Y1 mode of responses. Not dividing by dgamma here.'
@@ -424,7 +424,7 @@ class GGL(object):
     def save_runs(self, path_test, theta, gts, gxs, errs, weights, npairs, random_bool):
         """
         Function to save the measurements in each jk patch.
-        Currently not used, just useful for debugging sometimes. 
+        Currently not used, just useful for debugging sometimes.
         """
         rp = '_rp' if random_bool else ''
         np.savetxt(path_test + 'theta' + rp, theta, header='theta [arcmin]')
@@ -438,7 +438,7 @@ class GGL(object):
         """
         Computes the boost factor for a given set of weights for the lenses and randoms.
         Uses Eq. from Sheldon et al. (2004)
-        It does so for each N-1 jk regions. 
+        It does so for each N-1 jk regions.
         """
 
         bf_jk = []
@@ -460,7 +460,7 @@ class GGL(object):
         Returns:
         Theta, and the numerators of gt, gx and weights, to be combined later.
         """
-        # Obtain the numerators 
+        # Obtain the numerators
         gts = gts * ws
         gxs = gxs * ws
 
@@ -473,7 +473,7 @@ class GGL(object):
 
     def process_run(self, all, theta, path_test, end):
         """
-        From the jackknife measurements in all jackknife regions but all, constructs covariance, mean and stats. 
+        From the jackknife measurements in all jackknife regions but all, constructs covariance, mean and stats.
         Saves them into file.
         all: gt_all or gx_all.
         theta: in arcmin.
@@ -505,7 +505,7 @@ class GGL(object):
 
     def get_chi2(self, path_test, end):
         """
-        Load chi2 and degrees of freedom for a certain lens and source bin and test. 
+        Load chi2 and degrees of freedom for a certain lens and source bin and test.
         end: string like: gt, gx, randoms.
         """
         chi2, ndf = np.loadtxt(path_test + 'null_chi2_%s' % end, unpack=True)
@@ -513,17 +513,17 @@ class GGL(object):
 
     def save_plot(self, name_plot):
         """
-        Saves plot in pdf and png and creates directory to save it if it doesn't exist. 
+        Saves plot in pdf and png and creates directory to save it if it doesn't exist.
         """
 
         make_directory(self.paths['plots_config'])
         plt.savefig(self.paths['plots_config'] + '%s.pdf' % name_plot, bbox_inches='tight')
         plt.savefig(self.paths['plots_config'] + '%s.png' % name_plot, bbox_inches='tight', dpi=400)
-        
+
     def load_sims(self):
         """
 	Loads the simulation measurements and covariance used to fit an amplitude to the data measurements.
-        Function used in TestSizeSNR and TestSysMaps. 
+        Function used in TestSizeSNR and TestSysMaps.
 	"""
         sims = np.loadtxt(self.paths['sims'], unpack=True, usecols=(1,))
         cov_sims = np.loadtxt(self.paths['cov_sims'])
@@ -531,8 +531,8 @@ class GGL(object):
 
     def ratio_from_sims(self, theta, gtl_all, gth_all, sims, cov_sims):
         """
-	Computes the ratio of measurements of the splits (high/low) by computing the ratio of the corresponding amplitudes with respect to the simulation measurements.   
-        Function used in TestSizeSNR and TestSysMaps. 
+	Computes the ratio of measurements of the splits (high/low) by computing the ratio of the corresponding amplitudes with respect to the simulation measurements.
+        Function used in TestSizeSNR and TestSysMaps.
 	"""
         ratioA_all = np.zeros(len(gth_all))
         chi2fit_h = np.zeros(len(gth_all))
@@ -554,12 +554,12 @@ class GGL(object):
 
 class Measurement(GGL):
     """
-    Subclass that runs the gglensing measurement for all the lens-source bin combinations. 
+    Subclass that runs the gglensing measurement for all the lens-source bin combinations.
     Includes:
     - Mean response calculation.
     - Random points subtraction.
     - Jackknife covariance calculation.
-    - Boost factors calculation. 
+    - Boost factors calculation.
     """
 
     def __init__(self, config, paths, zbins, plotting):
@@ -588,55 +588,55 @@ class Measurement(GGL):
             random_all = pf.getdata(self.paths['randoms_mice'])
 
         for sbin in zbins['sbins']:
-		print 'Running measurement for source %s.' % sbin
+    		print 'Running measurement for source %s.' % sbin
 
-		if mode == 'data':
-		    source = self.load_metacal_bin(source_all, calibrator, zlim_low=zbins[sbin][0], zlim_high=zbins[sbin][1])
-		    R = source['Rmean']
-                    print 'R',  R
-		    #rr = np.random.rand(len(source['ra']))
-		    #np.savetxt('radec',zip(source['ra'][rr<0.05],source['dec'][rr<0.05]))
+    		if mode == 'data':
+    		    source = self.load_metacal_bin(source_all, calibrator, zlim_low=zbins[sbin][0], zlim_high=zbins[sbin][1])
+    		    R = source['Rmean']
+                        print 'R',  R
+    		    #rr = np.random.rand(len(source['ra']))
+    		    #np.savetxt('radec',zip(source['ra'][rr<0.05],source['dec'][rr<0.05]))
 
-		if mode == 'data_y1sources':
-		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
-		    R = 1.
+    		if mode == 'data_y1sources':
+    		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
+    		    R = 1.
 
-		if mode == 'mice':
-		    """
-		    In this case there are no responses, so we set it to one.
-		    """
-		    R = 1.
-		    source = pf.getdata(self.paths['mice'] + 'mice2_shear_fullsample_bin%s.fits'%sbin[-1])
+    		if mode == 'mice':
+    		    """
+    		    In this case there are no responses, so we set it to one.
+    		    """
+    		    R = 1.
+    		    source = pf.getdata(self.paths['mice'] + 'mice2_shear_fullsample_bin%s.fits'%sbin[-1])
 
-		for l, lbin in enumerate(zbins['lbins']):
-		    print 'Running measurement for lens %s.' % lbin
-		    path_test = self.get_path_test(lbin, sbin)
-		    make_directory(path_test)
+    		for l, lbin in enumerate(zbins['lbins']):
+    		    print 'Running measurement for lens %s.' % lbin
+    		    path_test = self.get_path_test(lbin, sbin)
+    		    make_directory(path_test)
 
-		    lens = lens_all[(lens_all['z'] > zbins[lbin][0]) & (lens_all['z'] < zbins[lbin][1])]
+    		    lens = lens_all[(lens_all['z'] > zbins[lbin][0]) & (lens_all['z'] < zbins[lbin][1])]
 
-		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
-		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
-		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
+    		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
+    		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
+    		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
 
-		    if mode == 'data':
-			random = random_all[(random_all['z'] > zbins[lbin][0]) & (random_all['z'] < zbins[lbin][1])]
-		    if mode == 'mice':
-			random = random_all[l*len(random_all)/5:(l+1)*len(random_all)/5]
+    		    if mode == 'data':
+    			random = random_all[(random_all['z'] > zbins[lbin][0]) & (random_all['z'] < zbins[lbin][1])]
+    		    if mode == 'mice':
+    			random = random_all[l*len(random_all)/5:(l+1)*len(random_all)/5]
 
-		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
-		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, True)
-		    gtnum_r, gxnum_r, wnum_r = self.numerators_jackknife(gts, gxs, weights)
+    		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
+    		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, True)
+    		    gtnum_r, gxnum_r, wnum_r = self.numerators_jackknife(gts, gxs, weights)
 
-		    gt_all = (gtnum / wnum) / R - (gtnum_r / wnum_r) / R
-		    gx_all = (gxnum / wnum) / R - (gxnum_r / wnum_r) / R
+    		    gt_all = (gtnum / wnum) / R - (gtnum_r / wnum_r) / R
+    		    gx_all = (gxnum / wnum) / R - (gxnum_r / wnum_r) / R
 
-		    bf_all = self.compute_boost_factor(lens['jk'], random['jk'], wnum, wnum_r)
+    		    bf_all = self.compute_boost_factor(lens['jk'], random['jk'], wnum, wnum_r)
 
-		    self.process_run(gt_all, theta, path_test, 'gt')
-		    self.process_run(gx_all, theta, path_test, 'gx')
-		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
-		    self.process_run(bf_all, theta, path_test, 'boost_factor')
+    		    self.process_run(gt_all, theta, path_test, 'gt')
+    		    self.process_run(gx_all, theta, path_test, 'gx')
+    		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
+    		    self.process_run(bf_all, theta, path_test, 'boost_factor')
 
     def save_gammat_2pointfile(self):
         """
@@ -712,7 +712,7 @@ class Measurement(GGL):
 
     def plot(self):
         """"
-        Makes plot of the fiducial measurement for all redshift bins. 
+        Makes plot of the fiducial measurement for all redshift bins.
         """
 
         cmap = self.plotting['cmap']
@@ -868,7 +868,7 @@ class Measurement(GGL):
         """
         Makes plot of the cross-component gammax.
         Top panel: Plot of the gammax measurement for a single lens-source combination.
-        Bottom panel: chi2 distribution from all lens-source combinations. 
+        Bottom panel: chi2 distribution from all lens-source combinations.
         """
 
         labels = [plotting['catname']]
@@ -930,7 +930,7 @@ class Measurement(GGL):
 
 class Responses(GGL):
     """
-    Subclass that obtains the scale dependence responses (NK correlations) for all the lens-source bin combinations. Both for randoms and lenses. 
+    Subclass that obtains the scale dependence responses (NK correlations) for all the lens-source bin combinations. Both for randoms and lenses.
     """
 
     def __init__(self, config, paths, zbins, plotting):
@@ -977,8 +977,8 @@ class Responses(GGL):
 
     def plot(self, lens_random):
         """
-        Makes plot comparing the NK responses to the mean ones. 
-        lens_random: string, can be lens or random. 
+        Makes plot comparing the NK responses to the mean ones.
+        lens_random: string, can be lens or random.
         Indicates which is the foreground sample when computing the NK correlations.
         """
 
@@ -1027,8 +1027,8 @@ class Responses(GGL):
 
 class TestStars(GGL):
     """
-    SubClass to test if the tangential shear around stars is consistent with zero. 
-    Uses no tomography for the source sample. 
+    SubClass to test if the tangential shear around stars is consistent with zero.
+    Uses no tomography for the source sample.
     """
 
     def __init__(self, config, paths, zbins, plotting):
@@ -1042,7 +1042,7 @@ class TestStars(GGL):
     def run(self, typestars):
 
         """
-        Runs the gglensing measurement with stars as lenses and the full source sample. 
+        Runs the gglensing measurement with stars as lenses and the full source sample.
         typestars: string that indicates which stars to load. Either 'bright' or 'faint'.
         Includes:
         - Mean response calculation for the full sample.
@@ -1074,7 +1074,7 @@ class TestStars(GGL):
 
     def plot(self):
         """
-        Make plot for all the stars test. 
+        Make plot for all the stars test.
         """
 
         types = ['bright', 'faint']
@@ -1114,7 +1114,7 @@ class TestStars(GGL):
 
 class TestPSF(GGL):
     """
-    SubClass to test if the psf residuals are compatible with zero. 
+    SubClass to test if the psf residuals are compatible with zero.
     Uses no tomography for the lens sample.
     """
 
@@ -1128,7 +1128,7 @@ class TestPSF(GGL):
 
     def save_psf_residuals(self, ra_lims, dec_lims):
         """
-        Computes the psf residuals for the r band and saves them to a file. 
+        Computes the psf residuals for the r band and saves them to a file.
         """
 
         info = pf.open(paths['y1base'] + 'cats/y1a1-v13/exposure_info_y1a1-v13.fits')[1].data
@@ -1140,7 +1140,7 @@ class TestPSF(GGL):
         min_ra, max_ra = ra_lims
         min_dec, max_dec = dec_lims
 
-        # Use only r-band 
+        # Use only r-band
         mask_info = (fil == 'r')
         exp = exp[mask_info]
         print 'Only r band:', len(exp)
@@ -1161,7 +1161,7 @@ class TestPSF(GGL):
             e2 = data['e2']
             psf1 = data['psf_e1']
             psf2 = data['psf_e2']
-            # Resiual psf is the difference between the measurement of the psf (e1) and the model of the psf(psfex) 
+            # Resiual psf is the difference between the measurement of the psf (e1) and the model of the psf(psfex)
             # at the position of the stars, that is the only place you can measure the psf
             res1 = e1 - psf1
             res2 = e2 - psf2
@@ -1425,7 +1425,7 @@ class TestPSF(GGL):
 
     def plot(self):
         """
-        Makes plot of the psf resdiuals. 
+        Makes plot of the psf resdiuals.
         """
         cmap = plotting['cmap']
         c1 = plt.get_cmap(cmap)(0)
@@ -1464,7 +1464,7 @@ class TestPSF(GGL):
 
 class TestSizeSNR(GGL):
     """
-    SubClass to test if the tangential shear signal has no dependence on source size or S/N. Using the first lens bin and all sources, as in Y1. 
+    SubClass to test if the tangential shear signal has no dependence on source size or S/N. Using the first lens bin and all sources, as in Y1.
     The variable size_snr on run will be 'size' or 'snr' and will specify the test.
     """
 
@@ -1488,12 +1488,12 @@ class TestSizeSNR(GGL):
 
     def run_responses_mean_notomo_size_snr(self, Rgamma, size_snr, cut, high_low):
         """
-        Computes responses when there is an extra selection on size or snr. 
-        For all the sources (no tomography). 
-        - Rgamma: Rgamma for the high or low selection in size or snr. 
-        - size_snr: string, either size or snr. 
+        Computes responses when there is an extra selection on size or snr.
+        For all the sources (no tomography).
+        - Rgamma: Rgamma for the high or low selection in size or snr.
+        - size_snr: string, either size or snr.
         - cut: median of size or snr for the whole source sample.
-        - high_low: string, either high or low. 
+        - high_low: string, either high or low.
         """
 
         e_ix = {}  # ellipticities for component i for a given selection s, divided by Delta gamma.
@@ -1704,10 +1704,10 @@ class TestSizeSNR(GGL):
 
 class TestSysMaps(GGL):
     """
-    SubClass to test if the tangential shear signal has no dependence on observational conditions such as seeing, airmass etc, in each band griz. 
-    Using the first lens bin and all sources, as in Y1. 
-    The variable map can be: 'airmass', 'fwhm', 'maglimit', 'skybrite'. We iterate over them. 
-    The variable band can be: 'g', 'r', 'i', 'z'. We iterate over them. In Y1 we only used r band in the end, because it was used by im3shape. 
+    SubClass to test if the tangential shear signal has no dependence on observational conditions such as seeing, airmass etc, in each band griz.
+    Using the first lens bin and all sources, as in Y1.
+    The variable map can be: 'airmass', 'fwhm', 'maglimit', 'skybrite'. We iterate over them.
+    The variable band can be: 'g', 'r', 'i', 'z'. We iterate over them. In Y1 we only used r band in the end, because it was used by im3shape.
     """
 
     def __init__(self, config, paths, zbins, plotting, source_nofz_pars, sysmaps):
@@ -1731,7 +1731,7 @@ class TestSysMaps(GGL):
 
     def visualize_map(self, pix, signal, map, band, nside, nested_bool, name):
         """
-        Plots the map and saves it. 
+        Plots the map and saves it.
         """
         ma = np.array([-1.6375 * 10 ** 30] * hp.nside2npix(nside))
         naturals = np.arange(0, len(ma))
@@ -1746,8 +1746,8 @@ class TestSysMaps(GGL):
     def load_systematics_map(self, map, band, nside, nested_bool):
         '''
         Loads the systematics map, splits into high and low parts, and plots all maps.
-        nested_bool: True if nest, False if ring. 
-        Returns: pixels corresponding the low half and the high half, for each map. 
+        nested_bool: True if nest, False if ring.
+        Returns: pixels corresponding the low half and the high half, for each map.
         '''
         path = os.path.join(self.paths['y1base'], 'cats', 'systematics_maps') + '/'
         sys_map = pf.getdata(
@@ -1782,8 +1782,8 @@ class TestSysMaps(GGL):
 
     def radec_to_thetaphi(self, ra, dec):
         """
-        Converts ra and dec in degrees to theta and phi. 
-        Returns theta and phi in radians. 
+        Converts ra and dec in degrees to theta and phi.
+        Returns theta and phi in radians.
         """
         theta = (90. - dec) * np.pi / 180.
         phi = ra * np.pi / 180.
@@ -1791,7 +1791,7 @@ class TestSysMaps(GGL):
 
     def run(self, maps, bands):
         """
-        Runs gglensing measurment for all maps and bands. 
+        Runs gglensing measurment for all maps and bands.
         """
 
         lens_all = pf.getdata(self.paths['y1'] + 'lens.fits')
