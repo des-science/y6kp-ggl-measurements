@@ -38,6 +38,8 @@ lens_selector = destest.Selector(params_lens,source_lens)
 lens_calibrator = destest.NoCalib(params_lens,lens_selector)
 
 w_l = lens_calibrator.calibrate('x',weight_only=True)
+print 'w_l', w_l
+print sl;fdja
 gmask = lens_calibrator.selector.get_match()
 # ra, dec from Gold have better precision
 # They have same ordering as the redmagic columns (not currently, there is a bug)
