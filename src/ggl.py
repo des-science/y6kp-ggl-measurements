@@ -112,8 +112,6 @@ class GGL(object):
         source_bin['dec'] = source['dec'][photoz_masks[0]]
         source_bin['e1'] = source['e1'][photoz_masks[0]]
         source_bin['e2'] = source['e2'][photoz_masks[0]]
-        print 'e1', source_bin['e1']
-        print 'e2', source_bin['e2']
         source_bin['psf_e1'] = source['psf_e1'][photoz_masks[0]]
         source_bin['psf_e1'] = source['psf_e1'][photoz_masks[0]]
         source_bin['snr'] = source['snr'][photoz_masks[0]]
@@ -128,8 +126,6 @@ class GGL(object):
             R11, _, _ = calibrator.calibrate('e_1', mask=photoz_masks)
             R22, _, _ = calibrator.calibrate('e_2', mask=photoz_masks)
         source_bin['Rmean'] = np.mean([R11, R22])
-        print 'Bin metacal'
-        print 'Rmean = ', source_bin['Rmean']
 
         return source_bin
 
@@ -593,13 +589,9 @@ class Measurement(GGL):
 		if mode == 'data':
 		    source = self.load_metacal_bin(source_all, calibrator, zlim_low=zbins[sbin][0], zlim_high=zbins[sbin][1])
 		    R = source['Rmean']
-                    print 'R',  R
-		    #rr = np.random.rand(len(source['ra']))
-		    #np.savetxt('radec',zip(source['ra'][rr<0.05],source['dec'][rr<0.05]))
 
 		if mode == 'data_y1sources':
 		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
-		    R = 1.
 
 		if mode == 'mice':
 		    """
