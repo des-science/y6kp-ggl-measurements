@@ -8,11 +8,21 @@ Define running on data (mode = 'data') or running or sims,
 for now implemented on mice simulations (mode = 'mice').
 Config and corresponding paths will be automatically
 defined depending on the mode used. 
+
+BLINDING Instructions: set blind = True below and run the scripts normally. This will save 
+a TwoPointFile with the blinded measurements. This only affects the gammat measurements, not the
+systematics tests. The plots will be blinded too. 
+
+UNBLINDING Instructions: set blind = False below and run only the measurement.save_gammat_2pointfile() 
+and measurement.plot(), both from ggl.py. This will save a TwoPointFile with the unblinded measurements
+and the corresponding unblinded plot.
 '''
 
 filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v2_6_20_18.h5'
 print '\nMastercat filename:\n--------------------------\n',filename_mastercat
 mode = 'data'
+blind = True
+cosmosis_sourced = False
 
 """
 CONFIGURATION
@@ -32,7 +42,7 @@ config_data = {
     'redmagic_v': 'combined_sample_fid',
     'zslim_v': 'y1',
     'zs_v': 'bpz',
-    'zllim_v': 'y1'
+    'zllim_v': 'y3'
     }
 
 config_mice = {
@@ -62,6 +72,11 @@ in the other scripts. Add more paths as necessary.
 """
 
 paths = {}
+
+# Edit here the following two paths if they do not match with yours.  Necessary for running the blinding script.
+paths['2pt_pipeline'] = '../../2pt_pipeline/'
+paths['cosmosis_source_file'] = '../../cosmosis/config/setup-cosmosis-nersc'
+
 paths['y1'] = '/Volumes/Data/y1_shear_tests/cats/jk/test_mcal_bpzmof_unblind/'
 paths['runs'] =  '../runs/' 
 paths['plots'] = '../plots/'
@@ -112,7 +127,7 @@ zbins['s1'] = [0.20, 0.43]
 zbins['s2'] = [0.43, 0.63] 
 zbins['s3'] = [0.63, 0.90] 
 zbins['s4'] = [0.90, 1.30] 
-
+zbins['source_lims'] = [zbins['s1'][0], zbins['s2'][0], zbins['s3'][0], zbins['s4'][0], zbins['s4'][1]]
 
 """
 PLOTTING
@@ -129,9 +144,9 @@ if mode == 'mice':
     plotting['catname'] = r'\textsc{MICE}'
 
 plotting['cmap'] = viridis
-plotting['redshift_l'] = [r'$0.15 < z_l < 0.30 $', r'$0.30 < z_l < 0.45$', r'$0.45 < z_l < 0.60$', r'$0.60 < z_l < 0.75 $', r'$0.75 < z_l < 0.90 $']
-plotting['redshift_s'] = [r'$0.20 < z_s < 0.43$', r'$0.43 < z_s < 0.63  $', r'$0.63 < z_s < 0.90  $', r'$0.90 < z_s < 1.30  $']
-plotting['titles_redmagic'] = ['redMaGiC HiDens', 'redMaGiC HiDens', 'redMaGiC HiDens', 'redMaGiC HiLum', 'redMaGiC HigherLum']
+plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(zbins['lims'][i], zbins['lims'][i+1]) for i in range(len(zbins['lims'])-1)]
+plotting['redshift_s'] = [r'$%0.2f < z_s < %0.2f $'%(zbins['source_lims'][i], zbins['source_lims'][i+1]) for i in range(len(zbins['source_lims'])-1)]
+plotting['titles_redmagic'] = ['redMaGiC HiDens', 'redMaGiC HiDens', 'redMaGiC HiDens', 'redMaGiC HiLum', 'redMaGiC HiLum']
 plotting['th_limit'] = [64.,40.,30., 24., 21.] 
 
 

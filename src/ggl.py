@@ -17,12 +17,18 @@ import signal
 import twopoint
 from scipy import interpolate
 import functions
-from info import paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode, filename_mastercat
+from info import blind, paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode, filename_mastercat, cosmosis_sourced
 import sys
 import yaml
 sys.path.append('../../destest/')
 import destest
 
+'''
+# For running the blinding script, after sourcing cosmosis environment
+import os
+import matplotlib.pyplot as plt  
+from info import blind, paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode, filename_mastercat, cosmosis_sourced
+'''
 
 def make_directory(directory):
     if not os.path.exists(directory):
@@ -569,6 +575,9 @@ class Measurement(GGL):
     def get_path_test_allzbins(self):
         return os.path.join(self.paths['runs_config'], 'measurement') + '/'
 
+    def get_twopointfile_name(self):
+        return os.path.join(self.get_path_test_allzbins() + 'gammat_twopointfile.fits')
+
     def run(self):
         if mode == 'data':
             lens_all = pf.getdata(self.paths['lens'])
@@ -632,7 +641,14 @@ class Measurement(GGL):
 
     def save_gammat_2pointfile(self):
         """
-        Save the gammat measurements into the 2point format file.
+        Save the gammat measurements, N(z)'s and jackknife covariance into the 2point format file.
+        Creates a:
+        - SpectrumMeasurement obejct: In which the gammat measurements are saved. 
+        - Kernel object: The N(z)'s are here. 
+        - CovarianceMatrixInfo object: In which the jackknife covariance is saved.
+
+        Then, it builds the TwoPointFile objet from the above objects,
+        and saves it to a file.
         """
 
         gt_length = self.config['nthbins'] * len(self.zbins['lbins']) * len(self.zbins['sbins'])
@@ -642,29 +658,65 @@ class Measurement(GGL):
         angular_bin = np.zeros_like(bin1)
         angle = np.zeros_like(gt_values)
         dv_start = 0
+        cov = np.zeros((gt_length, gt_length))
 
         for l in range(0, len(zbins['lbins'])):
             for s in range(len(zbins['sbins'])):
                 path_test = self.get_path_test(zbins['lbins'][l], zbins['sbins'][s])
                 theta, gt, gt_err = np.loadtxt(path_test + 'mean_gt', unpack=True)
+                cov_ls = np.loadtxt(path_test + 'cov_gt')
 
                 bin_pair_inds = np.arange(dv_start, dv_start + self.config['nthbins'])
                 gt_values[bin_pair_inds] = gt
-                bin1[bin_pair_inds] = l
-                bin2[bin_pair_inds] = s
+                bin1[bin_pair_inds] = l+1
+                bin2[bin_pair_inds] = s+1
                 angular_bin[bin_pair_inds] = np.arange(self.config['nthbins'])
                 angle[bin_pair_inds] = theta
                 dv_start += self.config['nthbins']
+                cov[bin_pair_inds[0]:bin_pair_inds[-1]+1, bin_pair_inds] = cov_ls
+
+        # Load Y1 twopoint file to get the N(z)'s for the blinding script
+        y1 = twopoint.TwoPointFile.from_fits('../../des-mpp/data_vectors/y1/2pt_NG_mcal_1110.fits')
+        y1_lensnz = y1.get_kernel('nz_lens')
+        y1_sourcenz = y1.get_kernel('nz_source')
 
         gammat = twopoint.SpectrumMeasurement('gammat', (bin1, bin2),
                                                      (twopoint.Types.galaxy_position_real,
                                                       twopoint.Types.galaxy_shear_plus_real),
-                                                     ['no_nz', 'no_nz'], 'SAMPLE', angular_bin, gt_values,
-                                                     angle=angle, angle_unit='arcmin')#, extra_cols=None)
+                                                     ('nz_lens', 'nz_source'), 'SAMPLE', angular_bin, gt_values,
+                                                     angle=angle, angle_unit='arcmin')
 
-        path_save = self.get_path_test_allzbins()
-        filename = 'gammat.fits'
-        (gammat.to_fits()).writeto(path_save + filename)
+        cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['gammat'], [gt_length], cov)
+
+        gammat_twopoint = twopoint.TwoPointFile([gammat], [y1_lensnz, y1_sourcenz], windows=None, covmat_info=cov_mat_info)
+
+        twopointfile_unblind = self.get_twopointfile_name()
+
+        # Remove file if it exists already because to_fits function doesn't overwrite
+        if os.path.isfile(twopointfile_unblind):
+            os.system('rm %s'%(twopointfile_unblind))
+
+        gammat_twopoint.to_fits(twopointfile_unblind)
+
+
+    def blind_measurements(self):
+        """
+        Run blinding script from 2pt pipeline repository. 
+        In order to run this, cosmosis environment needs to be sourced.
+        Currently needs to be 'outside' the script.
+        """
+        print 'Running blinding script from 2pt pipeline repository. Check that it is updated. Pull if necessary.'
+       
+        filename= self.get_twopointfile_name()
+        owd = os.getcwd()
+        # need to add absolute path here because otherwise bliding script doesnt find the file
+        filename_absolute_path = owd[:-3] + filename[2:]
+        #os.system('source %s'%self.paths['cosmosis_source_file'])
+        os.chdir(self.paths['2pt_pipeline'])
+        os.system('python pipeline/blind_2pt_usingcosmosis.py -s Y3_blinded -i pipeline/blinding_params_template.ini -b add -u %s'%filename_absolute_path)
+        os.chdir(owd)
+        if os.path.exists('%s_BLINDED.fits'%filename[:-5]):
+            os.system('rm %s'%(filename))
 
     def save_boostfactors_2pointfile(self):
         """
@@ -774,6 +826,103 @@ class Measurement(GGL):
         fig.suptitle(title_source, fontsize=16)
         fig.subplots_adjust(top=0.93)
         self.save_plot('plot_measurement')
+
+
+
+    def plot_from_twopointfile(self):
+        
+        """"
+        Makes plot of the fiducial measurement for all redshift bins, from a twopoint file, like Y1 style.
+        It also uses the twopoint plotting functions to plot the measurements in a different style,
+        the covariance and the N(z)'s.
+        Useful to plot the blinded measurements (now the default). 
+        """
+
+        filename = self.get_twopointfile_name()
+        gammat_file = twopoint.TwoPointFile.from_fits('%s_BLINDED.fits'%filename[:-5])
+
+        gammat = gammat_file.spectra[0]
+        pairs = gammat.bin_pairs
+        npairs = len(pairs)
+        # It starts with 1, not with 0
+        bins_l = np.transpose(pairs)[0]
+        bins_s = np.transpose(pairs)[1]
+        nbins_l = np.max(bins_l)
+        nbins_s = np.max(bins_s)
+        assert len(zbins['lbins']) == nbins_l, 'Number of lens bins in info does not match with the one in the two-point file.'
+        assert len(zbins['sbins']) == nbins_s, 'Number of source bins in info does not match with the one in the two-point file.'
+
+        cmap = self.plotting['cmap']
+        cmap_step = 0.25
+        title_source = self.plotting['catname']
+
+        # Figure
+        fig, ax = plt.subplots(2, 3, figsize=(10, 6), sharey=False, sharex=False, gridspec_kw={'height_ratios': [1, 1]})
+        fig.subplots_adjust(hspace=0.0, wspace=0.00)
+
+        for l in range(0, len(zbins['lbins'])):
+
+            # To iterate between the three columns and two lines
+            j = 0 if l < 3 else 1
+            ax[j][l % 3].axvspan(2.5, self.plotting['th_limit'][l], color='gray', alpha=0.2)
+
+            for s in range(len(zbins['sbins'])):
+
+                    path_test = self.get_path_test(zbins['lbins'][l], zbins['sbins'][s])
+                    th, gt = gammat.get_pair(l+1, s+1)
+                    err = gammat.get_error(l+1, s+1)
+
+                    mask_neg = gt < 0
+                    mask_pos = gt > 0
+
+                    chi2, ndf = self.get_chi2(path_test, 'gt')
+                    ax[j][l % 3].errorbar(th[mask_neg] * (1 + 0.05 * s), -gt[mask_neg], err[mask_neg], fmt='.', mfc='None',
+                                          mec=plt.get_cmap(cmap)(cmap_step * s), ecolor=plt.get_cmap(cmap)(cmap_step * s), capsize=2)
+                    ax[j][l % 3].errorbar(th[mask_pos] * (1 + 0.05 * s), gt[mask_pos], err[mask_pos], fmt='.',
+                                          color=plt.get_cmap(cmap)(cmap_step * s),
+                                          mec=plt.get_cmap(cmap)(cmap_step * s), label=self.plotting['redshift_s'][s], capsize=2)
+
+                    ax[j][l % 3].set_xlim(2.5, 300)
+                    ax[j][l % 3].set_ylim(10 ** (-6), 10 ** (-2))
+                    ax[j][l % 3].set_xscale('log')
+                    ax[j][l % 3].set_yscale('log')
+
+                    ax[j][l % 3].text(0.5, 0.9, self.plotting['redshift_l'][l], horizontalalignment='center',
+                                      verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
+                    #ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
+                    #                  verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
+
+                    #if l % 3 > 0:  # In case we want to keep labels on the left y-axis
+                    ax[j][l % 3].yaxis.set_ticklabels([])  # to remove the ticks labels
+                    if l < 2:
+                        ax[0][l].xaxis.set_ticklabels([])  # to remove the ticks labels
+
+                    ax[j][l % 3].set_xlabel(r'$\theta$ [arcmin]', size='large')
+                    ax[j][0].set_ylabel(r'$\gamma_t (\theta)$', size='large')
+                    ax[j][l % 3].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%d$'))
+
+                    """
+                    # Chi2
+                    ax[j][l%3].text(0.25,0.3,r'Null $\chi^2$/ndf',
+                                    horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 10)
+                    ax[j][l%3].text(0.25,0.23 -0.06*s,r'$%0.1f/%d$'%(chi2, ndf),
+                             horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 12, color = plt.get_cmap(cmap)(cmap_step*s))
+                    """
+
+        ax[1][0].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
+        ax[1][1].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
+        # handles, labels = ax[0][0].get_legend_handles_labels()
+        fig.delaxes(ax[1, 2])
+        # ax[1][1].legend(handles[::-1], labels[::-1], frameon=True, fancybox = True,prop={'size':12}, numpoints = 1, loc='center left', bbox_to_anchor=(1, 0.5))
+        ax[0][0].legend(frameon=False, fancybox=True, prop={'size': 12}, numpoints=1, loc='center',
+                        bbox_to_anchor=(2.45, -0.52))
+        fig.suptitle(title_source, fontsize=16)
+        fig.subplots_adjust(top=0.93)
+        self.save_plot('plot_measurement_BLINDED')
+
+        # Use twopoint library to make the rest of the plots
+        gammat_file.plots(self.paths['plots_config'] + 'gammat_twopointfile_BLINDED', blind_yaxis=True)
+
 
     def plot_boostfactors(self):
 
@@ -1958,13 +2107,21 @@ if run_measurement:
     print 'Starting measurement class...'
     gglensing = GGL(config, paths)
     measurement = Measurement(config, paths, zbins, plotting)
-    measurement.run()
-    #measurement.save_boostfactors_2pointfile() #there is a bug here now
-    measurement.save_gammat_2pointfile()
-    measurement.plot()
-    measurement.plot_boostfactors()
-    measurement.plot_randoms()
-    measurement.plot_gammax()
+    if not cosmosis_sourced:
+        if not blind:
+            measurement.run()
+            #measurement.save_boostfactors_2pointfile() #there is a bug here now
+            measurement.save_gammat_2pointfile()
+            measurement.plot_boostfactors()
+            measurement.plot_randoms()
+            measurement.plot_gammax()
+
+    if blind and cosmosis_sourced:
+        measurement.blind_measurements()
+    if blind and not cosmosis_sourced:
+        measurement.plot_from_twopointfile()
+    #if not blind:
+    #    measurement.plot()
 
 if run_responses_nk:
     responses = Responses(config, paths, zbins, plotting)
