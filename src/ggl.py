@@ -17,18 +17,12 @@ import signal
 import twopoint
 from scipy import interpolate
 import functions
-from info import blind, paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode, filename_mastercat, cosmosis_sourced
+from info import blind, paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode, filename_mastercat, plot_blinded
 import sys
 import yaml
+import subprocess
 sys.path.append('../../destest/')
 import destest
-
-'''
-# For running the blinding script, after sourcing cosmosis environment
-import os
-import matplotlib.pyplot as plt  
-from info import blind, paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode, filename_mastercat, cosmosis_sourced
-'''
 
 def make_directory(directory):
     if not os.path.exists(directory):
@@ -699,24 +693,6 @@ class Measurement(GGL):
         gammat_twopoint.to_fits(twopointfile_unblind)
 
 
-    def blind_measurements(self):
-        """
-        Run blinding script from 2pt pipeline repository. 
-        In order to run this, cosmosis environment needs to be sourced.
-        Currently needs to be 'outside' the script.
-        """
-        print 'Running blinding script from 2pt pipeline repository. Check that it is updated. Pull if necessary.'
-       
-        filename= self.get_twopointfile_name()
-        owd = os.getcwd()
-        # need to add absolute path here because otherwise bliding script doesnt find the file
-        filename_absolute_path = owd[:-3] + filename[2:]
-        #os.system('source %s'%self.paths['cosmosis_source_file'])
-        os.chdir(self.paths['2pt_pipeline'])
-        os.system('python pipeline/blind_2pt_usingcosmosis.py -s Y3_blinded -i pipeline/blinding_params_template.ini -b add -u %s'%filename_absolute_path)
-        os.chdir(owd)
-        if os.path.exists('%s_BLINDED.fits'%filename[:-5]):
-            os.system('rm %s'%(filename))
 
     def save_boostfactors_2pointfile(self):
         """
@@ -921,7 +897,7 @@ class Measurement(GGL):
         self.save_plot('plot_measurement_BLINDED')
 
         # Use twopoint library to make the rest of the plots
-        gammat_file.plots(self.paths['plots_config'] + 'gammat_twopointfile_BLINDED', blind_yaxis=True)
+        gammat_file.plots(self.paths['plots_config'] + 'gammat_twopointfile_BLINDED', blind_yaxis=True, latex = False)
 
 
     def plot_boostfactors(self):
@@ -2103,25 +2079,23 @@ run_psf = F
 run_size_snr = F
 run_sysmaps = F
 
+
 if run_measurement:
     print 'Starting measurement class...'
     gglensing = GGL(config, paths)
     measurement = Measurement(config, paths, zbins, plotting)
-    if not cosmosis_sourced:
+    if not plot_blinded:
+        measurement.run()
+        #measurement.save_boostfactors_2pointfile() #there is a bug here now
+        measurement.save_gammat_2pointfile()
         if not blind:
-            measurement.run()
-            #measurement.save_boostfactors_2pointfile() #there is a bug here now
-            measurement.save_gammat_2pointfile()
-            measurement.plot_boostfactors()
-            measurement.plot_randoms()
-            measurement.plot_gammax()
+            measurement.plot()
+        measurement.plot_boostfactors()
+        measurement.plot_randoms()
+        measurement.plot_gammax()
 
-    if blind and cosmosis_sourced:
-        measurement.blind_measurements()
-    if blind and not cosmosis_sourced:
+    if blind and plot_blinded:
         measurement.plot_from_twopointfile()
-    #if not blind:
-    #    measurement.plot()
 
 if run_responses_nk:
     responses = Responses(config, paths, zbins, plotting)

@@ -9,20 +9,24 @@ for now implemented on mice simulations (mode = 'mice').
 Config and corresponding paths will be automatically
 defined depending on the mode used. 
 
-BLINDING Instructions: set blind = True below and run the scripts normally. This will save 
-a TwoPointFile with the blinded measurements. This only affects the gammat measurements, not the
-systematics tests. The plots will be blinded too. 
-
-UNBLINDING Instructions: set blind = False below and run only the measurement.save_gammat_2pointfile() 
-and measurement.plot(), both from ggl.py. This will save a TwoPointFile with the unblinded measurements
-and the corresponding unblinded plot.
+BLINDING Instructions: set blind = True and plot_blinded = False below and run the 
+scripts normally (i.e. run ggl.py). This will save a TwoPointFile 
+with the unblinded measurements. Then, source the setup file of 
+cosmosis. This will enable the cosmosis environment. Once this is 
+done, run the blind.py script (you might need to pull from 
+2pt_pipeline repository first, and edit the path to that directory 
+in blind.py). The blind.py script will blind the measurements using 
+cosmosis, will save a twopoint file with the blinded measurements 
+and will delete the unblinded ones. Then, to plot the blinded measurements, 
+set plot_blinded = True and run ggl.py again. Then you are done. All this process 
+only affects the gammat measurements, not the systematics tests. 
 '''
 
 filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v2_6_20_18.h5'
 print '\nMastercat filename:\n--------------------------\n',filename_mastercat
 mode = 'data'
 blind = True
-cosmosis_sourced = False
+plot_blinded = True
 
 """
 CONFIGURATION
@@ -72,10 +76,6 @@ in the other scripts. Add more paths as necessary.
 """
 
 paths = {}
-
-# Edit here the following two paths if they do not match with yours.  Necessary for running the blinding script.
-paths['2pt_pipeline'] = '../../2pt_pipeline/'
-paths['cosmosis_source_file'] = '../../cosmosis/config/setup-cosmosis-nersc'
 
 paths['y1'] = '/Volumes/Data/y1_shear_tests/cats/jk/test_mcal_bpzmof_unblind/'
 paths['runs'] =  '../runs/' 
