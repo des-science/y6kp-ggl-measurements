@@ -585,6 +585,7 @@ class Measurement(GGL):
         if mode == 'mice':
             lens_all = pf.getdata(self.paths['lens_mice'])
             random_all = pf.getdata(self.paths['randoms_mice'])
+            source_all = pf.getdata(self.paths['source_mice'])
 
         for sbin in zbins['sbins']:
     		print 'Running measurement for source %s.' % sbin
@@ -601,7 +602,7 @@ class Measurement(GGL):
     		    In this case there are no responses, so we set it to one.
     		    """
     		    R = 1.
-    		    source = pf.getdata(self.paths['mice'] + 'mice2_shear_fullsample_bin%s.fits'%sbin[-1])
+                    source = source_all[(source_all['z'] > zbins[sbin][0]) & (source_all['z'] < zbins[sbin][1])]
 
     		for l, lbin in enumerate(zbins['lbins']):
     		    print 'Running measurement for lens %s.' % lbin
@@ -617,7 +618,7 @@ class Measurement(GGL):
     		    if mode == 'data':
     			random = random_all[(random_all['z'] > zbins[lbin][0]) & (random_all['z'] < zbins[lbin][1])]
     		    if mode == 'mice':
-    			random = random_all[l*len(random_all)/5:(l+1)*len(random_all)/5]
+    			random = random_all[l*len(random_all)/len(zbins['lbins']):(l+1)*len(random_all)/len(zbins['lbins'])]
 
     		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
     		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, True)
@@ -670,7 +671,7 @@ class Measurement(GGL):
                 cov[bin_pair_inds[0]:bin_pair_inds[-1]+1, bin_pair_inds] = cov_ls
 
         # Load Y1 twopoint file to get the N(z)'s for the blinding script
-        y1 = twopoint.TwoPointFile.from_fits('../../des-mpp/data_vectors/y1/2pt_NG_mcal_1110.fits')
+        y1 = twopoint.TwoPointFile.from_fits('y1_2pt_NG_mcal_1110.fits')
         y1_lensnz = y1.get_kernel('nz_lens')
         y1_sourcenz = y1.get_kernel('nz_source')
 
@@ -2085,7 +2086,7 @@ if run_measurement:
     gglensing = GGL(config, paths)
     measurement = Measurement(config, paths, zbins, plotting)
     if not plot_blinded:
-        measurement.run()
+        #measurement.run()
         #measurement.save_boostfactors_2pointfile() #there is a bug here now
         measurement.save_gammat_2pointfile()
         if not blind:

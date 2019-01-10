@@ -26,7 +26,7 @@ filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v2_6_
 print '\nMastercat filename:\n--------------------------\n',filename_mastercat
 mode = 'data'
 blind = True
-plot_blinded = True
+plot_blinded = False
 
 """
 CONFIGURATION
@@ -88,6 +88,7 @@ paths['lens'] = paths['redmagic', '%s'%config_data['redmagic_v']] + 'lens.fits'
 paths['randoms'] = paths['redmagic', '%s'%config_data['redmagic_v']] + 'random.fits'
 paths['mice'] = '/global/project/projectdirs/des/y3-bias/mice2/' 
 paths['lens_mice'] = paths['mice'] + 'lens.fits'
+paths['source_mice'] = paths['mice'] + 'source.fits'
 paths['randoms_mice'] = paths['mice'] + 'random.fits'
 paths['yaml'] = 'destest/' #+ config['mastercat_v'] + '/'
 paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
