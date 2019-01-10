@@ -12,7 +12,8 @@ defined depending on the mode used.
 BLINDING Instructions: set blind = True and plot_blinded = False below and run the 
 scripts normally (i.e. run ggl.py). This will save a TwoPointFile 
 with the unblinded measurements. Then, source the setup file of 
-cosmosis. This will enable the cosmosis environment. Once this is 
+cosmosis (i.e. source cosmosis/config/setup-cosmosis-nersc). 
+This will enable the cosmosis environment. Once this is 
 done, run the blind.py script (you might need to pull from 
 2pt_pipeline repository first, and edit the path to that directory 
 in blind.py). The blind.py script will blind the measurements using 
