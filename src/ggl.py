@@ -2087,7 +2087,7 @@ if run_measurement:
     measurement = Measurement(config, paths, zbins, plotting)
     if not plot_blinded:
         measurement.run()
-        #measurement.save_boostfactors_2pointfile() #there is a bug here now
+        measurement.save_boostfactors_2pointfile()
         measurement.save_gammat_2pointfile()
         if not blind:
             measurement.plot()
