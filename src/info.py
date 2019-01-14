@@ -24,7 +24,7 @@ only affects the gammat measurements, not the systematics tests.
 '''
 
 filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v2_6_20_18.h5'
-print '\nMastercat filename:\n--------------------------\n',filename_mastercat
+#print '\nMastercat filename:\n--------------------------\n',filename_mastercat
 mode = 'mice'
 blind = True
 plot_blinded = False
@@ -67,7 +67,7 @@ if mode == 'data':
 if mode == 'mice':
     config = config_mice
 
-print '\nChosen configuration:\n--------------------------\n', config
+#print '\nChosen configuration:\n--------------------------\n', config
 
 """
 PATHS

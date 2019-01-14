@@ -39,6 +39,7 @@ class GGL(object):
     """
 
     def __init__(self, config, paths):
+	print config
         self.config = config
         self.paths = paths
 
@@ -587,11 +588,11 @@ class Measurement(GGL):
             random_all = pf.getdata(self.paths['randoms_mice'])
             source_all = pf.getdata(self.paths['source_mice'])
 
-        for sbin in zbins['sbins']:
+        for sbin in self.zbins['sbins']:
     		print 'Running measurement for source %s.' % sbin
 
 		if mode == 'data':
-		    source = self.load_metacal_bin(source_all, calibrator, zlim_low=zbins[sbin][0], zlim_high=zbins[sbin][1])
+		    source = self.load_metacal_bin(source_all, calibrator, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
 		    R = source['Rmean']
 
 		if mode == 'data_y1sources':
@@ -602,23 +603,23 @@ class Measurement(GGL):
     		    In this case there are no responses, so we set it to one.
     		    """
     		    R = 1.
-                    source = source_all[(source_all['z'] > zbins[sbin][0]) & (source_all['z'] < zbins[sbin][1])]
+                    source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
 
-    		for l, lbin in enumerate(zbins['lbins']):
+    		for l, lbin in enumerate(self.zbins['lbins']):
     		    print 'Running measurement for lens %s.' % lbin
     		    path_test = self.get_path_test(lbin, sbin)
     		    make_directory(path_test)
 
-    		    lens = lens_all[(lens_all['z'] > zbins[lbin][0]) & (lens_all['z'] < zbins[lbin][1])]
+    		    lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
 
     		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
     		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
     		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
 
     		    if mode == 'data':
-    			random = random_all[(random_all['z'] > zbins[lbin][0]) & (random_all['z'] < zbins[lbin][1])]
+    			random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
     		    if mode == 'mice':
-    			random = random_all[l*len(random_all)/len(zbins['lbins']):(l+1)*len(random_all)/len(zbins['lbins'])]
+    			random = random_all[l*len(random_all)/len(self.zbins['lbins']):(l+1)*len(random_all)/len(self.zbins['lbins'])]
 
     		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
     		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, True)
@@ -655,9 +656,9 @@ class Measurement(GGL):
         dv_start = 0
         cov = np.zeros((gt_length, gt_length))
 
-        for l in range(0, len(zbins['lbins'])):
-            for s in range(len(zbins['sbins'])):
-                path_test = self.get_path_test(zbins['lbins'][l], zbins['sbins'][s])
+        for l in range(0, len(self.zbins['lbins'])):
+            for s in range(len(self.zbins['sbins'])):
+                path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
                 theta, gt, gt_err = np.loadtxt(path_test + 'mean_gt', unpack=True)
                 cov_ls = np.loadtxt(path_test + 'cov_gt')
 
@@ -708,9 +709,9 @@ class Measurement(GGL):
         angle = np.zeros_like(bf_values)
         dv_start = 0
 
-        for l in range(0, len(zbins['lbins'])):
-            for s in range(len(zbins['sbins'])):
-                path_test = self.get_path_test(zbins['lbins'][l], zbins['sbins'][s])
+        for l in range(0, len(self.zbins['lbins'])):
+            for s in range(len(self.zbins['sbins'])):
+                path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
                 theta, bf, bf_err = np.loadtxt(path_test + 'mean_boost_factor', unpack=True)
 
                 bin_pair_inds = np.arange(dv_start, dv_start + self.config['nthbins'])
@@ -816,7 +817,8 @@ class Measurement(GGL):
         """
 
         filename = self.get_twopointfile_name()
-        gammat_file = twopoint.TwoPointFile.from_fits('%s_BLINDED.fits'%filename[:-5])
+        if blind: gammat_file = twopoint.TwoPointFile.from_fits('%s_BLINDED.fits'%filename[:-5])
+        else: gammat_file = twopoint.TwoPointFile.from_fits('%s.fits'%filename[:-5])
 
         gammat = gammat_file.spectra[0]
         pairs = gammat.bin_pairs
@@ -826,8 +828,8 @@ class Measurement(GGL):
         bins_s = np.transpose(pairs)[1]
         nbins_l = np.max(bins_l)
         nbins_s = np.max(bins_s)
-        assert len(zbins['lbins']) == nbins_l, 'Number of lens bins in info does not match with the one in the two-point file.'
-        assert len(zbins['sbins']) == nbins_s, 'Number of source bins in info does not match with the one in the two-point file.'
+        assert len(self.zbins['lbins']) == nbins_l, 'Number of lens bins in info does not match with the one in the two-point file.'
+        assert len(self.zbins['sbins']) == nbins_s, 'Number of source bins in info does not match with the one in the two-point file.'
 
         cmap = self.plotting['cmap']
         cmap_step = 0.25
@@ -837,15 +839,15 @@ class Measurement(GGL):
         fig, ax = plt.subplots(2, 3, figsize=(10, 6), sharey=False, sharex=False, gridspec_kw={'height_ratios': [1, 1]})
         fig.subplots_adjust(hspace=0.0, wspace=0.00)
 
-        for l in range(0, len(zbins['lbins'])):
+        for l in range(0, len(self.zbins['lbins'])):
 
             # To iterate between the three columns and two lines
             j = 0 if l < 3 else 1
             ax[j][l % 3].axvspan(2.5, self.plotting['th_limit'][l], color='gray', alpha=0.2)
 
-            for s in range(len(zbins['sbins'])):
+            for s in range(len(self.zbins['sbins'])):
 
-                    path_test = self.get_path_test(zbins['lbins'][l], zbins['sbins'][s])
+                    path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
                     th, gt = gammat.get_pair(l+1, s+1)
                     err = gammat.get_error(l+1, s+1)
 
