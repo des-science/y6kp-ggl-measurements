@@ -25,7 +25,7 @@ only affects the gammat measurements, not the systematics tests.
 
 filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v2_6_20_18.h5'
 print '\nMastercat filename:\n--------------------------\n',filename_mastercat
-mode = 'data'
+mode = 'mice'
 blind = True
 plot_blinded = False
 
@@ -85,8 +85,8 @@ paths['y3'] = '../../ggl_results/'
 paths['y3_exp'] = '../../ggl_data/'
 paths['redmagic', config['redmagic_v']] = '../lens_cats/redmagic/%s/%s/njk_%d/'%(config_data['mastercat_v'], config['redmagic_v'], config['njk'])
 paths['redmagic', 'y1'] = '../lens_cats/redmagic/y1/'
-paths['lens'] = paths['redmagic', '%s'%config_data['redmagic_v']] + 'lens.fits'
-paths['randoms'] = paths['redmagic', '%s'%config_data['redmagic_v']] + 'random.fits'
+paths['lens'] = paths['redmagic', '%s'%config['redmagic_v']] + 'lens.fits'
+paths['randoms'] = paths['redmagic', '%s'%config['redmagic_v']] + 'random.fits'
 paths['mice'] = '/global/project/projectdirs/des/y3-bias/mice2/' 
 paths['lens_mice'] = paths['mice'] + 'lens.fits'
 paths['source_mice'] = paths['mice'] + 'source.fits'
