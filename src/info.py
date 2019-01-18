@@ -4,30 +4,40 @@ from colormaps import plasma,viridis
 
 '''
 Information about paths and parameters used in pipeline. 
+'''
+
+"""
+BASIC
+---------------------------------
+Define the basic parameters here.
 Define running on data (mode = 'data') or running or sims,
 for now implemented on mice simulations (mode = 'mice').
 Config and corresponding paths will be automatically
 defined depending on the mode used. 
 
-BLINDING Instructions: set blind = True and plot_blinded = False below and run the 
-scripts normally (i.e. run ggl.py). This will save a TwoPointFile 
-with the unblinded measurements. Then, source the setup file of 
-cosmosis (i.e. source cosmosis/config/setup-cosmosis-nersc). 
-This will enable the cosmosis environment. Once this is 
-done, run the blind.py script (you might need to pull from 
-2pt_pipeline repository first, and edit the path to that directory 
-in blind.py). The blind.py script will blind the measurements using 
+BLINDING Instructions: set blind = True and plot_blinded = False 
+below and run the scripts normally (i.e. run call_ggl_y3kp). 
+This will save a TwoPointFile with the unblinded measurements. 
+Then, source the setup file of cosmosis 
+(i.e. source cosmosis/config/setup-cosmosis-nersc, 
+using your own path to the file). This will enable the 
+cosmosis environment. Once this is done, run the blind.py script 
+(you might need to pull from 2pt_pipeline repository first, 
+and edit the path to that directory in blind.py). 
+The blind.py script will blind the measurements using 
 cosmosis, will save a twopoint file with the blinded measurements 
-and will delete the unblinded ones. Then, to plot the blinded measurements, 
-set plot_blinded = True and run ggl.py again. Then you are done. All this process 
-only affects the gammat measurements, not the systematics tests. 
-'''
+and will delete the unblinded ones. Then, to plot the blinded 
+measurements, set plot_blinded = True and run call_ggl_y3kp.py again. 
+Then you are done. All this process only affects the gammat 
+measurements, not the systematics tests. 
+"""
 
-filename_mastercat = '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v2_6_20_18.h5'
-#print '\nMastercat filename:\n--------------------------\n',filename_mastercat
-mode = 'mice'
-blind = True
-plot_blinded = False
+basic = {
+    'mode':'data',
+    'blind': True,
+    'plot_blinded': True
+}
+
 
 """
 CONFIGURATION
@@ -43,12 +53,14 @@ config_data = {
     'bslop': 0.1,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
-    'mastercat_v': filename_mastercat[53:-3], 
+    'filename_mastercat': '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v2_6_20_18.h5',
     'redmagic_v': 'combined_sample_fid',
     'zslim_v': 'y1',
     'zs_v': 'bpz',
     'zllim_v': 'y3'
     }
+
+config_data['mastercat_v'] = config_data['filename_mastercat'][53:-3]
 
 config_mice = {
     'njk': 300,
@@ -62,9 +74,9 @@ config_mice = {
     'zllim_v': 'y1'
     }
 
-if mode == 'data':
+if basic['mode'] == 'data':
     config = config_data
-if mode == 'mice':
+if basic['mode'] == 'mice':
     config = config_mice
 
 #print '\nChosen configuration:\n--------------------------\n', config
@@ -91,7 +103,7 @@ paths['mice'] = '/global/project/projectdirs/des/y3-bias/mice2/'
 paths['lens_mice'] = paths['mice'] + 'lens.fits'
 paths['source_mice'] = paths['mice'] + 'source.fits'
 paths['randoms_mice'] = paths['mice'] + 'random.fits'
-paths['yaml'] = 'destest/' #+ config['mastercat_v'] + '/'
+paths['yaml'] = 'destest/' 
 paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
                         'redmagic_%s'%config_data['redmagic_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
                         'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
@@ -103,8 +115,8 @@ paths['config_mice'] = os.path.join('mice', 'v_%s'%config_mice['version'], 'zsli
                         'bslop_%0.1g'%config_mice['bslop']) 
 
 # Where we save the runs and plots for one particular configuration:
-paths['runs_config'] = os.path.join(paths['runs'], paths['config_%s'%mode]) + '/'
-paths['plots_config'] = os.path.join(paths['plots'], paths['config_%s'%mode]) + '/'
+paths['runs_config'] = os.path.join(paths['runs'], paths['config_%s'%basic['mode']]) + '/'
+paths['plots_config'] = os.path.join(paths['plots'], paths['config_%s'%basic['mode']]) + '/'
 
 """
 ZBINS
@@ -140,11 +152,12 @@ accross several plots, to ensure consistency.
 """
 
 plotting = {}
-if mode == 'data':
+if basic['mode'] == 'data':
     plotting['catname'] = r'Metacalibration PSF ' + config['mastercat_v'][0:2]
-if mode == 'mice':
+if basic['mode'] == 'mice':
     plotting['catname'] = r'\textsc{MICE}'
 
+plotting['latex'] = False
 plotting['cmap'] = viridis
 plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(zbins['lims'][i], zbins['lims'][i+1]) for i in range(len(zbins['lims'])-1)]
 plotting['redshift_s'] = [r'$%0.2f < z_s < %0.2f $'%(zbins['source_lims'][i], zbins['source_lims'][i+1]) for i in range(len(zbins['source_lims'])-1)]

@@ -1,6 +1,5 @@
 import psutil
 import os
-import ipdb
 import numpy as np
 import astropy.io.fits as pf
 import pathos.multiprocessing as mp
@@ -12,15 +11,12 @@ from matplotlib import ticker
 import scipy.stats
 import healpy as hp
 import treecorr
-import itertools
 import signal
 import twopoint
 from scipy import interpolate
 import functions
-from info import blind, paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode, filename_mastercat, plot_blinded
 import sys
 import yaml
-import subprocess
 sys.path.append('../../destest/')
 import destest
 
@@ -28,18 +24,13 @@ def make_directory(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-
-plt.rc('text', usetex=False)
-plt.rc('font', family='serif')
-
-
 class GGL(object):
     """
     Basic class that has all the functions shared for several tests.
     """
 
-    def __init__(self, config, paths):
-	print config
+    def __init__(self, basic, config, paths):
+        self.basic = basic
         self.config = config
         self.paths = paths
 
@@ -53,7 +44,7 @@ class GGL(object):
         mcal_file = self.paths['yaml'] + 'destest_mcal.yaml'
         params_mcal = yaml.load(open(mcal_file))
         params_mcal['param_file'] = mcal_file
-        params_mcal['filename'] = filename_mastercat
+        params_mcal['filename'] = self.config['filename_mastercat']
         source_mcal = destest.H5Source(params_mcal)
         source_selector = destest.Selector(params_mcal,source_mcal)
         source_calibrator = destest.MetaCalib(params_mcal,source_selector)
@@ -61,13 +52,13 @@ class GGL(object):
         gold_file = self.paths['yaml'] + 'destest_gold.yaml'
         params_gold = yaml.load(open(gold_file))
         params_gold['param_file'] = gold_file
-        params_gold['filename'] = filename_mastercat
+        params_gold['filename'] = self.config['filename_mastercat']
         source_gold = destest.H5Source(params_gold)
         gold_selector = destest.Selector(params_gold,source_gold,inherit=source_selector)
 
         param_file = self.paths['yaml'] + './destest_pz.yaml'
         params_pz = yaml.load(open(param_file))
-        params_pz['filename'] = filename_mastercat
+        params_pz['filename'] = self.config['filename_mastercat']
         source_pz = destest.H5Source(params_pz)
         pz_selector = destest.Selector(params_pz, source_pz, inherit=source_selector)
 
@@ -233,10 +224,10 @@ class GGL(object):
 
                 print 'jk, nlens, nsource = ', jk, len(ra_l_jk), len(ra_s[bool_s])
                 cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
-                if mode == 'data' or mode=='data_y1sources':
+                if self.basic['mode'] == 'data' or self.basic['mode'] =='data_y1sources':
                     cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s], w=w[bool_s],
                                              ra_units='deg', dec_units='deg')
-                if mode == 'mice':
+                if self.basic['mode']  == 'mice':
                     cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=-e1[bool_s], g2=e2[bool_s], w=w[bool_s],
                                              ra_units='deg', dec_units='deg')
                 corr.process(cat_l, cat_s)
@@ -404,7 +395,7 @@ class GGL(object):
 
             print comp
             e_ix_allbins = np.zeros(0)
-            for sbin in zbins['sbins']:
+            for sbin in self.zbins['sbins']:
                 # Appending responses source bin sbin.
                 source_selection = pf.getdata(
                     self.paths['y1'] + 'metacal_sel_responses/metacal_sel_responses_sa%s_%s.fits' % (sbin[1], comp))
@@ -559,8 +550,8 @@ class Measurement(GGL):
     - Boost factors calculation.
     """
 
-    def __init__(self, config, paths, zbins, plotting):
-        GGL.__init__(self, config, paths)
+    def __init__(self, basic, config, paths, zbins, plotting):
+        GGL.__init__(self, basic, config, paths)
         self.zbins = zbins
         self.plotting = plotting
 
@@ -574,16 +565,16 @@ class Measurement(GGL):
         return os.path.join(self.get_path_test_allzbins() + 'gammat_twopointfile.fits')
 
     def run(self):
-        if mode == 'data':
+        if self.basic['mode'] == 'data':
             lens_all = pf.getdata(self.paths['lens'])
             random_all = pf.getdata(self.paths['randoms'])
             source_all, calibrator = self.load_metacal()
 
-        if mode == 'data_y1sources':
+        if self.basic['mode'] == 'data_y1sources':
             lens_all = pf.getdata(self.paths['lens'])
             random_all = pf.getdata(self.paths['randoms'])
 
-        if mode == 'mice':
+        if self.basic['mode'] == 'mice':
             lens_all = pf.getdata(self.paths['lens_mice'])
             random_all = pf.getdata(self.paths['randoms_mice'])
             source_all = pf.getdata(self.paths['source_mice'])
@@ -591,14 +582,14 @@ class Measurement(GGL):
         for sbin in self.zbins['sbins']:
     		print 'Running measurement for source %s.' % sbin
 
-		if mode == 'data':
+		if self.basic['mode'] == 'data':
 		    source = self.load_metacal_bin(source_all, calibrator, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
 		    R = source['Rmean']
 
-		if mode == 'data_y1sources':
+		if self.basic['mode'] == 'data_y1sources':
 		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
 
-    		if mode == 'mice':
+    		if self.basic['mode'] == 'mice':
     		    """
     		    In this case there are no responses, so we set it to one.
     		    """
@@ -616,9 +607,9 @@ class Measurement(GGL):
     		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
     		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
 
-    		    if mode == 'data':
+    		    if self.basic['mode']  == 'data':
     			random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-    		    if mode == 'mice':
+    		    if self.basic['mode']  == 'mice':
     			random = random_all[l*len(random_all)/len(self.zbins['lbins']):(l+1)*len(random_all)/len(self.zbins['lbins'])]
 
     		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
@@ -737,6 +728,9 @@ class Measurement(GGL):
         Makes plot of the fiducial measurement for all redshift bins.
         """
 
+        plt.rc('text', usetex=self.plotting['latex'])
+        plt.rc('font', family='serif')
+
         cmap = self.plotting['cmap']
         cmap_step = 0.25
         title_source = self.plotting['catname']
@@ -745,15 +739,15 @@ class Measurement(GGL):
         fig, ax = plt.subplots(2, 3, figsize=(10, 6), sharey=False, sharex=False, gridspec_kw={'height_ratios': [1, 1]})
         fig.subplots_adjust(hspace=0.0, wspace=0.00)
 
-        for l in range(0, len(zbins['lbins'])):
+        for l in range(0, len(self.zbins['lbins'])):
 
             # To iterate between the three columns and two lines
             j = 0 if l < 3 else 1
             ax[j][l % 3].axvspan(2.5, self.plotting['th_limit'][l], color='gray', alpha=0.2)
 
-            for s in range(len(zbins['sbins'])):
+            for s in range(len(self.zbins['sbins'])):
 
-                path_test = self.get_path_test(zbins['lbins'][l], zbins['sbins'][s])
+                path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
                 if os.path.isfile(path_test + 'mean_gt'):
                     th, gt, err = np.loadtxt(path_test + 'mean_gt', unpack=True)
 
@@ -816,8 +810,11 @@ class Measurement(GGL):
         Useful to plot the blinded measurements (now the default). 
         """
 
+        plt.rc('text', usetex=self.plotting['latex'])
+        plt.rc('font', family='serif')
+
         filename = self.get_twopointfile_name()
-        if blind: gammat_file = twopoint.TwoPointFile.from_fits('%s_BLINDED.fits'%filename[:-5])
+        if self.basic['blind']: gammat_file = twopoint.TwoPointFile.from_fits('%s_BLINDED.fits'%filename[:-5])
         else: gammat_file = twopoint.TwoPointFile.from_fits('%s.fits'%filename[:-5])
 
         gammat = gammat_file.spectra[0]
@@ -900,20 +897,23 @@ class Measurement(GGL):
         self.save_plot('plot_measurement_BLINDED')
 
         # Use twopoint library to make the rest of the plots
-        gammat_file.plots(self.paths['plots_config'] + 'gammat_twopointfile_BLINDED', blind_yaxis=True, latex = False)
+        gammat_file.plots(self.paths['plots_config'] + 'gammat_twopointfile_BLINDED', blind_yaxis=self.basic['blind'], latex = self.plotting['latex'])
 
 
     def plot_boostfactors(self):
+
+        plt.rc('text', usetex=self.plotting['latex'])
+        plt.rc('font', family='serif')
 
         cmap = self.plotting['cmap']
         fig, ax = plt.subplots(4, 5, figsize=(12.5, 9.375), sharey=True, sharex=True)
         fig.subplots_adjust(hspace=0.1, wspace=0.1)
         c1 = plt.get_cmap(cmap)(0.)
 
-        for l in range(0, len(zbins['lbins'])):
-            for s in range(len(zbins['sbins'])):
+        for l in range(0, len(self.zbins['lbins'])):
+            for s in range(len(self.zbins['sbins'])):
 
-                path_test = self.get_path_test(zbins['lbins'][l], zbins['sbins'][s])
+                path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
                 theta, bf, bf_err = np.loadtxt(path_test + 'mean_boost_factor', unpack=True)
 
                 ax[s][l].axhline(y=1, ls=':', color='k', alpha=1)
@@ -927,10 +927,10 @@ class Measurement(GGL):
                 if s == 3:
                     ax[s][l].set_xlabel(r'$\theta$ [arcmin]', size='larger')
                 if l == 0:
-                    ax[s][l].set_ylabel('%s\n' % plotting['redshift_s'][s] + r'Boost factors', size='larger',
+                    ax[s][l].set_ylabel('%s\n' % self.plotting['redshift_s'][s] + r'Boost factors', size='larger',
                                         linespacing=3)
                 if s == 0:
-                    ax[s][l].set_title(plotting['redshift_l'][l], size='larger')
+                    ax[s][l].set_title(self.plotting['redshift_l'][l], size='larger')
 
                 ax[s][l].axvspan(2.5, self.plotting['th_limit'][l], color='gray', alpha=0.2)
 
@@ -942,20 +942,23 @@ class Measurement(GGL):
         Makes plot of the tangential shear around random points.
         """
 
-        labels = [plotting['catname']]
+        plt.rc('text', usetex=self.plotting['latex'])
+        plt.rc('font', family='serif')
+
+        labels = [self.plotting['catname']]
         c = 0  # If adding im3shape, s=1
         markers = ['o', '^']
         fs = 18  # fontsize
-        cmap = plotting['cmap']
+        cmap = self.plotting['cmap']
         cmap_step = 0.25
         fig, ax = plt.subplots(4, 5, figsize=(17.25, 13.8), sharey=True, sharex=True)
         fig.subplots_adjust(hspace=0.0, wspace=0.0)
 
-        for l in range(0, len(zbins['lbins'])):
+        for l in range(0, len(self.zbins['lbins'])):
 
-            for s in range(len(zbins['sbins'])):
+            for s in range(len(self.zbins['sbins'])):
 
-                path_test = self.get_path_test(zbins['lbins'][l], zbins['sbins'][s])
+                path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
                 th, gt, err = np.loadtxt(path_test + 'mean_randoms', unpack=True)
 
                 ax[s][l].axhline(y=0, ls=':', color='k')
@@ -991,11 +994,14 @@ class Measurement(GGL):
         Bottom panel: chi2 distribution from all lens-source combinations.
         """
 
-        labels = [plotting['catname']]
+        plt.rc('text', usetex=self.plotting['latex'])
+        plt.rc('font', family='serif')
+
+        labels = [self.plotting['catname']]
         c = 0  # for metacal
         markers = ['o', '^']
         fs = 12  # fontsize
-        cmap = plotting['cmap']
+        cmap = self.plotting['cmap']
         cmap_step = 0.25
         c1 = plt.get_cmap(cmap)(cmap_step * 1.5)
         c2 = plt.get_cmap(cmap)(cmap_step * 3)
@@ -1006,7 +1012,7 @@ class Measurement(GGL):
         # TOP panel
         l = 0
         s = 0
-        path_test = self.get_path_test(zbins['lbins'][l], zbins['sbins'][s])
+        path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
         th, gx, err = np.loadtxt(path_test + 'mean_gx', unpack=True)
         ax[0].axhline(y=0, ls=':', color='k')
         ax[0].errorbar(th * (1 + 0.07 * c), gx * th, err * th, fmt=markers[c], color=colors[c],
@@ -1027,9 +1033,9 @@ class Measurement(GGL):
 
         # BOTTOM panel
         chi2s = []
-        for l in range(0, len(zbins['lbins'])):
-            for s in range(len(zbins['sbins'])):
-                path_test = self.get_path_test(zbins['lbins'][l], zbins['sbins'][s])
+        for l in range(0, len(self.zbins['lbins'])):
+            for s in range(len(self.zbins['sbins'])):
+                path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
                 chi2, ndf = self.get_chi2(path_test, 'gx')
                 chi2s.append(chi2)
         chi2s = np.array(chi2s)
@@ -1053,8 +1059,8 @@ class Responses(GGL):
     Subclass that obtains the scale dependence responses (NK correlations) for all the lens-source bin combinations. Both for randoms and lenses.
     """
 
-    def __init__(self, config, paths, zbins, plotting):
-        GGL.__init__(self, config, paths)
+    def __init__(self, basic, config, paths, zbins, plotting):
+        GGL.__init__(self, basic, config, paths)
         self.zbins = zbins
         self.plotting = plotting
 
@@ -1082,16 +1088,16 @@ class Responses(GGL):
             print 'Running measurement for source %s.' % sbin
             source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits' % sbin[1])
 
-            for lbin in zbins['lbins']:
+            for lbin in self.zbins['lbins']:
                 print 'Running measurement for lens %s.' % lbin
                 path_test = self.get_path_test(lbin, sbin)
                 make_directory(path_test)
 
-                lens = lens_all[(lens_all['z'] > zbins[lbin][0]) & (lens_all['z'] < zbins[lbin][1])]
+                lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
                 theta, R_nk, Rgamma_nk, Rs_nk = self.run_responses_nk_tomo(lens, source, sbin)
                 self.save_responses_nk(path_test, zip(theta, R_nk, Rgamma_nk, Rs_nk), 'lens')
 
-                random = random_all[(random_all['z'] > zbins[lbin][0]) & (random_all['z'] < zbins[lbin][1])]
+                random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
                 theta, R_nk, Rgamma_nk, Rs_nk = self.run_responses_nk_tomo(random, source, sbin)
                 self.save_responses_nk(path_test, zip(theta, R_nk, Rgamma_nk, Rs_nk), 'random')
 
@@ -1102,20 +1108,23 @@ class Responses(GGL):
         Indicates which is the foreground sample when computing the NK correlations.
         """
 
-        cmap = plotting['cmap']
+        plt.rc('text', usetex=self.plotting['latex'])
+        plt.rc('font', family='serif')
+
+        cmap = self.plotting['cmap']
         cmap_step = 0.25
         c1 = plt.get_cmap(cmap)(0.)
         c2 = plt.get_cmap(cmap)(0.6)
         fig, ax = plt.subplots(4, 5, figsize=(16.5, 13.2), sharey='row', sharex=True)
         fig.subplots_adjust(hspace=0.1, wspace=0.1)
 
-        for l in range(0, len(zbins['lbins'])):
+        for l in range(0, len(self.zbins['lbins'])):
 
-            for s in range(len(zbins['sbins'])):
+            for s in range(len(self.zbins['sbins'])):
 
-                path_test = self.get_path_test(zbins['lbins'][l], zbins['sbins'][s])
+                path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
                 theta, R_nk, _, _ = self.load_responses_nk(path_test, lens_random)
-                R_mean = self.load_responses_mean(zbins['sbins'][s])
+                R_mean = self.load_responses_mean(self.zbins['sbins'][s])
 
                 ax[s][l].plot(theta, [R_mean] * len(theta), '-', lw=2, color=c2, mec=c2, label=r'$R_{\mathrm{mean}}$')
                 ax[s][l].plot(theta, R_nk, '-', lw=2, color=c1, mec=c1, label=r'$R_{\mathrm{nk}}$')
@@ -1132,9 +1141,9 @@ class Responses(GGL):
                 if s == 3:
                     ax[s][l].set_xlabel(r'$\theta$ [arcmin]', size='larger')
                 if l == 0:
-                    ax[s][l].set_ylabel('%s\n' % plotting['redshift_s'][s] + r'Responses', size='larger', linespacing=3)
+                    ax[s][l].set_ylabel('%s\n' % self.plotting['redshift_s'][s] + r'Responses', size='larger', linespacing=3)
                 if s == 0:
-                    ax[s][l].set_title(plotting['redshift_l'][l], size='larger')
+                    ax[s][l].set_title(self.plotting['redshift_l'][l], size='larger')
 
                 ax[s][l].text(0.5, 0.85,
                               r'$\Delta R/R = %0.2f \%%$' % (100 * np.mean((R_nk - R_mean) / (R_mean + R_nk) * 2)),
@@ -1151,8 +1160,8 @@ class TestStars(GGL):
     Uses no tomography for the source sample.
     """
 
-    def __init__(self, config, paths, zbins, plotting):
-        GGL.__init__(self, config, paths)
+    def __init__(self, basic, config, paths, zbins, plotting):
+        GGL.__init__(self, basic, config, paths)
         self.zbins = zbins
         self.plotting = plotting
 
@@ -1197,6 +1206,9 @@ class TestStars(GGL):
         Make plot for all the stars test.
         """
 
+        plt.rc('text', usetex=self.plotting['latex'])
+        plt.rc('font', family='serif')
+
         types = ['bright', 'faint']
         styles = ['o', '^']
         shifts = [0, 1, 2, 3]
@@ -1238,8 +1250,8 @@ class TestPSF(GGL):
     Uses no tomography for the lens sample.
     """
 
-    def __init__(self, config, paths, zbins, plotting):
-        GGL.__init__(self, config, paths)
+    def __init__(self, basic, config, paths, zbins, plotting):
+        GGL.__init__(self, basic, config, paths)
         self.zbins = zbins
         self.plotting = plotting
 
@@ -1482,13 +1494,13 @@ class TestPSF(GGL):
         """
 
         lens = pf.getdata(self.paths['y1'] + 'lens.fits')
-        masklens = ((lens['z'] > zbins['l1'][0]) & (lens['z'] < zbins['l5'][1]))
+        masklens = ((lens['z'] > self.zbins['l1'][0]) & (lens['z'] < self.zbins['l5'][1]))
         lens = lens[masklens]
 
         random = pf.getdata(self.paths['y1'] + 'random.fits')
-        maskrandom = ((random['z'] > zbins['l1'][0]) & (random['z'] < zbins['l5'][1]))
-        print zbins['l1'][0]
-        print zbins['l5'][1]
+        maskrandom = ((random['z'] > self.zbins['l1'][0]) & (random['z'] < self.zbins['l5'][1]))
+        print self.zbins['l1'][0]
+        print self.zbins['l5'][1]
         random = random[maskrandom]
 
         psfres = pf.getdata(self.paths['y1'] + 'psfresiduals.fits')
@@ -1515,13 +1527,13 @@ class TestPSF(GGL):
         """
 
         lens = pf.getdata(self.paths['y3'] + 'lens.fits')
-        masklens = ((lens['z'] > zbins['l1'][0]) & (lens['z'] < zbins['l5'][1]))
+        masklens = ((lens['z'] > self.zbins['l1'][0]) & (lens['z'] < self.zbins['l5'][1]))
         lens = lens[masklens]
 
         random = pf.getdata(self.paths['y3'] + 'random.fits')
-        maskrandom = ((random['z'] > zbins['l1'][0]) & (random['z'] < zbins['l5'][1]))
-        print zbins['l1'][0]
-        print zbins['l5'][1]
+        maskrandom = ((random['z'] > self.zbins['l1'][0]) & (random['z'] < self.zbins['l5'][1]))
+        print self.zbins['l1'][0]
+        print self.zbins['l5'][1]
         random = random[maskrandom]
 
         for band in bands:
@@ -1547,7 +1559,10 @@ class TestPSF(GGL):
         """
         Makes plot of the psf resdiuals.
         """
-        cmap = plotting['cmap']
+        plt.rc('text', usetex=self.plotting['latex'])
+        plt.rc('font', family='serif')
+
+        cmap = self.plotting['cmap']
         c1 = plt.get_cmap(cmap)(0)
         titles_l = r'$0.15 < z < 0.90 $'
         title_redmagic = 'redMaGiC'
@@ -1588,8 +1603,8 @@ class TestSizeSNR(GGL):
     The variable size_snr on run will be 'size' or 'snr' and will specify the test.
     """
 
-    def __init__(self, config, paths, zbins, plotting, source_nofz_pars):
-        GGL.__init__(self, config, paths)
+    def __init__(self, basic, config, paths, zbins, plotting, source_nofz_pars):
+        GGL.__init__(self, basic, config, paths)
         self.zbins = zbins
         self.plotting = plotting
         self.source_nofz_pars = source_nofz_pars
@@ -1623,7 +1638,7 @@ class TestSizeSNR(GGL):
             print comp
             e_ix_allbins = np.zeros(0)
             par_ix_allbins = np.zeros(0)  # size or snr in the selection ix, for instance, size_1p, size_2p, etc.
-            for sbin in zbins['sbins']:
+            for sbin in self.zbins['sbins']:
                 # Appending responses source bin sbin.
                 source_selection = pf.getdata(
                     self.paths['y1'] + 'metacal_sel_responses/metacal_sel_responses_sa%s_%s.fits' % (sbin[1], comp))
@@ -1660,9 +1675,9 @@ class TestSizeSNR(GGL):
 
     def run(self, size_snr):
         lens_all = pf.getdata(self.paths['y1'] + 'lens.fits')
-        lens = lens_all[(lens_all['z'] > zbins['l1'][0]) & (lens_all['z'] < zbins['l1'][1])]
+        lens = lens_all[(lens_all['z'] > self.zbins['l1'][0]) & (lens_all['z'] < self.zbins['l1'][1])]
         random_all = pf.getdata(self.paths['y1'] + 'random.fits')
-        random = random_all[(random_all['z'] > zbins['l1'][0]) & (random_all['z'] < zbins['l1'][1])]
+        random = random_all[(random_all['z'] > self.zbins['l1'][0]) & (random_all['z'] < self.zbins['l1'][1])]
 
         sources = pf.getdata(self.paths['y1'] + 'metacal_sel_allbins.fits')
 
@@ -1750,7 +1765,10 @@ class TestSizeSNR(GGL):
         self.save_size_snr(path_test, size_snr, result_data, result_theory)
 
     def plot(self):
-        cmap = plotting['cmap']
+        plt.rc('text', usetex=self.plotting['latex'])
+        plt.rc('font', family='serif')
+
+        cmap = self.plotting['cmap']
         cmap_step = 0.25
         lss = ['-', ':']
         labels_c = [self.plotting['catname']]
@@ -1830,8 +1848,8 @@ class TestSysMaps(GGL):
     The variable band can be: 'g', 'r', 'i', 'z'. We iterate over them. In Y1 we only used r band in the end, because it was used by im3shape.
     """
 
-    def __init__(self, config, paths, zbins, plotting, source_nofz_pars, sysmaps):
-        GGL.__init__(self, config, paths)
+    def __init__(self, basic, config, paths, zbins, plotting, source_nofz_pars, sysmaps):
+        GGL.__init__(self, basic, config, paths)
         self.zbins = zbins
         self.plotting = plotting
         self.source_nofz_pars = source_nofz_pars
@@ -1915,9 +1933,9 @@ class TestSysMaps(GGL):
         """
 
         lens_all = pf.getdata(self.paths['y1'] + 'lens.fits')
-        lens = lens_all[(lens_all['z'] > zbins['l1'][0]) & (lens_all['z'] < zbins['l1'][1])]
+        lens = lens_all[(lens_all['z'] > self.zbins['l1'][0]) & (lens_all['z'] < self.zbins['l1'][1])]
         random_all = pf.getdata(self.paths['y1'] + 'random.fits')
-        random = random_all[(random_all['z'] > zbins['l1'][0]) & (random_all['z'] < zbins['l1'][1])]
+        random = random_all[(random_all['z'] > self.zbins['l1'][0]) & (random_all['z'] < self.zbins['l1'][1])]
         sources = pf.getdata(self.paths['y1'] + 'metacal_sel_allbins.fits')
         R = self.run_responses_mean_notomo(sources['Rgamma'])
 
@@ -2026,6 +2044,9 @@ class TestSysMaps(GGL):
         Plots measurments compared to expected theory.
         Set up for four maps, and a single band.
         """
+        plt.rc('text', usetex=self.plotting['latex'])
+        plt.rc('font', family='serif')
+
         #labels_cshort = r'\textsc{Metacal}'
         labels_cshort = 'Metacal'
         fontsize = 16
@@ -2071,62 +2092,3 @@ class TestSysMaps(GGL):
         ax[1][0].legend(frameon=False, loc='best', numpoints=1, fontsize=9.8)
         self.save_plot('systematics_maps')
 
-
-T = True
-F = False
-
-run_measurement = F
-run_responses_nk = F
-run_stars = F
-run_psf = F
-run_size_snr = F
-run_sysmaps = F
-
-
-if run_measurement:
-    print 'Starting measurement class...'
-    gglensing = GGL(config, paths)
-    measurement = Measurement(config, paths, zbins, plotting)
-    if not plot_blinded:
-        measurement.run()
-        measurement.save_boostfactors_2pointfile()
-        measurement.save_gammat_2pointfile()
-        if not blind:
-            measurement.plot()
-        measurement.plot_boostfactors()
-        measurement.plot_randoms()
-        measurement.plot_gammax()
-
-    if blind and plot_blinded:
-        measurement.plot_from_twopointfile()
-
-if run_responses_nk:
-    responses = Responses(config, paths, zbins, plotting)
-    responses.run_tomo_nk()
-    responses.plot('lens')
-    responses.plot('random')
-
-if run_stars:
-    stars = TestStars(config, paths, zbins, plotting)
-    stars.run('bright')
-    stars.run('faint')
-    stars.plot()
-
-if run_psf:
-    psf = TestPSF(config, paths, zbins, plotting)
-    ra_lims = (-1, 361)
-    dec_lims = (-90, -35)
-    psf.save_psf_residuals_y3(ra_lims, dec_lims)
-    # psf.run()
-    # psf.plot()
-
-if run_size_snr:
-    size_snr = TestSizeSNR(config, paths, zbins, plotting, source_nofz_pars)
-    size_snr.run('size')
-    size_snr.run('snr')
-    size_snr.plot()
-
-if run_sysmaps:
-    sysmaps = TestSysMaps(config, paths, zbins, plotting, source_nofz_pars, sysmaps)
-    sysmaps.run(['airmass', 'fwhm', 'maglimit', 'skybrite'], ['r'])
-    sysmaps.plot()

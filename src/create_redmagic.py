@@ -5,7 +5,7 @@ sys.path.append('../../destest/')
 sys.path.append('../../kmeans_radec/')
 import destest
 import pyfits as pf
-from info import zbins, config, filename_mastercat, paths, filename_mastercat
+from info import zbins, config, paths
 import kmeans_radec
 import os
 import jk
@@ -14,7 +14,7 @@ import jk
 mcal_file = paths['yaml'] + 'destest_mcal.yaml'
 params_mcal = yaml.load(open(mcal_file))
 params_mcal['param_file'] = mcal_file
-params_mcal['filename'] = filename_mastercat
+params_mcal['filename'] = config['filename_mastercat']
 source_mcal = destest.H5Source(params_mcal)
 source_selector = destest.Selector(params_mcal,source_mcal)
 source_calibrator = destest.MetaCalib(params_mcal,source_selector)
@@ -22,7 +22,7 @@ source_calibrator = destest.MetaCalib(params_mcal,source_selector)
 gold_file = paths['yaml'] + 'destest_gold.yaml'
 params_gold = yaml.load(open(gold_file))
 params_gold['param_file'] = gold_file
-params_gold['filename'] = filename_mastercat
+params_gold['filename'] = config['filename_mastercat']
 source_gold = destest.H5Source(params_gold)
 gold_selector = destest.Selector(params_gold,source_gold,inherit=source_selector)
 
@@ -30,7 +30,7 @@ gold_selector = destest.Selector(params_gold,source_gold,inherit=source_selector
 lens_file = paths['yaml'] + 'destest_redmagic.yaml'
 params_lens = yaml.load(open(lens_file))
 params_lens['param_file'] = lens_file
-params_lens['filename'] = filename_mastercat
+params_lens['filename'] = config['filename_mastercat']
 params_lens['table'] = [config['redmagic_v']]
 params_lens['select_path'] = 'index/redmagic/%s/select'%config['redmagic_v']
 source_lens = destest.H5Source(params_lens)
@@ -80,7 +80,7 @@ if w_l==1:
 param_file = paths['yaml'] + 'destest_random.yaml'
 params_rmr = yaml.load(open(param_file))
 params_rmr['param_file'] = param_file
-params_rmr['filename'] = filename_mastercat
+params_rmr['filename'] = config['filename_mastercat']
 params_rmr['table'] = [config['redmagic_v']]
 params_rmr['select_path'] = 'index/redmagic/%s/random_select'%config['redmagic_v']
 source_rmr = destest.H5Source(params_rmr)
@@ -109,7 +109,7 @@ dec_r = np.concatenate([dec_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for 
 z_r = np.concatenate([z_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i in range(len(zbins)-1)]) 
 
 # Path to save the lens catalogs already jackknifed
-path = '../lens_cats/redmagic/%s/%s/njk_%d/'%(filename_mastercat[53:-3], params_lens['table'][0],config['njk'])
+path = '../lens_cats/redmagic/%s/%s/njk_%d/'%(config['mastercat_v'], params_lens['table'][0],config['njk'])
 os.system('mkdir -p %s'%path)
 
 # Divides into jackknife regions

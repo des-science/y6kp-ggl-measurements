@@ -1,7 +1,5 @@
 import os
-import matplotlib.pyplot as plt  
-from info import blind, paths, config, zbins, plotting, source_nofz_pars, sysmaps, mode, filename_mastercat
-
+from info import paths
 
 path_2pt_pipeline = '../../2pt_pipeline/'
 
