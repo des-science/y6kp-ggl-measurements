@@ -754,7 +754,7 @@ class Measurement(GGL):
                     mask_neg = gt < 0
                     mask_pos = gt > 0
 
-                    chi2, ndf = self.get_chi2(path_test, 'gt')
+                    #chi2, ndf = self.get_chi2(path_test, 'gt')
                     ax[j][l % 3].errorbar(th[mask_neg] * (1 + 0.05 * s), -gt[mask_neg], err[mask_neg], fmt='.', mfc='None',
                                           mec=plt.get_cmap(cmap)(cmap_step * s), ecolor=plt.get_cmap(cmap)(cmap_step * s), capsize=2)
                     ax[j][l % 3].errorbar(th[mask_pos] * (1 + 0.05 * s), gt[mask_pos], err[mask_pos], fmt='.',
@@ -762,7 +762,6 @@ class Measurement(GGL):
                                           mec=plt.get_cmap(cmap)(cmap_step * s), label=self.plotting['redshift_s'][s], capsize=2)
 
                     ax[j][l % 3].set_xlim(self.config['thlims'][0]*0.8, self.config['thlims'][1]*1.2)
-                    #ax[j][l % 3].set_ylim(10 ** (-6), 10 ** (-2))
                     ax[j][l % 3].set_xscale('log')
                     ax[j][l % 3].set_yscale('log')
 
@@ -801,6 +800,38 @@ class Measurement(GGL):
 
 
 
+    def load_twopointfile(self):
+        '''
+        Loads TwoPointFile and returns it.
+        '''
+        filename = self.get_twopointfile_name()
+        if self.basic['blind']: gammat_file = twopoint.TwoPointFile.from_fits('%s_BLINDED.fits'%filename[:-5])
+        else: gammat_file = twopoint.TwoPointFile.from_fits('%s.fits'%filename[:-5])
+        return gammat_file
+        
+
+    def compute_sn_ratio(self):
+        '''
+        Compute S/N ratio using null chi2. 
+        S/N = sqrt(null chi2 - ndof)
+        Uses full jackknife covariance.
+        '''
+
+        gammat_file = self.load_twopointfile()
+        gammat = gammat_file.spectra[0].value
+        cov = gammat_file.covmat
+        
+        COV = np.array(cov)
+        INVCOV = np.linalg.inv(COV)
+        null_chi2 = np.mat(gammat)*INVCOV*np.transpose(np.mat(gammat))
+        dof = gammat.shape[0]
+        sn = np.sqrt(null_chi2 - dof)
+        
+        path_save = self.get_path_test_allzbins()
+        print 'S/N of the full measurements:', float(sn)
+        np.savetxt(path_save + 'sn_ratio_full_measurements', sn, fmt = '%0.5g', header = 'S/N ratio computed with JK covariance, S/N = sqrt(null chi2 - ndof)')
+
+
     def plot_from_twopointfile(self):
         
         """"
@@ -813,9 +844,7 @@ class Measurement(GGL):
         plt.rc('text', usetex=self.plotting['latex'])
         plt.rc('font', family='serif')
 
-        filename = self.get_twopointfile_name()
-        if self.basic['blind']: gammat_file = twopoint.TwoPointFile.from_fits('%s_BLINDED.fits'%filename[:-5])
-        else: gammat_file = twopoint.TwoPointFile.from_fits('%s.fits'%filename[:-5])
+        gammat_file = self.load_twopointfile()
 
         gammat = gammat_file.spectra[0]
         pairs = gammat.bin_pairs
@@ -851,7 +880,7 @@ class Measurement(GGL):
                     mask_neg = gt < 0
                     mask_pos = gt > 0
 
-                    chi2, ndf = self.get_chi2(path_test, 'gt')
+                    #chi2, ndf = self.get_chi2(path_test, 'gt')
                     ax[j][l % 3].errorbar(th[mask_neg] * (1 + 0.05 * s), -gt[mask_neg], err[mask_neg], fmt='.', mfc='None',
                                           mec=plt.get_cmap(cmap)(cmap_step * s), ecolor=plt.get_cmap(cmap)(cmap_step * s), capsize=2)
                     ax[j][l % 3].errorbar(th[mask_pos] * (1 + 0.05 * s), gt[mask_pos], err[mask_pos], fmt='.',
