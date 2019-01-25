@@ -736,7 +736,7 @@ class Measurement(GGL):
         title_source = self.plotting['catname']
 
         # Figure
-        fig, ax = plt.subplots(2, 3, figsize=(10, 6), sharey=False, sharex=False, gridspec_kw={'height_ratios': [1, 1]})
+        fig, ax = plt.subplots(2, 3, figsize=(10, 6), sharey=True, sharex=False, gridspec_kw={'height_ratios': [1, 1]})
         fig.subplots_adjust(hspace=0.0, wspace=0.00)
 
         for l in range(0, len(self.zbins['lbins'])):
@@ -761,8 +761,8 @@ class Measurement(GGL):
                                           color=plt.get_cmap(cmap)(cmap_step * s),
                                           mec=plt.get_cmap(cmap)(cmap_step * s), label=self.plotting['redshift_s'][s], capsize=2)
 
-                    ax[j][l % 3].set_xlim(2.5, 300)
-                    ax[j][l % 3].set_ylim(10 ** (-6), 10 ** (-2))
+                    ax[j][l % 3].set_xlim(self.config['thlims'][0]*0.8, self.config['thlims'][1]*1.2)
+                    #ax[j][l % 3].set_ylim(10 ** (-6), 10 ** (-2))
                     ax[j][l % 3].set_xscale('log')
                     ax[j][l % 3].set_yscale('log')
 
@@ -778,7 +778,7 @@ class Measurement(GGL):
 
                     ax[j][l % 3].set_xlabel(r'$\theta$ [arcmin]', size='large')
                     ax[j][0].set_ylabel(r'$\gamma_t (\theta)$', size='large')
-                    ax[j][l % 3].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%d$'))
+                    #ax[j][l % 3].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%d$'))
 
                     """
                     # Chi2
