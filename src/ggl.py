@@ -743,8 +743,8 @@ class Measurement(GGL):
 
             # To iterate between the three columns and two lines
             j = 0 if l < 3 else 1
-            ax[j][l % 3].axvspan(2.5, self.plotting['th_limit'][l], color='gray', alpha=0.2)
-
+            ax[j][l % 3].axvspan(self.config['thlims'][0]*0.8, self.plotting['th_limit'][l], color='gray', alpha=0.2)
+            print self.config['thlims'][0]*0.8
             for s in range(len(self.zbins['sbins'])):
 
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
@@ -788,8 +788,8 @@ class Measurement(GGL):
                              horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 12, color = plt.get_cmap(cmap)(cmap_step*s))
                     """
 
-        ax[1][0].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
-        ax[1][1].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
+        #ax[1][0].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
+        #ax[1][1].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
         # handles, labels = ax[0][0].get_legend_handles_labels()
         fig.delaxes(ax[1, 2])
         # ax[1][1].legend(handles[::-1], labels[::-1], frameon=True, fancybox = True,prop={'size':12}, numpoints = 1, loc='center left', bbox_to_anchor=(1, 0.5))
@@ -840,7 +840,7 @@ class Measurement(GGL):
 
             # To iterate between the three columns and two lines
             j = 0 if l < 3 else 1
-            ax[j][l % 3].axvspan(2.5, self.plotting['th_limit'][l], color='gray', alpha=0.2)
+            ax[j][l % 3].axvspan(self.config['thlims'][0]*0.8, self.plotting['th_limit'][l], color='gray', alpha=0.2)
 
             for s in range(len(self.zbins['sbins'])):
 
@@ -858,8 +858,7 @@ class Measurement(GGL):
                                           color=plt.get_cmap(cmap)(cmap_step * s),
                                           mec=plt.get_cmap(cmap)(cmap_step * s), label=self.plotting['redshift_s'][s], capsize=2)
 
-                    ax[j][l % 3].set_xlim(2.5, 300)
-                    ax[j][l % 3].set_ylim(10 ** (-6), 10 ** (-2))
+                    ax[j][l % 3].set_xlim(self.config['thlims'][0]*0.8, self.config['thlims'][1]*1.2)
                     ax[j][l % 3].set_xscale('log')
                     ax[j][l % 3].set_yscale('log')
 
@@ -885,8 +884,8 @@ class Measurement(GGL):
                              horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 12, color = plt.get_cmap(cmap)(cmap_step*s))
                     """
 
-        ax[1][0].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
-        ax[1][1].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
+        #ax[1][0].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
+        #ax[1][1].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
         # handles, labels = ax[0][0].get_legend_handles_labels()
         fig.delaxes(ax[1, 2])
         # ax[1][1].legend(handles[::-1], labels[::-1], frameon=True, fancybox = True,prop={'size':12}, numpoints = 1, loc='center left', bbox_to_anchor=(1, 0.5))
