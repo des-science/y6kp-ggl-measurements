@@ -122,6 +122,24 @@ class GGL(object):
         return source_bin
 
 
+    def load_metacal_bin_sels_responses(self, source, zlim_low, zlim_high):
+        """
+        source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
+        zlim_low, zlim_high: limits to select the tomographic bin.
+        Obtains 4 masks (sheared 1p, 1m, 2p, 2m) to obtain the new selection response.
+        Returns: Source dictionary masked each time with one of the masks, to compute the selection response manually and
+                 test its scale dependence. 
+        """
+        photoz_masks = [(source['bpz_mean'][i] > zlim_low) & (source['bpz_mean'][i] < zlim_high) for i in range(1, 5)]
+        source_bin_sels = {}
+        source_bin_sels['ra'] = [source['ra'][photoz_masks[i]] for i in range(1, 5)]
+        source_bin_sels['dec'] = [source['dec'][photoz_masks[i]] for i in range(1, 5)]
+        source_bin_sels['e1'] = [source['e1'][photoz_masks[i]] for i in range(1, 5)]
+        source_bin_sels['e2'] = [source['e2'][photoz_masks[i]] for i in range(1, 5)]
+
+        return source_bin_sels
+
+
     def get_lens(self, lens):
         """
         Given a lens sample, returns ra, dec, jk and weight, in case it exists.
@@ -351,24 +369,29 @@ class GGL(object):
                    header='R_mean, Rgamma_mean, Rs_mean')
         return R_mean
 
-    def run_responses_nk_tomo(self, lens, source, sbin):
+    def run_responses_nk_tomo(self, lens, source, source_sels, sbin):
         """
         Function that computes scale dependent responses for each lens-source combination.
         Uses NK TreeCorr correlation.
+        Lens: Lens catalog for a certain redshift bin.
+        Source: Source catalog for a certain redshif bin for the unsheared selection. 
+        Source_sels: List of source catalogs for each of the four sheared selections: sheared 1p, 1m, 2p, 2m,
+                     to obtain the new selection response.  
+        
         """
 
         print 'Be aware: Y1 mode of responses. Not dividing by dgamma here.'
         R_nk_ix = {}  # Scale dependent R for component i,x for a given selection s, divided by Delta gamma.
         # x: p, m
         components = ['1p', '1m', '2p', '2m']
-        for comp in components:
-            source_selection = pf.getdata(
-                self.paths['y1'] + 'metacal_sel_responses/metacal_sel_responses_sa%s_%s.fits' % (sbin[1], comp))
+        for i, comp in enumerate(components):
+            #source_selection = 
+            #pf.getdata(self.paths['y1'] + 'metacal_sel_responses/metacal_sel_responses_sa%s_%s.fits' % (sbin[1], comp))
 
             source_component_ix = {
-                'ra': source_selection['ra'],
-                'dec': source_selection['dec'],
-                'Rgamma': source_selection['Riisx']
+                'ra': source_sels[i]['ra'],
+                'dec': source_sels[i]['dec'],
+                'Rgamma': source_sels[i]['e%s'%comp[0]] # Choose e1 for 1p, 1m, and e2 for 2p, 2m.
             }
 
             theta, R_nk_ix[comp] = self.run_nk(lens, source_component_ix)
@@ -540,6 +563,28 @@ class GGL(object):
         return ratioA_mean, err_A
 
 
+    def load_data_or_sims(self):
+        '''
+        Loads and returns lens, randoms and sources, either from data or from simulations.
+        '''
+
+        if self.basic['mode'] == 'data':
+            lens_all = pf.getdata(self.paths['lens'])
+            random_all = pf.getdata(self.paths['randoms'])
+            source_all, calibrator = self.load_metacal()
+
+        if self.basic['mode'] == 'data_y1sources':
+            lens_all = pf.getdata(self.paths['lens'])
+            random_all = pf.getdata(self.paths['randoms'])
+
+        if self.basic['mode'] == 'mice':
+            lens_all = pf.getdata(self.paths['lens_mice'])
+            random_all = pf.getdata(self.paths['randoms_mice'])
+            source_all = pf.getdata(self.paths['source_mice'])
+
+        return lens_all, random_all, source_all, calibrator
+
+
 class Measurement(GGL):
     """
     Subclass that runs the gglensing measurement for all the lens-source bin combinations.
@@ -565,19 +610,8 @@ class Measurement(GGL):
         return os.path.join(self.get_path_test_allzbins() + 'gammat_twopointfile.fits')
 
     def run(self):
-        if self.basic['mode'] == 'data':
-            lens_all = pf.getdata(self.paths['lens'])
-            random_all = pf.getdata(self.paths['randoms'])
-            source_all, calibrator = self.load_metacal()
 
-        if self.basic['mode'] == 'data_y1sources':
-            lens_all = pf.getdata(self.paths['lens'])
-            random_all = pf.getdata(self.paths['randoms'])
-
-        if self.basic['mode'] == 'mice':
-            lens_all = pf.getdata(self.paths['lens_mice'])
-            random_all = pf.getdata(self.paths['randoms_mice'])
-            source_all = pf.getdata(self.paths['source_mice'])
+        lens_all, random_all, source_all, calibrator = self.load_data_or_sims()
 
         for sbin in self.zbins['sbins']:
     		print 'Running measurement for source %s.' % sbin
@@ -723,6 +757,7 @@ class Measurement(GGL):
         filename = 'boost_factors.fits'
         (boost_factors.to_fits()).writeto(path_save + filename)
 
+
     def plot(self):
         """"
         Makes plot of the fiducial measurement for all redshift bins.
@@ -798,8 +833,6 @@ class Measurement(GGL):
         fig.subplots_adjust(top=0.93)
         self.save_plot('plot_measurement')
 
-
-
     def load_twopointfile(self):
         '''
         Loads TwoPointFile and returns it.
@@ -808,7 +841,6 @@ class Measurement(GGL):
         if self.basic['blind']: gammat_file = twopoint.TwoPointFile.from_fits('%s_BLINDED.fits'%filename[:-5])
         else: gammat_file = twopoint.TwoPointFile.from_fits('%s.fits'%filename[:-5])
         return gammat_file
-        
 
     def compute_sn_ratio(self):
         '''
@@ -880,7 +912,6 @@ class Measurement(GGL):
                     mask_neg = gt < 0
                     mask_pos = gt > 0
 
-                    #chi2, ndf = self.get_chi2(path_test, 'gt')
                     ax[j][l % 3].errorbar(th[mask_neg] * (1 + 0.05 * s), -gt[mask_neg], err[mask_neg], fmt='.', mfc='None',
                                           mec=plt.get_cmap(cmap)(cmap_step * s), ecolor=plt.get_cmap(cmap)(cmap_step * s), capsize=2)
                     ax[j][l % 3].errorbar(th[mask_pos] * (1 + 0.05 * s), gt[mask_pos], err[mask_pos], fmt='.',
@@ -913,9 +944,6 @@ class Measurement(GGL):
                              horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 12, color = plt.get_cmap(cmap)(cmap_step*s))
                     """
 
-        #ax[1][0].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
-        #ax[1][1].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
-        # handles, labels = ax[0][0].get_legend_handles_labels()
         fig.delaxes(ax[1, 2])
         # ax[1][1].legend(handles[::-1], labels[::-1], frameon=True, fancybox = True,prop={'size':12}, numpoints = 1, loc='center left', bbox_to_anchor=(1, 0.5))
         ax[0][0].legend(frameon=False, fancybox=True, prop={'size': 12}, numpoints=1, loc='center',
@@ -1108,25 +1136,26 @@ class Responses(GGL):
         Runs for lenses and randoms too.
         """
 
-        lens_all = pf.getdata(self.paths['y1'] + 'lens.fits')
-        random_all = pf.getdata(self.paths['y1'] + 'random.fits')
+        lens_all, random_all, source_all, calibrator = self.load_data_or_sims()
 
         for sbin in zbins['sbins']:
 
-            print 'Running measurement for source %s.' % sbin
-            source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits' % sbin[1])
+            print 'Running responses test for source %s.' % sbin
+	    source = self.load_metacal_bin(source_all, calibrator, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
+            source_sels = self.load_metacal_bin_sels_responses(self, source_all, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
+            #source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits' % sbin[1])
 
             for lbin in self.zbins['lbins']:
-                print 'Running measurement for lens %s.' % lbin
+                print 'Running responses test for lens %s.' % lbin
                 path_test = self.get_path_test(lbin, sbin)
                 make_directory(path_test)
 
                 lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
-                theta, R_nk, Rgamma_nk, Rs_nk = self.run_responses_nk_tomo(lens, source, sbin)
+                theta, R_nk, Rgamma_nk, Rs_nk = self.run_responses_nk_tomo(lens, source, source_sels, sbin)
                 self.save_responses_nk(path_test, zip(theta, R_nk, Rgamma_nk, Rs_nk), 'lens')
 
                 random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-                theta, R_nk, Rgamma_nk, Rs_nk = self.run_responses_nk_tomo(random, source, sbin)
+                theta, R_nk, Rgamma_nk, Rs_nk = self.run_responses_nk_tomo(random, source, source_sels, sbin)
                 self.save_responses_nk(path_test, zip(theta, R_nk, Rgamma_nk, Rs_nk), 'random')
 
     def plot(self, lens_random):

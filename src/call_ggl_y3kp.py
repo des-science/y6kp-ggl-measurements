@@ -4,7 +4,7 @@ from ggl import GGL, Measurement, Responses, TestStars, TestPSF, TestSizeSNR, Te
 T = True
 F = False
 
-run_measurement = F
+run_measurement = T
 run_responses_nk = F
 run_stars = F
 run_psf = F

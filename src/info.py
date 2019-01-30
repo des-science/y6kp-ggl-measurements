@@ -35,7 +35,7 @@ measurements, not the systematics tests.
 basic = {
     'mode':'data',
     'blind': True,
-    'plot_blinded': True
+    'plot_blinded': False
 }
 
 
@@ -51,8 +51,8 @@ config_mice.
 config_data = {
     'njk': 100,
     'bslop': 0.1,
-    'nthbins': 20,
-    'thlims': np.array([2.5,250.]),
+    'nthbins': 21,
+    'thlims': np.array([2.5,500.]),
     'filename_mastercat': '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_v2_6_20_18.h5',
     'redmagic_v': 'combined_sample_fid',
     'zslim_v': 'y1',
