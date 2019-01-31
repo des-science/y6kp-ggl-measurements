@@ -4,8 +4,8 @@ from ggl import GGL, Measurement, Responses, TestStars, TestPSF, TestSizeSNR, Te
 T = True
 F = False
 
-run_measurement = T
-run_responses_nk = F
+run_measurement = F
+run_responses_nk = T
 run_stars = F
 run_psf = F
 run_size_snr = F
@@ -20,7 +20,6 @@ if run_measurement:
         measurement.run()
         measurement.save_boostfactors_2pointfile()
         measurement.save_gammat_2pointfile()
-        measurement.compute_sn_ratio()
         if not basic['blind']:
             measurement.plot()
         measurement.plot_boostfactors()
@@ -28,6 +27,7 @@ if run_measurement:
         measurement.plot_gammax()
 
     if basic['blind'] and basic['plot_blinded']:
+        measurement.compute_sn_ratio()
         measurement.plot_from_twopointfile()
 
 if run_responses_nk:
