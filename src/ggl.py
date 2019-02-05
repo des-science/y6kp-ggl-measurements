@@ -66,6 +66,8 @@ class GGL(object):
 
         # Dictionary with the unsheared version and 1p, 1m, 2p, 2m
         source_5cats = {}
+        source_5cats['ra'] = [gold_selector.get_col('ra', uncut=True)[0][gold_selector.get_mask()[i]] for i in range(5)]
+        source_5cats['dec'] = [gold_selector.get_col('dec', uncut=True)[0][gold_selector.get_mask()[i]] for i in range(5)]
         if 'v1' in self.config['mastercat_v']:
             source_5cats['e1'] = source_selector.get_col('e1')
             source_5cats['e2'] = source_selector.get_col('e2')
@@ -81,8 +83,8 @@ class GGL(object):
 
         # Dictionary with the unsheared version only:
         source = {}
-        source['ra'] = gold_selector.get_col('ra')[0]
-        source['dec'] = gold_selector.get_col('dec')[0]
+        source['ra'] = source_5cats['ra'][0]
+        source['dec'] = source_5cats['dec'][0]
         source['e1'] = source_5cats['e1'][0]
         source['e2'] = source_5cats['e2'][0]
         source['psf_e1'] = source_5cats['psf_e1'][0]
@@ -92,16 +94,25 @@ class GGL(object):
         source['bpz_mean'] = source_5cats['bpz_mean'][0]
         source['bpz_zmc'] = source_5cats['bpz_zmc'][0]
 
+
         calibrator = destest.MetaCalib(params_mcal, source_selector)
         if 'v1' in self.config['mastercat_v']:
             R11, _, _ = calibrator.calibrate('e1')
             R22, _, _ = calibrator.calibrate('e2')
+            source['Rgamma'] = calibrator.calibrate('e1', return_wRg=True)
+
         if 'v2' in self.config['mastercat_v']:
             R11, _, _ = calibrator.calibrate('e_1')
             R22, _, _ = calibrator.calibrate('e_2')
+            # Note: This returns the Rgamma per galaxy already averaged over e1, e2.
+            # So source['Rmean'] is equal to source['Rgamma'].mean()
+            source['Rgamma'] = calibrator.calibrate('e_1', return_wRg=True)
+
+        ipdb.set_trace()
 
         source['Rmean'] = np.mean([R11, R22])
         print 'Response full sample', source['Rmean']
+
 
         return source, calibrator, source_5cats
 
@@ -127,6 +138,7 @@ class GGL(object):
         source_bin['size'] = source['size'][photoz_masks[0]]
         source_bin['bpz_mean'] = source['bpz_mean'][photoz_masks[0]]
         source_bin['bpz_zmc'] = source['bpz_zmc'][photoz_masks[0]]
+        source_bin['Rgamma'] = source['Rgamma'][photoz_masks[0]]
 
         if 'v1' in self.config['mastercat_v']:
             R11, _, _ = calibrator.calibrate('e1', mask=photoz_masks)
@@ -150,6 +162,8 @@ class GGL(object):
         """
         photoz_masks = [(source_5cats['bpz_mean'][i] > zlim_low) & (source_5cats['bpz_mean'][i] < zlim_high) for i in range(5)]
         source_bin_sels = {}
+        source_bin_sels['ra'] = [source_5cats['ra'][i][photoz_masks[i]] for i in range(1, 5)]
+        source_bin_sels['dec'] = [source_5cats['dec'][i][photoz_masks[i]] for i in range(1, 5)]
         source_bin_sels['e1'] = [source_5cats['e1'][i][photoz_masks[i]] for i in range(1, 5)]
         source_bin_sels['e2'] = [source_5cats['e2'][i][photoz_masks[i]] for i in range(1, 5)]
 
@@ -391,22 +405,21 @@ class GGL(object):
         Function that computes scale dependent responses for each lens-source combination.
         Uses NK TreeCorr correlation.
         Lens: Lens catalog for a certain redshift bin.
-        Source: Source catalog for a certain redshif bin for the unsheared selection. 
+        Source: Source catalog for a certain redshift bin for the unsheared selection. 
         Source_sels: List of source catalogs for each of the four sheared selections: sheared 1p, 1m, 2p, 2m,
                      to obtain the new selection response.  
         delta_gamma: value of the artificially applied shear to the images. 
         """
 
-        print 'Be aware: Y1 mode of responses. Not dividing by dgamma here.'
-        R_nk_ix = {}  # Scale dependent R for component i,x for a given selection s, divided by Delta gamma.
+        e_nk_ix = {}  # Scale dependent ellipticity for component i for a given selection x.
         # x: p, m
         components = ['1p', '1m', '2p', '2m']
         for i, comp in enumerate(components):
             #source_selection = 
             #pf.getdata(self.paths['y1'] + 'metacal_sel_responses/metacal_sel_responses_sa%s_%s.fits' % (sbin[1], comp))
             source_component_ix = {
-                'ra': source['ra'],
-                'dec': source['dec'],
+                'ra': source_sels['ra'][i],
+                'dec': source_sels['dec'][i],
                 'e_ix': source_sels['e%s'%comp[0]][i] # Choose e1 for 1p, 1m selections, and e2 for 2p, 2m selections. 
             }
             theta, e_nk_ix[comp] = self.run_nk(lens, source_component_ix, scalar = source_component_ix['e_ix'])
@@ -426,7 +439,6 @@ class GGL(object):
         Saves R_total, Rgamma, R_s in file and returns R_total.
         """
 
-        print 'Be aware: Y1 mode of responses. Not dividing by dgamma here.'
         e_ix = {}  # ellipticities for component i for a given selection s, divided by Delta gamma.
         # x: p, m
         components = ['1p', '1m', '2p', '2m']
