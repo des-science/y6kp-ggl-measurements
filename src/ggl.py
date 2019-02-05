@@ -108,8 +108,6 @@ class GGL(object):
             # So source['Rmean'] is equal to source['Rgamma'].mean()
             source['Rgamma'] = calibrator.calibrate('e_1', return_wRg=True)
 
-        ipdb.set_trace()
-
         source['Rmean'] = np.mean([R11, R22])
         print 'Response full sample', source['Rmean']
 
