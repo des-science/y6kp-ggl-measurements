@@ -39,7 +39,26 @@ class GGL(object):
         """
         Loads metacal data for Y3 catalog using h5 interface.
         Combines with Gold and BPZ.
-        Returns: dictionary for the sources, with all the relevant columns.
+        Returns: two dictionaries for the sources, with all the relevant columns and the calibrator
+                 in order to be used for other functions too. 
+                 These are the two dictionaries it returns, which are used for different things:
+
+        - source_5sels: It is a nested dictionary with 'sheared' and 'unsheared' quantities. 
+                        *'unsheared': Dictionary with the unsheared version of each 
+                                      quantity with the selections from: unsheared, 1p, 1m, 2p, 2m.
+                                      The unsheared version of a quantity means that has been measured on
+                                      images which are unsheared, or using fluxes obtained from unsheared images.
+                                      This dictionary is useful to compute the selection response manually.
+
+                        *'sheared': Dictionary with the 5 selections (1p, 1m, 2p, 2m), in which the 
+                                    quantities are obtained from sheared images or using fluxes measured
+                                    on sheared images. 
+                                    This dictionary is useful to make further selections besides the baseline selection,
+                                    for instance to select of redshift bins, size or S/N, which you need to do also 
+                                    using the sheard quanties to compute the selection response. 
+        
+        - source: Simplest one. Dictionary with the baseline unsheared selection and quantites.
+        
         """
 
         mcal_file = self.paths['yaml'] + 'destest_mcal.yaml'
@@ -64,36 +83,35 @@ class GGL(object):
         pz_selector = destest.Selector(params_pz, source_pz, inherit=source_selector)
 
 
-        # Dictionary with the unsheared version and 1p, 1m, 2p, 2m
-        source_5cats = {}
-        source_5cats['ra'] = [gold_selector.get_col('ra', uncut=True)[0][gold_selector.get_mask()[i]] for i in range(5)]
-        source_5cats['dec'] = [gold_selector.get_col('dec', uncut=True)[0][gold_selector.get_mask()[i]] for i in range(5)]
-        if 'v1' in self.config['mastercat_v']:
-            source_5cats['e1'] = source_selector.get_col('e1')
-            source_5cats['e2'] = source_selector.get_col('e2')
-        if 'v2' in self.config['mastercat_v']:
-            source_5cats['e1'] = source_selector.get_col('e_1')
-            source_5cats['e2'] = source_selector.get_col('e_2')
-        source_5cats['psf_e1'] = source_selector.get_col('psf_e1')
-        source_5cats['psf_e2'] = source_selector.get_col('psf_e2')
-        source_5cats['snr'] = source_selector.get_col('snr')
-        source_5cats['size'] = source_selector.get_col('T')
-        source_5cats['bpz_mean'] = pz_selector.get_col('zmean_sof')
-        source_5cats['bpz_zmc'] = pz_selector.get_col('zmc_sof')
+        # Dictionary with the unsheared version of each quantity with the selections from: unsheared, 1p, 1m, 2p, 2m. 
+        source_5sels = {}
+        source_5sels['unsheared'] = {}
+        source_5sels['unsheared']['ra'] = [gold_selector.get_col('ra', uncut=True)[0][gold_selector.get_mask()[i]] for i in range(5)]
+        source_5sels['unsheared']['dec'] = [gold_selector.get_col('dec', uncut=True)[0][gold_selector.get_mask()[i]] for i in range(5)]
+        source_5sels['unsheared']['e1'] = [source_selector.get_col('e_1', uncut=True)[0][source_selector.get_mask()[i]] for i in range(5)]
+        source_5sels['unsheared']['e2'] = [source_selector.get_col('e_2', uncut=True)[0][source_selector.get_mask()[i]] for i in range(5)]
 
-        # Dictionary with the unsheared version only:
+        # Dictionary with the 5 selections (1p, 1m, 2p, 2m), in which the quantities are obtained from sheared images or using fluxes measured on sheared images.   
+        source_5sels['sheared'] = {}
+        source_5sels['sheared']['e1'] = source_selector.get_col('e_1')
+        source_5sels['sheared']['e2'] = source_selector.get_col('e_2')
+        source_5sels['sheared']['snr'] = source_selector.get_col('snr')
+        source_5sels['sheared']['size'] = source_selector.get_col('T')
+        source_5sels['sheared']['bpz_mean'] = pz_selector.get_col('zmean_sof')
+        source_5sels['sheared']['bpz_zmc'] = pz_selector.get_col('zmc_sof')
+
+        # Dictionary with the unsheared version and selection only:
         source = {}
-        source['ra'] = source_5cats['ra'][0]
-        source['dec'] = source_5cats['dec'][0]
-        source['e1'] = source_5cats['e1'][0]
-        source['e2'] = source_5cats['e2'][0]
-        source['psf_e1'] = source_5cats['psf_e1'][0]
-        source['psf_e2'] = source_5cats['psf_e2'][0]
-        source['snr'] = source_5cats['snr'][0]
-        source['size'] = source_5cats['size'][0]
-        source['bpz_mean'] = source_5cats['bpz_mean'][0]
-        source['bpz_zmc'] = source_5cats['bpz_zmc'][0]
-
+        source['ra'] = source_5sels['unsheared']['ra'][0]
+        source['dec'] = source_5sels['unsheared']['dec'][0]
+        source['e1'] = source_5sels['unsheared']['e1'][0]
+        source['e2'] = source_5sels['unsheared']['e2'][0]
+        source['psf_e1'] = source_selector.get_col('psf_e1')[0]
+        source['psf_e2'] = source_selector.get_col('psf_e2')[0]
+        source['snr'] = source_5sels['sheared']['snr'][0]
+        source['size'] = source_5sels['sheared']['size'][0]
+        source['bpz_mean'] = source_5sels['sheared']['bpz_mean'][0]
+        source['bpz_zmc'] = source_5sels['sheared']['bpz_zmc'][0]
 
         calibrator = destest.MetaCalib(params_mcal, source_selector)
         if 'v1' in self.config['mastercat_v']:
@@ -111,20 +129,19 @@ class GGL(object):
         source['Rmean'] = np.mean([R11, R22])
         print 'Response full sample', source['Rmean']
 
+        return source, source_5sels, calibrator
 
-        return source, calibrator, source_5cats
-
-    def load_metacal_bin(self, source, calibrator, source_5cats, zlim_low, zlim_high):
+    def load_metacal_bin(self, source, source_5sels, calibrator, zlim_low, zlim_high):
         """
         source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
+        source_5sels: dictionary containing relevant columns for the sources, with the baseline selection applied already,
+                     for each of the 5 selections 1p, 1m, 2p, 2m. 
         calibrator: class to compute the response. Taken from baseline selection.
-        source_5cats: dictionary containing relevant columns for the sources, with the baseline selection applied already,
-                     for each of the unsheared and sheared versions. 
         zlim_low, zlim_high: limits to select the tomographic bin.
         Obtains 5 masks (unsheared, sheared 1p, 1m, 2p, 2m) to obtain the new selection response.
         Returns: Source dictionary masked with the unsheared mask and with the mean response updated.
         """
-        photoz_masks = [(source_5cats['bpz_mean'][i] > zlim_low) & (source_5cats['bpz_mean'][i] < zlim_high) for i in range(5)]
+        photoz_masks = [(source_5sels['sheared']['bpz_mean'][i] > zlim_low) & (source_5sels['sheared']['bpz_mean'][i] < zlim_high) for i in range(5)]
         source_bin = {}
         source_bin['ra'] = source['ra'][photoz_masks[0]]
         source_bin['dec'] = source['dec'][photoz_masks[0]]
@@ -145,25 +162,24 @@ class GGL(object):
             R11, _, _ = calibrator.calibrate('e_1', mask=photoz_masks)
             R22, _, _ = calibrator.calibrate('e_2', mask=photoz_masks)
         source_bin['Rmean'] = np.mean([R11, R22])
-
+        print 'Mean response redshift bin (%0.2f, %0.2f):'%(zlim_low, zlim_high), source_bin['Rmean'], np.mean(source_bin['Rgamma'])
         return source_bin
 
 
-    def load_metacal_bin_sels_responses(self, source_5cats, zlim_low, zlim_high):
+    def load_metacal_bin_sels_responses(self, source_5sels, zlim_low, zlim_high):
         """
-        source_5cats: dictionary containing relevant columns for the sources, with the baseline selection applied already,
-                   for each of the unsheared and sheared versions.
+        source_5sels: Nested dictionary containing relevant columns for the sources, with the baseline selection applied already,
+                   for each of the unsheared and sheared versions and for each selection.
         zlim_low, zlim_high: limits to select the tomographic bin.
-        Obtains 4 masks (sheared 1p, 1m, 2p, 2m) to obtain the new selection response.
-        Returns: Source dictionary masked each time with one of the masks, to compute the selection response manually and
+        Returns: Source dictionary masked each time with one of the photo-z masks, to compute the selection response manually and
                  test its scale dependence. 
         """
-        photoz_masks = [(source_5cats['bpz_mean'][i] > zlim_low) & (source_5cats['bpz_mean'][i] < zlim_high) for i in range(5)]
+        photoz_masks = [(source_5sels['sheared']['bpz_mean'][i] > zlim_low) & (source_5sels['sheared']['bpz_mean'][i] < zlim_high) for i in range(5)]
         source_bin_sels = {}
-        source_bin_sels['ra'] = [source_5cats['ra'][i][photoz_masks[i]] for i in range(1, 5)]
-        source_bin_sels['dec'] = [source_5cats['dec'][i][photoz_masks[i]] for i in range(1, 5)]
-        source_bin_sels['e1'] = [source_5cats['e1'][i][photoz_masks[i]] for i in range(1, 5)]
-        source_bin_sels['e2'] = [source_5cats['e2'][i][photoz_masks[i]] for i in range(1, 5)]
+        source_bin_sels['ra'] = [source_5sels['unsheared']['ra'][i][photoz_masks[i]] for i in range(1, 5)]
+        source_bin_sels['dec'] = [source_5sels['unsheared']['dec'][i][photoz_masks[i]] for i in range(1, 5)]
+        source_bin_sels['e1'] = [source_5sels['unsheared']['e1'][i][photoz_masks[i]] for i in range(1, 5)]
+        source_bin_sels['e2'] = [source_5sels['unsheared']['e2'][i][photoz_masks[i]] for i in range(1, 5)]
 
         return source_bin_sels
 
@@ -374,59 +390,48 @@ class GGL(object):
         Rs_mean = 0.5 * (Rs11_mean + Rs22_mean)
         return Rs_mean
 
-    def load_responses_mean(self, sbin):
-        """
-        Loads responses for sbin.
-        Note: sbin can be 'notomo', which is the union of all the bins.
-        Returns R_mean
-        """
-        path_save = os.path.join(self.paths['runs'], 'metacal_%s' % self.config['metacal_v'],
-                                 'zbinsource_%s' % self.config['zbinsource_v']) + '/'
-        R_mean, _, _ = np.loadtxt(path_save + 'responses_mean_%s' % sbin, unpack=True)
-        return R_mean
 
-    def save_responses_mean(self, Rgamma_mean, Rs_mean, sbin):
-        """
-        Puts together Rgamma and Rs and saves them.
-        Returns R_total.
-        """
-        R_mean = Rgamma_mean + Rs_mean
-        responses = np.array([R_mean, Rgamma_mean, Rs_mean])
-        path_save = os.path.join(self.paths['runs'], 'metacal_%s' % self.config['metacal_v'],
-                                   'zbinsource_%s' % self.config['zbinsource_v']) + '/'
-        np.savetxt(path_save + 'responses_mean_%s' % sbin, responses.reshape(1, responses.shape[0]),
-                   header='R_mean, Rgamma_mean, Rs_mean')
-        return R_mean
-
-    def run_responses_nk_tomo(self, lens, source, source_sels, sbin, delta_gamma):
+    def run_responses_nk_tomo(self, lens, source, source_sels, delta_gamma):
         """
         Function that computes scale dependent responses for each lens-source combination.
         Uses NK TreeCorr correlation.
         Lens: Lens catalog for a certain redshift bin.
         Source: Source catalog for a certain redshift bin for the unsheared selection. 
-        Source_sels: List of source catalogs for each of the four sheared selections: sheared 1p, 1m, 2p, 2m,
-                     to obtain the new selection response.  
+        Source_sels: List of source catalogs for each of the four sheared selections (sheared 1p, 1m, 2p, 2m)
+                     but with the unsheared quantities ra, dec, e1, e2, to obtain the new selection response.  
         delta_gamma: value of the artificially applied shear to the images. 
         """
 
-        e_nk_ix = {}  # Scale dependent ellipticity for component i for a given selection x.
+        e_nk_ix = {}  # Mean scale dependent ellipticity for component i for a given selection x.
+        e_ix = {} # Mean ellipticity for component i for a given selection x.
         # x: p, m
         components = ['1p', '1m', '2p', '2m']
         for i, comp in enumerate(components):
-            #source_selection = 
-            #pf.getdata(self.paths['y1'] + 'metacal_sel_responses/metacal_sel_responses_sa%s_%s.fits' % (sbin[1], comp))
             source_component_ix = {
                 'ra': source_sels['ra'][i],
                 'dec': source_sels['dec'][i],
                 'e_ix': source_sels['e%s'%comp[0]][i] # Choose e1 for 1p, 1m selections, and e2 for 2p, 2m selections. 
             }
             theta, e_nk_ix[comp] = self.run_nk(lens, source_component_ix, scalar = source_component_ix['e_ix'])
+            e_ix[comp] = np.mean(source_component_ix['e_ix'])
 
         theta, Rgamma_nk = self.run_nk(lens, source, scalar = source['Rgamma'])
+        Rgamma_mean = np.mean(source['Rgamma'])
+    
         Rs_nk = self.compute_Rs(e_nk_ix, delta_gamma)
-
         R_nk = Rgamma_nk + Rs_nk
-        return theta, R_nk, Rgamma_nk, Rs_nk
+        print 'Rgamma_nk', Rgamma_nk
+        print 'Rs_nk', Rs_nk
+        print 'R_nk', R_nk
+        print 'delta_gamma', delta_gamma
+        
+        Rs_mean = self.compute_Rs(e_ix, delta_gamma)
+        R_mean = Rgamma_mean + Rs_mean
+        print 'Rmean, Rgamma_mean, Rs_mean', R_mean, Rgamma_mean, Rs_mean
+
+        responses_nk = zip(theta, R_nk, Rgamma_nk, Rs_nk)
+        responses_mean = [R_mean, Rgamma_mean, Rs_mean]
+        return responses_nk, responses_mean
 
     def run_responses_mean_notomo(self, Rgamma, delta_gamma):
         """
@@ -446,8 +451,8 @@ class GGL(object):
             e_ix_allbins = np.zeros(0)
             for sbin in self.zbins['sbins']:
                 # Appending responses source bin sbin.
-                source_selection = pf.getdata(
-                    self.paths['y1'] + 'metacal_sel_responses/metacal_sel_responses_sa%s_%s.fits' % (sbin[1], comp))
+                #source_selection = pf.getdata(
+                #    self.paths['y1'] + 'metacal_sel_responses/metacal_sel_responses_sa%s_%s.fits' % (sbin[1], comp))
                 e_ix_allbins = np.append(e_ix_allbins, source_selection['Riisx'])
 
             e_ix[comp] = np.mean(e_ix_allbins)
@@ -597,7 +602,7 @@ class GGL(object):
         if self.basic['mode'] == 'data':
             lens_all = pf.getdata(self.paths['lens'])
             random_all = pf.getdata(self.paths['randoms'])
-            source_all, calibrator, source_all_5cats = self.load_metacal()
+            source_all, source_all_5sels, calibrator = self.load_metacal()
 
         if self.basic['mode'] == 'data_y1sources':
             lens_all = pf.getdata(self.paths['lens'])
@@ -608,7 +613,7 @@ class GGL(object):
             random_all = pf.getdata(self.paths['randoms_mice'])
             source_all = pf.getdata(self.paths['source_mice'])
 
-        return lens_all, random_all, source_all, calibrator, source_all_5cats
+        return lens_all, random_all, source_all, source_all_5sels, calibrator
 
 
 class Measurement(GGL):
@@ -637,14 +642,15 @@ class Measurement(GGL):
 
     def run(self):
 
-        lens_all, random_all, source_all, calibrator, source_all_5cats = self.load_data_or_sims()
+        lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
 
         for sbin in self.zbins['sbins']:
     		print 'Running measurement for source %s.' % sbin
 
 		if self.basic['mode'] == 'data':
-		    source = self.load_metacal_bin(source_all, calibrator, source_all_5cats, lim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
+		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, lim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
 		    R = source['Rmean']
+                    print 'R = source[Rmean]', R, sbin
 
 		if self.basic['mode'] == 'data_y1sources':
 		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
@@ -1156,21 +1162,31 @@ class Responses(GGL):
         theta, R_nk, Rgamma_nk, Rs_nk = np.loadtxt(path_test + 'responses_nk_%s' % end, unpack=True)
         return theta, R_nk, Rgamma_nk, Rs_nk
 
+    def load_responses_mean(self, end):
+        R_mean, Rgamma, Rs = np.loadtxt(path_save + 'responses_mean_%s'%end, unpack=True)
+        return R_mean 
+
+    def save_responses_mean(self, responses_mean, end):
+        responses_mean = np.array([responses_mean[sbin] for sbin in self.zbins['sbins']])
+        np.savetxt(path_save + 'responses_mean_%s'%end, responses_mean,
+                   header='R_mean, Rgamma_mean, Rs_mean')
+
     def run_tomo_nk(self):
         """
         Runs the NK responses between lenses and sources.
         Runs for lenses and randoms too.
         """
-
-        lens_all, random_all, source_all, calibrator, source_all_5cats = self.load_data_or_sims()
-
+        lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
+        resp = {}
+        responses_mean = {}
         for sbin in self.zbins['sbins']:
 
             print 'Running responses test for source %s.' % sbin
-            source = self.load_metacal_bin(source_all, calibrator, source_all_5cats, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
-            source_sels = self.load_metacal_bin_sels_responses(source_all_5cats, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
+            source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
+            resp[sbin] = source['Rmean']
+            print 'R = source[Rmean]', resp
+            source_sels = self.load_metacal_bin_sels_responses(source_all_5sels, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
             delta_gamma = 2*0.01
-            #source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits' % sbin[1])
 
             for lbin in self.zbins['lbins']:
                 print 'Running responses test for lens %s.' % lbin
@@ -1178,13 +1194,19 @@ class Responses(GGL):
                 make_directory(path_test)
 
                 lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
-                theta, R_nk, Rgamma_nk, Rs_nk = self.run_responses_nk_tomo(lens, source, source_sels, sbin, delta_gamma)
-                self.save_responses_nk(path_test, zip(theta, R_nk, Rgamma_nk, Rs_nk), 'lens')
+                responses_nk, responses_mean[sbin] = self.run_responses_nk_tomo(lens, source, source_sels, delta_gamma)
+                self.save_responses_nk(path_test, responses_nk, 'lens')
 
-                random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-                theta, R_nk, Rgamma_nk, Rs_nk = self.run_responses_nk_tomo(random, source, source_sels, sbin, delta_gamma)
-                self.save_responses_nk(path_test, zip(theta, R_nk, Rgamma_nk, Rs_nk), 'random')
+                #random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+                #responses_nk, _ = self.run_responses_nk_tomo(random, source, source_sels, delta_gamma)
+                #self.save_responses_nk(path_test, responses_nk, 'random')
 
+
+        print resp
+        print responses_mean
+        self.save_responses_mean(resp, 'destest')
+        self.save_responses_mean(responses_mean, 'xcorr')
+            
     def plot(self, lens_random):
         """
         Makes plot comparing the NK responses to the mean ones.
