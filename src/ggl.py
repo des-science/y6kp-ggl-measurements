@@ -420,9 +420,6 @@ class GGL(object):
     
         Rs_nk = self.compute_Rs(e_nk_ix, delta_gamma)
         R_nk = Rgamma_nk + Rs_nk
-        print 'Rgamma_nk', Rgamma_nk
-        print 'Rs_nk', Rs_nk
-        print 'R_nk', R_nk
         print 'delta_gamma', delta_gamma
         
         Rs_mean = self.compute_Rs(e_ix, delta_gamma)
@@ -561,6 +558,7 @@ class GGL(object):
         make_directory(self.paths['plots_config'])
         plt.savefig(self.paths['plots_config'] + '%s.pdf' % name_plot, bbox_inches='tight')
         plt.savefig(self.paths['plots_config'] + '%s.png' % name_plot, bbox_inches='tight', dpi=400)
+        print 'Plot saved in:', self.paths['plots_config'] + '%s.pdf'% name_plot
 
     def load_sims(self):
         """
@@ -1152,6 +1150,10 @@ class Responses(GGL):
         self.zbins = zbins
         self.plotting = plotting
 
+
+    def get_path_test_allzbins(self):
+        return os.path.join(self.paths['runs_config'], 'responses_nk') + '/'
+
     def get_path_test(self, lbin, sbin):
         return os.path.join(self.paths['runs_config'], 'responses_nk', lbin + '_' + sbin) + '/'
 
@@ -1162,14 +1164,15 @@ class Responses(GGL):
         theta, R_nk, Rgamma_nk, Rs_nk = np.loadtxt(path_test + 'responses_nk_%s' % end, unpack=True)
         return theta, R_nk, Rgamma_nk, Rs_nk
 
-    def load_responses_mean(self, end):
-        R_mean, Rgamma, Rs = np.loadtxt(path_save + 'responses_mean_%s'%end, unpack=True)
-        return R_mean 
-
     def save_responses_mean(self, responses_mean, end):
         responses_mean = np.array([responses_mean[sbin] for sbin in self.zbins['sbins']])
-        np.savetxt(path_save + 'responses_mean_%s'%end, responses_mean,
+        np.savetxt(self.get_path_test_allzbins() + 'responses_mean_%s'%end, responses_mean,
                    header='R_mean, Rgamma_mean, Rs_mean')
+
+    def load_responses_mean(self, end):
+        R_mean, Rgamma, Rs = np.loadtxt(self.get_path_test_allzbins() + 'responses_mean_%s'%end, unpack=True)
+        return R_mean 
+
 
     def run_tomo_nk(self):
         """
@@ -1197,9 +1200,9 @@ class Responses(GGL):
                 responses_nk, responses_mean[sbin] = self.run_responses_nk_tomo(lens, source, source_sels, delta_gamma)
                 self.save_responses_nk(path_test, responses_nk, 'lens')
 
-                #random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-                #responses_nk, _ = self.run_responses_nk_tomo(random, source, source_sels, delta_gamma)
-                #self.save_responses_nk(path_test, responses_nk, 'random')
+                random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+                responses_nk, _ = self.run_responses_nk_tomo(random, source, source_sels, delta_gamma)
+                self.save_responses_nk(path_test, responses_nk, 'random')
 
 
         print resp
@@ -1221,25 +1224,24 @@ class Responses(GGL):
         cmap_step = 0.25
         c1 = plt.get_cmap(cmap)(0.)
         c2 = plt.get_cmap(cmap)(0.6)
-        fig, ax = plt.subplots(4, 5, figsize=(16.5, 13.2), sharey='row', sharex=True)
+        fig, ax = plt.subplots(len(self.zbins['sbins']), len(self.zbins['lbins']), figsize=(16.5, 13.2), sharey='row', sharex=True)
         fig.subplots_adjust(hspace=0.1, wspace=0.1)
 
-        for l in range(0, len(self.zbins['lbins'])):
+        R_mean_all = self.load_responses_mean('xcorr')
+        print R_mean_all
+        for l in range(len(self.zbins['lbins'])):
 
             for s in range(len(self.zbins['sbins'])):
-
+                R_mean = R_mean_all[s]
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
                 theta, R_nk, _, _ = self.load_responses_nk(path_test, lens_random)
-                R_mean = self.load_responses_mean(self.zbins['sbins'][s])
-
-                ax[s][l].plot(theta, [R_mean] * len(theta), '-', lw=2, color=c2, mec=c2, label=r'$R_{\mathrm{mean}}$')
-                ax[s][l].plot(theta, R_nk, '-', lw=2, color=c1, mec=c1, label=r'$R_{\mathrm{nk}}$')
-                ax[s][l].plot(theta, [np.mean(R_nk)] * len(theta), ':', lw=2, color=c1, mec=c1,
+                ax[s][l].margins(x=0, y=0.5) 
+                ax[s][l].plot(theta, [R_mean] * len(theta), '-', lw=2, color=c1, mec=c1, label=r'$R_{\mathrm{mean}}$')
+                ax[s][l].plot(theta, R_nk, '-', lw=2, color=c2, mec=c2, label=r'$R_{\mathrm{nk}}$')
+                ax[s][l].plot(theta, [np.mean(R_nk)] * len(theta), ':', lw=2, color=c2, mec=c2,
                               label=r'$\overline{R_{\mathrm{nk}}}$')
                 ax[s][l].set_xscale('log')
                 ax[s][l].set_xlim(self.config['thlims'][0], self.config['thlims'][1])
-                ax[0][l].set_ylim(0.724, 0.729)
-                ax[2][l].set_ylim(0.633, 0.638)
                 ax[s][l].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%0.0f$'))
                 ax[s][l].tick_params(axis='both', which='major', labelsize='larger')
                 ax[s][l].tick_params(axis='both', which='minor', labelsize='larger')
@@ -1251,13 +1253,81 @@ class Responses(GGL):
                 if s == 0:
                     ax[s][l].set_title(self.plotting['redshift_l'][l], size='larger')
 
-                ax[s][l].text(0.5, 0.85,
-                              r'$\Delta R/R = %0.2f \%%$' % (100 * np.mean((R_nk - R_mean) / (R_mean + R_nk) * 2)),
+                diff = R_mean/R_nk - 1
+
+                ax[s][l].text(0.5, 0.88,
+                              r'Mean $R_{\mathrm{mean}}/R_{\mathrm{nk}}-1 = %0.2f \%%$' % (100 * np.mean(diff)),
                               horizontalalignment='center', verticalalignment='center', transform=ax[s][l].transAxes,
-                              fontsize='larger')
+                              fontsize='medium')
+
+                ax[s][l].text(0.5, 0.79,
+                              r'Max $R_{\mathrm{mean}}/R_{\mathrm{nk}}-1 = %0.2f \%%$' % (100 * np.max(np.absolute(diff))),
+                              horizontalalignment='center', verticalalignment='center', transform=ax[s][l].transAxes,
+                              fontsize='medium')
 
         ax[0][4].legend(frameon=False, fontsize=16, loc='lower right')
         self.save_plot('plot_responses_%s' % lens_random)
+
+
+    def plot_sigmas(self, lens_random):
+        """
+        Makes plot comparing the NK responses to the mean ones, divided by the uncertainty on the measurement. 
+        lens_random: string, can be lens or random.
+        Indicates which is the foreground sample when computing the NK correlations.
+        """
+
+        plt.rc('text', usetex=self.plotting['latex'])
+        plt.rc('font', family='serif')
+
+        cmap = self.plotting['cmap']
+        cmap_step = 0.25
+        c1 = plt.get_cmap(cmap)(0.)
+        c2 = plt.get_cmap(cmap)(0.6)
+        fig, ax = plt.subplots(len(self.zbins['sbins']), len(self.zbins['lbins']), figsize=(16.5, 13.2), sharey=True, sharex=True)
+        fig.subplots_adjust(hspace=0.1, wspace=0.1)
+
+        R_mean_all = self.load_responses_mean('xcorr')
+        print R_mean_all
+
+        measurement = Measurement(self.basic, self.config, self.paths, self.zbins, self.plotting)
+        gammat_file = measurement.load_twopointfile()
+        gammat = gammat_file.spectra[0]
+
+
+        for l in range(len(self.zbins['lbins'])):
+
+            for s in range(len(self.zbins['sbins'])):
+                R_mean = R_mean_all[s]
+                path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
+                theta, R_nk, _, _ = self.load_responses_nk(path_test, lens_random)
+                _, gt = gammat.get_pair(l+1, s+1)
+                err = gammat.get_error(l+1, s+1)
+                #ax[s][l].plot(theta, [R_mean] * len(theta), '-', lw=2, color=c2, mec=c2, label=r'$R_{\mathrm{mean}}$')
+                #ax[s][l].plot(theta, R_nk, '-', lw=2, color=c1, mec=c1, label=r'$R_{\mathrm{nk}}$')
+                #ax[s][l].plot(theta, [np.mean(R_nk)] * len(theta), ':', lw=2, color=c1, mec=c1,
+                #              label=r'$\overline{R_{\mathrm{nk}}}$')
+                diff = (R_mean/R_nk-1)*gt/err
+                ax[s][l].plot(theta, diff, lw=2, color=c1, mec=c1)
+                ax[s][l].axhline(y=0, color= 'k', ls=':')
+                #ax[s][l].plot(theta, err, lw=2, color=c2, mec=c2, label=r'$\sigma_{\gamma_t, \mathrm{JK}}$')
+                #ax[s][l].plot(theta, diff/err, lw=2, color=c2, mec=c2, label=r'$(R_{\mathrm{nk}} - R_{\mathrm{mean}})/\sigma_{\gamma_t}$')
+                ax[s][l].set_xscale('log')
+                #ax[s][l].set_yscale('log')
+                ax[s][l].set_xlim(self.config['thlims'][0], self.config['thlims'][1])
+                ax[s][l].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%0.0f$'))
+                ax[s][l].tick_params(axis='both', which='major', labelsize='larger')
+                ax[s][l].tick_params(axis='both', which='minor', labelsize='larger')
+
+                if s == 3:
+                    ax[s][l].set_xlabel(r'$\theta$ [arcmin]', size='larger')
+                if l == 0:
+                    ax[s][l].set_ylabel('%s\n' % self.plotting['redshift_s'][s] + r'$(R_{\mathrm{mean}}/R_{\mathrm{nk}}-1)\gamma_t/\sigma_{\gamma_t, \mathrm{JK}}$', size='larger', linespacing=3)
+                if s == 0:
+                    ax[s][l].set_title(self.plotting['redshift_l'][l], size='larger')
+
+        ax[0][4].legend(frameon=False, fontsize=16, loc='lower right')
+        self.save_plot('plot_responses_%s_diff' % lens_random)
+
 
 
 class TestStars(GGL):

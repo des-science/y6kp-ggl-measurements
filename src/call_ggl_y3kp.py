@@ -4,8 +4,8 @@ from ggl import GGL, Measurement, Responses, TestStars, TestPSF, TestSizeSNR, Te
 T = True
 F = False
 
-run_measurement = F
-run_responses_nk = T
+run_measurement = T
+run_responses_nk = F
 run_stars = F
 run_psf = F
 run_size_snr = F
@@ -33,7 +33,8 @@ if run_measurement:
 if run_responses_nk:
     responses = Responses(basic, config, paths, zbins, plotting)
     responses.run_tomo_nk()
-    responses.plot('lens')
+    #responses.plot('lens')
+    responses.plot_sigmas('lens')
     responses.plot('random')
 
 if run_stars:
