@@ -327,7 +327,7 @@ class GGL(object):
                     gxs[jk].append(zeros)
                     errs[jk].append(zeros)
                 if 'NK' in type_corr:
-                    xi_nk[jk].append(corr.xi)
+                    xi_nks[jk].append(corr.xi)
                 weights[jk].append(zeros)
                 npairs[jk].append(zeros)
 
@@ -353,7 +353,8 @@ class GGL(object):
         gts = [manager.list() for x in range(self.config['njk'])]
         gxs = [manager.list() for x in range(self.config['njk'])]
         errs = [manager.list() for x in range(self.config['njk'])]
-
+        xi_nks = [manager.list() for x in range(self.config['njk'])]
+        
         p = mp.Pool(10, worker_init)
         ipdb.set_trace()
         p.map(run_jki, range(self.config['njk']))
@@ -381,8 +382,8 @@ class GGL(object):
             return theta, weights, npairs
             
         if 'NK' in type_corr:
-            xi_nk = reshape_manager(xi_nk)
-            return theta, xi_nk, weights, npairs
+            xi_nks = reshape_manager(xi_nks)
+            return theta, xi_nks, weights, npairs
 
     def run_nk_no_jackknife(self, lens, source, scalar):
         """
