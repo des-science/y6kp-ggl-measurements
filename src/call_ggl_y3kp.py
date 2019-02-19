@@ -18,8 +18,9 @@ if run_measurement:
     measurement = Measurement(basic, config, paths, zbins, plotting)
     if not basic['plot_blinded']:
         measurement.run()
-        measurement.save_boostfactors_2pointfile()
-        measurement.save_gammat_2pointfile()
+        #measurement.save_boostfactors_2pointfile() #deprecated, without errors
+        measurement.save_2pointfile('gt')
+        measurement.save_2pointfile('boost_factor')
         if not basic['blind']:
             measurement.plot()
         measurement.plot_boostfactors()
@@ -32,10 +33,10 @@ if run_measurement:
 
 if run_responses_nk:
     responses = Responses(basic, config, paths, zbins, plotting)
-    responses.run_tomo_nk()
+    responses.run()
     #responses.plot('lens')
-    responses.plot_sigmas('lens')
-    responses.plot('random')
+    #responses.plot_sigmas('lens')
+    #responses.plot('random')
 
 if run_stars:
     stars = TestStars(basic, config, paths, zbins, plotting)

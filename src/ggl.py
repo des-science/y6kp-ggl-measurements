@@ -223,10 +223,11 @@ class GGL(object):
         and a given configuration, and paralalizes the measurements
         in different jackknife patches for the lenses and randoms.
         Returns the measurements for each jackknife patch.
-        type_corr: string, type of correlation, i.e. NG, NN.
-        NG for gammat, NN for wtheta.
+        type_corr: string, type of correlation, i.e. NG, NN, NK_Rgamma
+        NG for gammat, NN for wtheta, NK for scalar quantities, like
+        the responses. The string after NK_ is used to load the column.
         """
-        assert type_corr == 'NG' or type_corr == 'NN', 'This type_corr of correlation is not accepted by this function.'
+        assert type_corr == 'NG' or type_corr == 'NN' or 'NK' in type_corr, 'This type_corr of correlation is not accepted by this function.'
 
         parent_id = os.getpid()
 
@@ -271,6 +272,16 @@ class GGL(object):
                                               max_sep=self.config['thlims'][1], sep_units='arcmin',
                                               bin_slop=self.config['bslop'])
 
+            if 'NK' in type_corr:
+                if jk == 0: print 'Doing NK correlation with variable %s.'%type_corr[3:]
+                corr = treecorr.NKCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
+                                              max_sep=self.config['thlims'][1], sep_units='arcmin',
+                                              bin_slop=self.config['bslop'])
+
+                
+
+
+
             if len(ra_l_jk) > 1:
 
                 if len(ra_l_jk) % 2 == 0:  # If len array is even, make it odd before computing the median.
@@ -292,6 +303,10 @@ class GGL(object):
                 if self.basic['mode']  == 'mice':
                     cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=-e1[bool_s], g2=e2[bool_s], w=w[bool_s],
                                              ra_units='deg', dec_units='deg')
+                if 'NK' in type_corr:
+                    cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], k=scalar[bool_s], w=w[bool_s], 
+                                             ra_units='deg', dec_units='deg')
+
                 corr.process(cat_l, cat_s)
 
                 if jk == 0: theta.append(np.exp(corr.logr))
@@ -299,6 +314,8 @@ class GGL(object):
                     gts[jk].append(corr.xi)
                     gxs[jk].append(corr.xi_im)
                     errs[jk].append(np.sqrt(np.abs(corr.varxi)))
+                if 'NK' in type_corr:
+                    xi_nk[jk].append(corr.xi)
                 weights[jk].append(corr.weight)
                 npairs[jk].append(corr.npairs)
 
@@ -309,14 +326,21 @@ class GGL(object):
                     gts[jk].append(zeros)
                     gxs[jk].append(zeros)
                     errs[jk].append(zeros)
+                if 'NK' in type_corr:
+                    xi_nk[jk].append(corr.xi)
                 weights[jk].append(zeros)
                 npairs[jk].append(zeros)
 
         ra_l, dec_l, jk_l, w_l = self.get_lens(lens)
         ra_s, dec_s, w = self.get_source(source)
-        e1 = source['e1']
-        e2 = source['e2']
+        if type_corr == 'NG' or type_corr == 'NN':
+            e1 = source['e1']
+            e2 = source['e2']
 
+        if 'NK' in type_corr:
+            print type_corr, type_corr[3:]
+            scalar = source['%s'%type_corr[3:]]
+            
         nside = 8
         theta = (90.0 - dec_s) * np.pi / 180.
         phi = ra_s * np.pi / 180.
@@ -331,6 +355,7 @@ class GGL(object):
         errs = [manager.list() for x in range(self.config['njk'])]
 
         p = mp.Pool(10, worker_init)
+        ipdb.set_trace()
         p.map(run_jki, range(self.config['njk']))
         p.close()
 
@@ -354,8 +379,12 @@ class GGL(object):
         if type_corr == 'NN':
             print 'returning NN'
             return theta, weights, npairs
+            
+        if 'NK' in type_corr:
+            xi_nk = reshape_manager(xi_nk)
+            return theta, xi_nk, weights, npairs
 
-    def run_nk(self, lens, source, scalar):
+    def run_nk_no_jackknife(self, lens, source, scalar):
         """
         Uses TreeCorr to compute the NK correlation between lens and source.
         Used to compute scale dependece responses.
@@ -377,88 +406,6 @@ class GGL(object):
         R_nk = nk.xi
 
         return theta, R_nk
-
-    def compute_Rs(self, e_ix, delta_gamma):
-        """
-        Computes R_s.
-        e_ix: Dictionary per each component 1p, 1m, 2p, 2m.
-        delta_gamma: value of the artificially applied shear to the images. 
-        It can be averaged over all angular scales, or averaged in angular bins using NK correlation.
-        """
-        Rs11_mean = (e_ix['1p'] - e_ix['1m'])/delta_gamma
-        Rs22_mean = (e_ix['2p'] - e_ix['2m'])/delta_gamma
-        Rs_mean = 0.5 * (Rs11_mean + Rs22_mean)
-        return Rs_mean
-
-
-    def run_responses_nk_tomo(self, lens, source, source_sels, delta_gamma):
-        """
-        Function that computes scale dependent responses for each lens-source combination.
-        Uses NK TreeCorr correlation.
-        Lens: Lens catalog for a certain redshift bin.
-        Source: Source catalog for a certain redshift bin for the unsheared selection. 
-        Source_sels: List of source catalogs for each of the four sheared selections (sheared 1p, 1m, 2p, 2m)
-                     but with the unsheared quantities ra, dec, e1, e2, to obtain the new selection response.  
-        delta_gamma: value of the artificially applied shear to the images. 
-        """
-
-        e_nk_ix = {}  # Mean scale dependent ellipticity for component i for a given selection x.
-        e_ix = {} # Mean ellipticity for component i for a given selection x.
-        # x: p, m
-        components = ['1p', '1m', '2p', '2m']
-        for i, comp in enumerate(components):
-            source_component_ix = {
-                'ra': source_sels['ra'][i],
-                'dec': source_sels['dec'][i],
-                'e_ix': source_sels['e%s'%comp[0]][i] # Choose e1 for 1p, 1m selections, and e2 for 2p, 2m selections. 
-            }
-            theta, e_nk_ix[comp] = self.run_nk(lens, source_component_ix, scalar = source_component_ix['e_ix'])
-            e_ix[comp] = np.mean(source_component_ix['e_ix'])
-
-        theta, Rgamma_nk = self.run_nk(lens, source, scalar = source['Rgamma'])
-        Rgamma_mean = np.mean(source['Rgamma'])
-    
-        Rs_nk = self.compute_Rs(e_nk_ix, delta_gamma)
-        R_nk = Rgamma_nk + Rs_nk
-        print 'delta_gamma', delta_gamma
-        
-        Rs_mean = self.compute_Rs(e_ix, delta_gamma)
-        R_mean = Rgamma_mean + Rs_mean
-        print 'Rmean, Rgamma_mean, Rs_mean', R_mean, Rgamma_mean, Rs_mean
-
-        responses_nk = zip(theta, R_nk, Rgamma_nk, Rs_nk)
-        responses_mean = [R_mean, Rgamma_mean, Rs_mean]
-        return responses_nk, responses_mean
-
-    def run_responses_mean_notomo(self, Rgamma, delta_gamma):
-        """
-        Rgamma: (R11 + R22)/2 for each galaxy.
-        delta_gamma: value of the artificially applied shear to the images.      
-        Averages Rgamma in combination of all source bins and computes and averages R_s too.
-        Then it computes the mean of R_total.
-        Saves R_total, Rgamma, R_s in file and returns R_total.
-        """
-
-        e_ix = {}  # ellipticities for component i for a given selection s, divided by Delta gamma.
-        # x: p, m
-        components = ['1p', '1m', '2p', '2m']
-        for comp in components:
-
-            print comp
-            e_ix_allbins = np.zeros(0)
-            for sbin in self.zbins['sbins']:
-                # Appending responses source bin sbin.
-                #source_selection = pf.getdata(
-                #    self.paths['y1'] + 'metacal_sel_responses/metacal_sel_responses_sa%s_%s.fits' % (sbin[1], comp))
-                e_ix_allbins = np.append(e_ix_allbins, source_selection['Riisx'])
-
-            e_ix[comp] = np.mean(e_ix_allbins)
-
-        Rgamma_mean = np.mean(Rgamma)
-        Rs_mean = self.compute_Rs(e_ix, delta_gamma)
-        R_mean = self.save_responses_mean(Rgamma_mean, Rs_mean, 'notomo')
-
-        return R_mean
 
     def save_runs(self, path_test, theta, gts, gxs, errs, weights, npairs, random_bool):
         """
@@ -690,11 +637,12 @@ class Measurement(GGL):
     		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
     		    self.process_run(bf_all, theta, path_test, 'boost_factor')
 
-    def save_gammat_2pointfile(self):
+    def save_2pointfile(self, string):
         """
-        Save the gammat measurements, N(z)'s and jackknife covariance into the 2point format file.
+        Save the correlation function measurements (i.e. gammat, boost factors, etc),
+        N(z)'s and jackknife covariance into the 2point format file.
         Creates a:
-        - SpectrumMeasurement obejct: In which the gammat measurements are saved. 
+        - SpectrumMeasurement obejct: In which the 2PCF measurements are saved. 
         - Kernel object: The N(z)'s are here. 
         - CovarianceMatrixInfo object: In which the jackknife covariance is saved.
 
@@ -702,23 +650,23 @@ class Measurement(GGL):
         and saves it to a file.
         """
 
-        gt_length = self.config['nthbins'] * len(self.zbins['lbins']) * len(self.zbins['sbins'])
-        gt_values = np.zeros(gt_length, dtype=float)
-        bin1 = np.zeros(gt_length, dtype=int)
+        length = self.config['nthbins'] * len(self.zbins['lbins']) * len(self.zbins['sbins'])
+        values = np.zeros(length, dtype=float)
+        bin1 = np.zeros(length, dtype=int)
         bin2 = np.zeros_like(bin1)
         angular_bin = np.zeros_like(bin1)
-        angle = np.zeros_like(gt_values)
+        angle = np.zeros_like(values)
         dv_start = 0
-        cov = np.zeros((gt_length, gt_length))
+        cov = np.zeros((length, length))
 
         for l in range(0, len(self.zbins['lbins'])):
             for s in range(len(self.zbins['sbins'])):
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
-                theta, gt, gt_err = np.loadtxt(path_test + 'mean_gt', unpack=True)
-                cov_ls = np.loadtxt(path_test + 'cov_gt')
+                theta, xi, xi_err = np.loadtxt(path_test + 'mean_%s'%string, unpack=True)
+                cov_ls = np.loadtxt(path_test + 'cov_%s'%string)
 
                 bin_pair_inds = np.arange(dv_start, dv_start + self.config['nthbins'])
-                gt_values[bin_pair_inds] = gt
+                values[bin_pair_inds] = xi
                 bin1[bin_pair_inds] = l+1
                 bin2[bin_pair_inds] = s+1
                 angular_bin[bin_pair_inds] = np.arange(self.config['nthbins'])
@@ -731,29 +679,43 @@ class Measurement(GGL):
         y1_lensnz = y1.get_kernel('nz_lens')
         y1_sourcenz = y1.get_kernel('nz_source')
 
-        gammat = twopoint.SpectrumMeasurement('gammat', (bin1, bin2),
-                                                     (twopoint.Types.galaxy_position_real,
-                                                      twopoint.Types.galaxy_shear_plus_real),
-                                                     ('nz_lens', 'nz_source'), 'SAMPLE', angular_bin, gt_values,
-                                                     angle=angle, angle_unit='arcmin')
+        if string == 'gt':
+            gammat = twopoint.SpectrumMeasurement('gammat', (bin1, bin2),
+                                                  (twopoint.Types.galaxy_position_real,
+                                                   twopoint.Types.galaxy_shear_plus_real),
+                                                  ('nz_lens', 'nz_source'), 'SAMPLE', angular_bin, values,
+                                                  angle=angle, angle_unit='arcmin')
 
-        cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['gammat'], [gt_length], cov)
+            cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['gammat'], [length], cov)
+            print 'Saving TwoPointFile with Y1 N(z)s'
+            gammat_twopoint = twopoint.TwoPointFile([gammat], [y1_lensnz, y1_sourcenz], windows=None, covmat_info=cov_mat_info)
+            twopointfile_unblind = self.get_twopointfile_name()
 
-        gammat_twopoint = twopoint.TwoPointFile([gammat], [y1_lensnz, y1_sourcenz], windows=None, covmat_info=cov_mat_info)
+            # Remove file if it exists already because to_fits function doesn't overwrite
+            if os.path.isfile(twopointfile_unblind):
+                os.system('rm %s'%(twopointfile_unblind))
 
-        twopointfile_unblind = self.get_twopointfile_name()
-
-        # Remove file if it exists already because to_fits function doesn't overwrite
-        if os.path.isfile(twopointfile_unblind):
-            os.system('rm %s'%(twopointfile_unblind))
-
-        gammat_twopoint.to_fits(twopointfile_unblind)
-
+            gammat_twopoint.to_fits(twopointfile_unblind)
 
 
-    def save_boostfactors_2pointfile(self):
+        if string == 'boost_factor':
+            boost_factor = twopoint.SpectrumMeasurement('boost_factor', (bin1, bin2),
+                                                  (twopoint.Types.galaxy_position_real,
+                                                   twopoint.Types.galaxy_shear_plus_real),
+                                                  ('nz_lens', 'nz_source'), 'SAMPLE', angular_bin, values,
+                                                  angle=angle, angle_unit='arcmin')
+
+            cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['boost_factor'], [length], cov)
+            print 'Saving TwoPointFile with Y1 N(z)s'
+            boost_factor_twopoint = twopoint.TwoPointFile([boost_factor], [y1_lensnz, y1_sourcenz], windows=None, covmat_info=cov_mat_info)
+            save_path = os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits'%string)
+            boost_factor_twopoint.to_fits(save_path)
+
+
+    def save_spectrum_measurement_file(self):
         """
-        Save the boost factors into the 2point format file.
+        Save the boost factors into a SpectrumMeasurment file, from the twopoint code.
+        Caveat: cannot save the errors, use TwoPointFile instead (see save_2pointfile function above).
         """
 
         bf_length = self.config['nthbins'] * len(self.zbins['lbins']) * len(self.zbins['sbins'])
@@ -1158,10 +1120,10 @@ class Responses(GGL):
         return os.path.join(self.paths['runs_config'], 'responses_nk', lbin + '_' + sbin) + '/'
 
     def save_responses_nk(self, path_test, responses, end):
-        np.savetxt(path_test + 'responses_nk_%s' % end, responses, header='theta(arcmin), R_nk, Rgamma_nk, Rs_nk')
+        np.savetxt(path_test + 'responses_nk_no_jackknife_%s' % end, responses, header='theta(arcmin), R_nk, Rgamma_nk, Rs_nk')
 
     def load_responses_nk(self, path_test, end):
-        theta, R_nk, Rgamma_nk, Rs_nk = np.loadtxt(path_test + 'responses_nk_%s' % end, unpack=True)
+        theta, R_nk, Rgamma_nk, Rs_nk = np.loadtxt(path_test + 'responses_nk_no_jackknife_%s' % end, unpack=True)
         return theta, R_nk, Rgamma_nk, Rs_nk
 
     def save_responses_mean(self, responses_mean, end):
@@ -1173,8 +1135,95 @@ class Responses(GGL):
         R_mean, Rgamma, Rs = np.loadtxt(self.get_path_test_allzbins() + 'responses_mean_%s'%end, unpack=True)
         return R_mean 
 
+    def compute_Rs(self, e_ix, delta_gamma):
+        """
+        Computes R_s.
+        e_ix: Dictionary per each component 1p, 1m, 2p, 2m.
+        delta_gamma: value of the artificially applied shear to the images. 
+        It can be averaged over all angular scales, or averaged in angular bins using NK correlation.
+        """
+        Rs11_mean = (e_ix['1p'] - e_ix['1m'])/delta_gamma
+        Rs22_mean = (e_ix['2p'] - e_ix['2m'])/delta_gamma
+        Rs_mean = 0.5 * (Rs11_mean + Rs22_mean)
+        return Rs_mean
 
-    def run_tomo_nk(self):
+    def build_dictionary_e_ix(self, lens, source_sels, average_type):
+        """
+        Function to build the dictionary e_ix, which is the mean ellipticity for 
+        the component i=(1,2) for a given selection x=(p,m). Therefore, it will have
+        the mean of e_1p['1p'], e_1m['1m'], e_2p['2p'], e_2m['2m'], which will be obtained
+        from the selections 1p, 1m, 2p, 2m respectively. This dictionary is used 
+        to compute the selection response Rs.
+        """
+    
+        e_ix = {}
+        components = ['1p', '1m', '2p', '2m']
+        for i, comp in enumerate(components):
+            source_component_ix = {
+                'ra': source_sels['ra'][i],
+                'dec': source_sels['dec'][i],
+                'e_ix': source_sels['e%s'%comp[0]][i]} # Choose e1 for 1p, 1m selections, and e2 for 2p, 2m selections. 
+            if average_type == 'mean':
+                e_ix[comp] = np.mean(source_component_ix['e_ix'])
+            if average_type == 'NK_no_jackknife':
+                theta, e_ix[comp] = self.run_nk_no_jackknife(lens, source_component_ix, scalar = source_component_ix['e_ix'])
+
+            if average_type == 'NK_jackknife':
+                theta, xi_nk, weights, npairs = self.run_treecorr_jackknife(lens, source_component_ix, type_corr = 'NK_e_ix')
+                e_ixnum, _, wnum = self.numerators_jackknife(xi_nk, xi_nk, weights)
+                e_ix[comp] = e_ixnum / wnum # contains all the jackknife regions measurements
+
+        return e_ix
+
+    def run_responses_tomo(self, lens, source, source_sels, delta_gamma, average_type, path_test, lens_or_random):
+        """
+        Function that computes mean response for each source bin or scale dependent responses for each lens-source combination.
+        Uses NK TreeCorr correlation for scale dependence.
+        Source: Source catalog for a certain redshift bin for the unsheared selection. 
+        Source_sels: List of source catalogs for each of the four sheared selections (sheared 1p, 1m, 2p, 2m)
+                     but with the unsheared quantities ra, dec, e1, e2, to obtain the new selection response.  
+        delta_gamma: value of the artificially applied shear to the images. 
+        average_type: way to average the ellipticities, can be:
+                     - 'mean': np.mean
+                     - 'NK_no_jackknife': using NK correlations without jackknife
+                     - 'NK_jackknife': using NK correlations with jackknife
+        lens_or_random: string for saving.
+        Rgamma: (R11 + R22)/2 for each galaxy.
+        """
+
+        if average_type == 'mean':
+            Rgamma = np.mean(source['Rgamma'])
+
+        if average_type == 'NK_no_jackknife':
+            theta, Rgamma = self.run_nk_no_jackknife(lens, source, scalar = source['Rgamma'])
+
+        if average_type == 'NK_jackknife':
+            theta, xi_nk, weights, npairs = self.run_treecorr_jackknife(lens, source, type_corr = 'NK_Rgamma')
+            Rgammanum, _, wnum = self.numerators_jackknife(xi_nk, xi_nk, weights)
+            Rgamma = e_ixnum / wnum # contains all the jackknife regions measurements (i.e. Rgamma_all)
+            
+        e_ix = self.build_dictionary_e_ix(lens, source_sels, average_type)
+        Rs = self.compute_Rs(e_ix, delta_gamma)
+
+        R = Rgamma + Rs
+
+        print 'average_type, R, Rgamma, Rs', average_type, R, Rgamma, Rs
+
+        if average_type == 'mean':
+            responses = [R, Rgamma, Rs]
+            return responses
+        
+        if average_type == 'NK_no_jackknife':
+            responses = zip(theta, R, Rgamma, Rs)
+            self.save_responses_nk(path_test, responses, lens_or_random)
+
+        if average_type == 'NK_jackknife':
+            self.process_run(R, theta, path_test, 'R_nk_JK_%s'%lens_or_random)
+            self.process_run(Rgamma, theta, path_test, 'Rgamma_nk_JK_%s'%lens_or_random)
+            self.process_run(Rs, theta, path_test, 'Rs_nk_JK_%s'%lens_or_random)
+
+
+    def run(self):
         """
         Runs the NK responses between lenses and sources.
         Runs for lenses and randoms too.
@@ -1197,12 +1246,13 @@ class Responses(GGL):
                 make_directory(path_test)
 
                 lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
-                responses_nk, responses_mean[sbin] = self.run_responses_nk_tomo(lens, source, source_sels, delta_gamma)
-                self.save_responses_nk(path_test, responses_nk, 'lens')
+                responses_mean[sbin] = self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='mean', path_test=path_test, lens_or_random='lens')
+                #responses_nk_no_jackknife = self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='NK_no_jackknife', path_test=path_test, lens_or_random='lens')
+                self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='NK_jackknife',path_test=path_test, lens_or_random='lens')
 
-                random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-                responses_nk, _ = self.run_responses_nk_tomo(random, source, source_sels, delta_gamma)
-                self.save_responses_nk(path_test, responses_nk, 'random')
+                #random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+                #responses_nk_no_jackknife = self.run_responses_tomo(random, source, source_sels, delta_gamma, average_type='NK_no_jackknife', path_test=path_test, lens_or_random='random')
+                #self.run_responses_tomo(random, source, source_sels, delta_gamma, average_type='NK_jackknife', path_test=path_test, lens_or_random='random')
 
 
         print resp
