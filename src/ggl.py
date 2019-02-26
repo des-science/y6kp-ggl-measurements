@@ -228,7 +228,6 @@ class GGL(object):
         the responses. The string after NK_ is used to load the column.
         """
         assert type_corr == 'NG' or type_corr == 'NN' or 'NK' in type_corr, 'This type_corr of correlation is not accepted by this function.'
-
         parent_id = os.getpid()
 
         def worker_init():
@@ -271,16 +270,12 @@ class GGL(object):
                 corr = treecorr.NNCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
                                               max_sep=self.config['thlims'][1], sep_units='arcmin',
                                               bin_slop=self.config['bslop'])
-
+                
             if 'NK' in type_corr:
                 if jk == 0: print 'Doing NK correlation with variable %s.'%type_corr[3:]
                 corr = treecorr.NKCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
                                               max_sep=self.config['thlims'][1], sep_units='arcmin',
                                               bin_slop=self.config['bslop'])
-
-                
-
-
 
             if len(ra_l_jk) > 1:
 
@@ -297,16 +292,18 @@ class GGL(object):
 
                 print 'jk, nlens, nsource = ', jk, len(ra_l_jk), len(ra_s[bool_s])
                 cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
-                if self.basic['mode'] == 'data' or self.basic['mode'] =='data_y1sources':
-                    cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s], w=w[bool_s],
-                                             ra_units='deg', dec_units='deg')
-                if self.basic['mode']  == 'mice':
-                    cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=-e1[bool_s], g2=e2[bool_s], w=w[bool_s],
-                                             ra_units='deg', dec_units='deg')
+ 
+                if type_corr == 'NG' or type_corr == 'NN':
+                    if self.basic['mode'] == 'data' or self.basic['mode'] =='data_y1sources':
+                        cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s], w=w[bool_s],
+                                                 ra_units='deg', dec_units='deg')
+                    if self.basic['mode']  == 'mice':
+                        cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=-e1[bool_s], g2=e2[bool_s], w=w[bool_s],
+                                                 ra_units='deg', dec_units='deg')
                 if 'NK' in type_corr:
                     cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], k=scalar[bool_s], w=w[bool_s], 
                                              ra_units='deg', dec_units='deg')
-
+ 
                 corr.process(cat_l, cat_s)
 
                 if jk == 0: theta.append(np.exp(corr.logr))
@@ -315,7 +312,7 @@ class GGL(object):
                     gxs[jk].append(corr.xi_im)
                     errs[jk].append(np.sqrt(np.abs(corr.varxi)))
                 if 'NK' in type_corr:
-                    xi_nk[jk].append(corr.xi)
+                    xi_nks[jk].append(corr.xi)
                 weights[jk].append(corr.weight)
                 npairs[jk].append(corr.npairs)
 
@@ -336,10 +333,14 @@ class GGL(object):
         if type_corr == 'NG' or type_corr == 'NN':
             e1 = source['e1']
             e2 = source['e2']
-
         if 'NK' in type_corr:
             print type_corr, type_corr[3:]
             scalar = source['%s'%type_corr[3:]]
+            # We still need to define these variables because otherwise 
+            # multiprocessing gives an error (cell is empty), because one has to define
+            # all variables even when they are not needed for correct execution.
+            e1 = np.zeros(len(scalar))
+            e2 = np.zeros(len(scalar))
             
         nside = 8
         theta = (90.0 - dec_s) * np.pi / 180.
@@ -356,7 +357,6 @@ class GGL(object):
         xi_nks = [manager.list() for x in range(self.config['njk'])]
         
         p = mp.Pool(10, worker_init)
-        ipdb.set_trace()
         p.map(run_jki, range(self.config['njk']))
         p.close()
 
@@ -382,6 +382,7 @@ class GGL(object):
             return theta, weights, npairs
             
         if 'NK' in type_corr:
+            print 'returning NK'
             xi_nks = reshape_manager(xi_nks)
             return theta, xi_nks, weights, npairs
 
@@ -594,7 +595,7 @@ class Measurement(GGL):
     		print 'Running measurement for source %s.' % sbin
 
 		if self.basic['mode'] == 'data':
-		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, lim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
+		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
 		    R = source['Rmean']
                     print 'R = source[Rmean]', R, sbin
 
@@ -1201,7 +1202,7 @@ class Responses(GGL):
         if average_type == 'NK_jackknife':
             theta, xi_nk, weights, npairs = self.run_treecorr_jackknife(lens, source, type_corr = 'NK_Rgamma')
             Rgammanum, _, wnum = self.numerators_jackknife(xi_nk, xi_nk, weights)
-            Rgamma = e_ixnum / wnum # contains all the jackknife regions measurements (i.e. Rgamma_all)
+            Rgamma = Rgammanum / wnum # contains all the jackknife regions measurements (i.e. Rgamma_all)
             
         e_ix = self.build_dictionary_e_ix(lens, source_sels, average_type)
         Rs = self.compute_Rs(e_ix, delta_gamma)
