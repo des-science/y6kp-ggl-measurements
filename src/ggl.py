@@ -1114,7 +1114,6 @@ class Responses(GGL):
         self.zbins = zbins
         self.plotting = plotting
 
-
     def get_path_test_allzbins(self):
         return os.path.join(self.paths['runs_config'], 'responses_nk') + '/'
 
@@ -1125,8 +1124,12 @@ class Responses(GGL):
         np.savetxt(path_test + 'responses_nk_no_jackknife_%s' % end, responses, header='theta(arcmin), R_nk, Rgamma_nk, Rs_nk')
 
     def load_responses_nk(self, path_test, end):
-        theta, R_nk, Rgamma_nk, Rs_nk = np.loadtxt(path_test + 'responses_nk_no_jackknife_%s' % end, unpack=True)
+        theta, R_nk, Rgamma_nk, Rs_nk = np.loadtxt(path_test + 'responses_nk_%s' % end, unpack=True)
         return theta, R_nk, Rgamma_nk, Rs_nk
+
+    def load_responses_nk_errors(self, path_test, end):
+        theta, R_nk, err = np.loadtxt(path_test + 'mean_R_nk_JK_%s' % end, unpack=True)
+        return theta, R_nk, err
 
     def save_responses_mean(self, responses_mean, end):
         responses_mean = np.array([responses_mean[sbin] for sbin in self.zbins['sbins']])
@@ -1148,6 +1151,61 @@ class Responses(GGL):
         Rs22_mean = (e_ix['2p'] - e_ix['2m'])/delta_gamma
         Rs_mean = 0.5 * (Rs11_mean + Rs22_mean)
         return Rs_mean
+
+    def compute_chi2_consistency(self, datavector, constant, cov):
+        diff = datavector-constant
+        chi2 = np.dot(diff.T, np.dot(np.linalg.inv(cov), diff))
+
+        # Hartlap factor
+        N = self.config['njk']  # number of jackknife regions
+        p = len(diff)  # number of angular bins
+        factor = (N - p - 2) / float(N - 1)
+        chi2_hartlap = chi2 * factor
+        return chi2_hartlap
+
+    def fit_constant_minuit(self, datavector, cov):
+        """
+        Function to fit a constant to some data.
+        Minimizes chi2 using Minuit
+        """
+        from iminuit import Minuit
+        data_mat = np.mat(datavector)
+        def f(c):
+            return np.abs(np.array((data_mat - c)*np.linalg.inv(cov)*(data_mat.T - c))[0][0])
+
+        m = Minuit(f, print_level=0, errordef=1, pedantic = False)
+        m.migrad()
+        fit, err_fit = m.values['c'], m.errors['c']
+        hartlap_factor = (self.config['njk'] - len(datavector) - 2) / float(self.config['njk'] - 1)
+        chi2_fit = f(fit)*hartlap_factor
+        
+        print 'fit, err_fit = %0.3e +- %0.3e (Minuit)'%(fit, err_fit)
+        print 'chi2_fit/ndf: %0.2f/%d (Minuit)'%(chi2_fit, (len(datavector)-1))
+        return fit, err_fit, chi2_fit, len(datavector)-1
+
+
+    def fit_constant_least_squares(self, datavector, cov, R0):
+        """
+        Function to fit a constant to some data.
+        Minimizes chi2 using least squares from scipy
+        R0: initial guess for the constant
+        """
+        from scipy import optimize
+        data_mat = np.mat(datavector)
+        def f(c):
+            return np.abs(np.array((data_mat - c)*np.linalg.inv(cov)*(data_mat.T - c))[0][0])
+        #ipdb.set_trace()
+        opt = optimize.least_squares(f, R0)
+        fit = opt.x
+        print 'Fit with least squares:', fit
+
+        hartlap_factor = (self.config['njk'] - len(datavector) - 2) / float(self.config['njk'] - 1)
+        chi2_fit = f(fit[0])*hartlap_factor
+        
+        print 'fit = %0.3e (least squares)'%(fit[0])
+        print 'chi2_fit/ndf: %0.2f/%d (least squares)'%(chi2_fit, (len(datavector)-1))
+        return fit 
+
 
     def build_dictionary_e_ix(self, lens, source_sels, average_type):
         """
@@ -1262,10 +1320,11 @@ class Responses(GGL):
         self.save_responses_mean(resp, 'destest')
         self.save_responses_mean(responses_mean, 'xcorr')
             
-    def plot(self, lens_random):
+    def plot(self, lens_random, mask_scales):
         """
         Makes plot comparing the NK responses to the mean ones.
         lens_random: string, can be lens or random.
+        mask_scales: boolean, scales to use for the chi2
         Indicates which is the foreground sample when computing the NK correlations.
         """
 
@@ -1275,7 +1334,8 @@ class Responses(GGL):
         cmap = self.plotting['cmap']
         cmap_step = 0.25
         c1 = plt.get_cmap(cmap)(0.)
-        c2 = plt.get_cmap(cmap)(0.6)
+        c2 = plt.get_cmap(cmap)(0.25)
+        c3 = plt.get_cmap(cmap)(0.5)
         fig, ax = plt.subplots(len(self.zbins['sbins']), len(self.zbins['lbins']), figsize=(16.5, 13.2), sharey='row', sharex=True)
         fig.subplots_adjust(hspace=0.1, wspace=0.1)
 
@@ -1286,12 +1346,41 @@ class Responses(GGL):
             for s in range(len(self.zbins['sbins'])):
                 R_mean = R_mean_all[s]
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
-                theta, R_nk, _, _ = self.load_responses_nk(path_test, lens_random)
+                #theta, R_nk, _, _ = self.load_responses_nk(path_test, lens_random)
+                theta, R_nk_jk, err = self.load_responses_nk_errors(path_test, lens_random)
+                cov = np.loadtxt(path_test + 'cov_R_nk_JK_%s'%lens_random)
+
+                if mask_scales:
+                    ax[s][l].axvspan(self.config['thlims'][0]*0.8, self.plotting['th_limit'][l], color='gray', alpha=0.2)                
+                    mask = theta>self.plotting['th_limit'][l]
+                    chi2 = self.compute_chi2_consistency(datavector=R_nk_jk[mask], constant=R_mean, cov=(cov[mask].T)[mask].T)
+                    save = 'mask_scales'
+                    ndf = len(R_nk_jk[mask])
+                    c, err_c, chi2_c, ndf_c = self.fit_constant_minuit(datavector=R_nk_jk[mask], cov=(cov[mask].T)[mask].T)
+                    
+                else:
+                    chi2 = self.compute_chi2_consistency(datavector=R_nk_jk, constant=R_mean, cov=cov)
+                    save = 'all_scales'
+                    ndf = len(R_nk_jk)
+                    c, err_c, chi2_c, ndf_c = self.fit_constant_minuit(datavector=R_nk_jk, cov=cov)
+                    c_ls = self.fit_constant_least_squares(datavector=R_nk_jk, cov=cov, R0=R_mean)
+
                 ax[s][l].margins(x=0, y=0.5) 
                 ax[s][l].plot(theta, [R_mean] * len(theta), '-', lw=2, color=c1, mec=c1, label=r'$R_{\mathrm{mean}}$')
-                ax[s][l].plot(theta, R_nk, '-', lw=2, color=c2, mec=c2, label=r'$R_{\mathrm{nk}}$')
-                ax[s][l].plot(theta, [np.mean(R_nk)] * len(theta), ':', lw=2, color=c2, mec=c2,
-                              label=r'$\overline{R_{\mathrm{nk}}}$')
+                #ax[s][l].plot(theta, R_nk, '-', lw=2, color=c2, mec=c2, label=r'$R_{\mathrm{nk}}$')
+                #ax[s][l].plot(theta, [np.mean(R_nk)] * len(theta), '--', lw=2, color=c2, mec=c2,
+                #              label=r'$\overline{R_{\mathrm{nk}}}$')
+                ax[s][l].errorbar(theta, R_nk_jk, err, fmt = 'o', color=c3, mec=c3, markersize=3., label=r'$R_{\mathrm{nk, jk}}$')
+                ax[s][l].plot(theta, [np.mean(R_nk_jk)] * len(theta), ':', lw=2, color=c3, mec=c3,
+                              label=r'$\overline{R_{\mathrm{nk, jk}}}$')
+
+
+                ax[s][l].plot(theta, [c_ls] * len(theta), '--', lw=2, color=c3, mec=c3,
+                              label=r'Fit with least squares')
+                ax[s][l].fill_between(theta, np.array([c - err_c for i in theta]), 
+                              np.array([c + err_c for i in theta]), alpha=0.4, edgecolor=c3, facecolor=c3, 
+                              label='Fit Minuit')
+
                 ax[s][l].set_xscale('log')
                 ax[s][l].set_xlim(self.config['thlims'][0], self.config['thlims'][1])
                 ax[s][l].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%0.0f$'))
@@ -1305,7 +1394,7 @@ class Responses(GGL):
                 if s == 0:
                     ax[s][l].set_title(self.plotting['redshift_l'][l], size='larger')
 
-                diff = R_mean/R_nk - 1
+                diff = R_mean/R_nk_jk - 1
 
                 ax[s][l].text(0.5, 0.88,
                               r'Mean $R_{\mathrm{mean}}/R_{\mathrm{nk}}-1 = %0.2f \%%$' % (100 * np.mean(diff)),
@@ -1317,11 +1406,16 @@ class Responses(GGL):
                               horizontalalignment='center', verticalalignment='center', transform=ax[s][l].transAxes,
                               fontsize='medium')
 
-        ax[0][4].legend(frameon=False, fontsize=16, loc='lower right')
-        self.save_plot('plot_responses_%s' % lens_random)
+                ax[s][l].text(0.5, 0.70,
+                              r'$\chi^2$/ndf$ = %0.1f/%d$' % (chi2, ndf),
+                              horizontalalignment='center', verticalalignment='center', transform=ax[s][l].transAxes,
+                              fontsize='medium')
+
+        ax[0][4].legend(frameon=False, fontsize=10, loc='lower right')
+        self.save_plot('plot_responses_jk_only_%s_%s'%(save, lens_random))
 
 
-    def plot_sigmas(self, lens_random):
+    def plot_sigmas(self, lens_random, mask_scales):
         """
         Makes plot comparing the NK responses to the mean ones, divided by the uncertainty on the measurement. 
         lens_random: string, can be lens or random.
@@ -1351,15 +1445,27 @@ class Responses(GGL):
             for s in range(len(self.zbins['sbins'])):
                 R_mean = R_mean_all[s]
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
-                theta, R_nk, _, _ = self.load_responses_nk(path_test, lens_random)
+                theta, R_nk, _ = self.load_responses_nk_errors(path_test, lens_random)
+                path_test_measurement = measurement.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
+                cov = np.loadtxt(path_test_measurement + 'cov_gt')
                 _, gt = gammat.get_pair(l+1, s+1)
                 err = gammat.get_error(l+1, s+1)
-                #ax[s][l].plot(theta, [R_mean] * len(theta), '-', lw=2, color=c2, mec=c2, label=r'$R_{\mathrm{mean}}$')
-                #ax[s][l].plot(theta, R_nk, '-', lw=2, color=c1, mec=c1, label=r'$R_{\mathrm{nk}}$')
-                #ax[s][l].plot(theta, [np.mean(R_nk)] * len(theta), ':', lw=2, color=c1, mec=c1,
-                #              label=r'$\overline{R_{\mathrm{nk}}}$')
-                diff = (R_mean/R_nk-1)*gt/err
-                ax[s][l].plot(theta, diff, lw=2, color=c1, mec=c1)
+                diff_err = (R_mean/R_nk-1)*gt/err
+                diff = (R_mean/R_nk-1)*gt
+
+                if mask_scales:
+                    ax[s][l].axvspan(self.config['thlims'][0]*0.8, self.plotting['th_limit'][l], color='gray', alpha=0.2)                
+                    mask = theta>self.plotting['th_limit'][l]
+                    chi2 = self.compute_chi2_consistency(datavector=R_mean/R_nk[mask]*gt[mask], constant=gt[mask], cov=(cov[mask].T)[mask].T)
+                    save = 'mask_scales'
+                    ndf = len(R_nk[mask])
+                else:
+                    chi2 = self.compute_chi2_consistency(datavector=R_mean/R_nk*gt, constant=gt, cov=cov)
+                    save = 'all_scales'
+                    ndf = len(R_nk)
+
+                print 'l, s, chi2:', l, s, chi2
+                ax[s][l].plot(theta, diff_err, lw=2, color=c1, mec=c1)
                 ax[s][l].axhline(y=0, color= 'k', ls=':')
                 #ax[s][l].plot(theta, err, lw=2, color=c2, mec=c2, label=r'$\sigma_{\gamma_t, \mathrm{JK}}$')
                 #ax[s][l].plot(theta, diff/err, lw=2, color=c2, mec=c2, label=r'$(R_{\mathrm{nk}} - R_{\mathrm{mean}})/\sigma_{\gamma_t}$')
@@ -1376,6 +1482,11 @@ class Responses(GGL):
                     ax[s][l].set_ylabel('%s\n' % self.plotting['redshift_s'][s] + r'$(R_{\mathrm{mean}}/R_{\mathrm{nk}}-1)\gamma_t/\sigma_{\gamma_t, \mathrm{JK}}$', size='larger', linespacing=3)
                 if s == 0:
                     ax[s][l].set_title(self.plotting['redshift_l'][l], size='larger')
+
+                ax[s][l].text(0.5, 0.87,
+                              r'$\chi^2$/ndf$ = %0.3f/%d$' % (chi2, ndf),
+                              horizontalalignment='center', verticalalignment='center', transform=ax[s][l].transAxes,
+                              fontsize='medium')
 
         ax[0][4].legend(frameon=False, fontsize=16, loc='lower right')
         self.save_plot('plot_responses_%s_diff' % lens_random)
