@@ -1,11 +1,12 @@
 from info import basic, paths, config, zbins, plotting, source_nofz_pars, sysmaps
-from ggl import GGL, Measurement, Responses, TestStars, TestPSF, TestSizeSNR, TestSysMaps
+from ggl import GGL, Measurement, ResponsesScale, ResponsesProjection, TestStars, TestPSF, TestSizeSNR, TestSysMaps
 
 T = True
 F = False
 
 run_measurement = F
-run_responses_nk = T
+run_responses_nk = F
+run_responses_ng = T
 run_stars = F
 run_psf = F
 run_size_snr = F
@@ -32,12 +33,16 @@ if run_measurement:
         measurement.plot_from_twopointfile()
 
 if run_responses_nk:
-    responses = Responses(basic, config, paths, zbins, plotting)
-    #responses.run()
-    responses.plot('lens', mask_scales =False)
+    responses = ResponsesScale(basic, config, paths, zbins, plotting)
+    responses.run()
+    #responses.plot('lens', mask_scales =False)
     #responses.plot('lens', mask_scales =True)
     #responses.plot_sigmas('lens', mask_scales =False)
     #responses.plot('random')
+
+if run_responses_ng:
+    responses = ResponsesProjection(basic, config, paths, zbins, plotting)
+    responses.run()
 
 if run_stars:
     stars = TestStars(basic, config, paths, zbins, plotting)

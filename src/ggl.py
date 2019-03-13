@@ -125,8 +125,11 @@ class GGL(object):
             # Note: This returns the Rgamma per galaxy already averaged over e1, e2.
             # So source['Rmean'] is equal to source['Rgamma'].mean()
             source['Rgamma'] = calibrator.calibrate('e_1', return_wRg=True)
+            source['R11'] = calibrator.calibrate('e_1', return_full=True)[0]
+            source['R22'] = calibrator.calibrate('e_2', return_full=True)[0]
 
         source['Rmean'] = np.mean([R11, R22])
+
         print 'Response full sample', source['Rmean']
 
         return source, source_5sels, calibrator
@@ -161,6 +164,9 @@ class GGL(object):
         if 'v2' in self.config['mastercat_v']:
             R11, _, _ = calibrator.calibrate('e_1', mask=photoz_masks)
             R22, _, _ = calibrator.calibrate('e_2', mask=photoz_masks)
+            source_bin['R11'] = calibrator.calibrate('e_1', return_full=True, mask=photoz_masks)[0]
+            source_bin['R22'] = calibrator.calibrate('e_2', return_full=True, mask=photoz_masks)[0]
+            
         source_bin['Rmean'] = np.mean([R11, R22])
         print 'Mean response redshift bin (%0.2f, %0.2f):'%(zlim_low, zlim_high), source_bin['Rmean'], np.mean(source_bin['Rgamma'])
         return source_bin
@@ -333,6 +339,11 @@ class GGL(object):
         if type_corr == 'NG' or type_corr == 'NN':
             e1 = source['e1']
             e2 = source['e2']
+            # We still need to define these variables because otherwise 
+            # multiprocessing gives an error (cell is empty), because one has to define
+            # all variables even when they are not needed for correct execution.
+            scalar = np.zeros(len(e1))
+            #print 'Doing correlations with responses!!!! e1=R11 and e2=R22!!'
         if 'NK' in type_corr:
             print type_corr, type_corr[3:]
             scalar = source['%s'%type_corr[3:]]
@@ -1104,7 +1115,7 @@ class Measurement(GGL):
         self.save_plot('plot_gammax')
 
 
-class Responses(GGL):
+class ResponsesScale(GGL):
     """
     Subclass that obtains the scale dependence responses (NK correlations) for all the lens-source bin combinations. Both for randoms and lenses.
     """
@@ -1235,7 +1246,7 @@ class Responses(GGL):
 
         return e_ix
 
-    def run_responses_tomo(self, lens, source, source_sels, delta_gamma, average_type, path_test, lens_or_random):
+    def run_responses_tomo_scale_dependence(self, lens, source, source_sels, delta_gamma, average_type, path_test, lens_or_random):
         """
         Function that computes mean response for each source bin or scale dependent responses for each lens-source combination.
         Uses NK TreeCorr correlation for scale dependence.
@@ -1282,7 +1293,6 @@ class Responses(GGL):
             self.process_run(Rgamma, theta, path_test, 'Rgamma_nk_JK_%s'%lens_or_random)
             self.process_run(Rs, theta, path_test, 'Rs_nk_JK_%s'%lens_or_random)
 
-
     def run(self):
         """
         Runs the NK responses between lenses and sources.
@@ -1307,12 +1317,12 @@ class Responses(GGL):
 
                 lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
                 responses_mean[sbin] = self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='mean', path_test=path_test, lens_or_random='lens')
-                #responses_nk_no_jackknife = self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='NK_no_jackknife', path_test=path_test, lens_or_random='lens')
-                self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='NK_jackknife',path_test=path_test, lens_or_random='lens')
+                #comment:responses_nk_no_jackknife = self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='NK_no_jackknife', path_test=path_test, lens_or_random='lens') #much slower
+                #self.run_responses_tomo_scale_dependence(lens, source, source_sels, delta_gamma, average_type='NK_jackknife',path_test=path_test, lens_or_random='lens')
 
-                #random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-                #responses_nk_no_jackknife = self.run_responses_tomo(random, source, source_sels, delta_gamma, average_type='NK_no_jackknife', path_test=path_test, lens_or_random='random')
-                #self.run_responses_tomo(random, source, source_sels, delta_gamma, average_type='NK_jackknife', path_test=path_test, lens_or_random='random')
+                #comment:random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+                #comment:responses_nk_no_jackknife = self.run_responses_tomo(random, source, source_sels, delta_gamma, average_type='NK_no_jackknife', path_test=path_test, lens_or_random='random') #super slow
+                #comment:self.run_responses_tomo_scale_dependence(random, source, source_sels, delta_gamma, average_type='NK_jackknife', path_test=path_test, lens_or_random='random')
 
 
         print resp
@@ -1492,6 +1502,69 @@ class Responses(GGL):
         self.save_plot('plot_responses_%s_diff' % lens_random)
 
 
+
+class ResponsesProjection(GGL):
+    """
+    Subclass that obtains the tangential compomenent projection of the responses (NG correlations) for all the lens-source bin combinations. Both for randoms and lenses.
+    """
+
+    def __init__(self, basic, config, paths, zbins, plotting):
+        GGL.__init__(self, basic, config, paths)
+        self.zbins = zbins
+        self.plotting = plotting
+
+    def get_path_test_allzbins(self):
+        return os.path.join(self.paths['runs_config'], 'responses_ng') + '/'
+
+    def get_path_test(self, lbin, sbin):
+        return os.path.join(self.paths['runs_config'], 'responses_ng', lbin + '_' + sbin) + '/'
+
+    def run(self):
+        """
+        Runs the projection of the responeses (in the same way as in the shears)
+        """
+
+        lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
+
+        for sbin in self.zbins['sbins']:
+    		print 'Running measurement for source %s.' % sbin
+
+		if self.basic['mode'] == 'data':
+		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
+		    R = source['Rmean']
+                    print 'R = source[Rmean]', R, sbin
+
+		if self.basic['mode'] == 'data_y1sources':
+		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
+
+    		for l, lbin in enumerate(self.zbins['lbins']):
+    		    print 'Running measurement for lens %s.' % lbin
+    		    path_test = self.get_path_test(lbin, sbin)
+    		    make_directory(path_test)
+
+    		    lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
+
+    		    theta, R, Rx, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
+    		    #self.save_runs(path_test, theta, R, Rx, errs, weights, npairs, False)
+    		    Rnum, Rxnum, wnum = self.numerators_jackknife(R, Rx, weights)
+
+                    random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+
+    		    theta, R, Rx, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
+    		    #self.save_runs(path_test, theta, R, Rx, errs, weights, npairs, True)
+    		    Rnum_r, Rxnum_r, wnum_r = self.numerators_jackknife(R, Rx, weights)
+
+    		    R_all = Rnum/wnum
+                    R_r_all = Rnum_r/wnum_r
+    		    Rx_all = Rxnum/wnum
+                    Rx_r_all = Rxnum_r/wnum_r
+
+    		    self.process_run(R_all, theta, path_test, 'R')
+    		    self.process_run(Rx_all, theta, path_test, 'Rx')
+    		    self.process_run(R_r_all, theta, path_test, 'R_randoms')
+    		    self.process_run(Rx_r_all, theta, path_test, 'Rx_randoms')
+
+        
 
 class TestStars(GGL):
     """
