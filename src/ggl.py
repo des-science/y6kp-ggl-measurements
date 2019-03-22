@@ -1246,7 +1246,7 @@ class ResponsesScale(GGL):
 
         return e_ix
 
-    def run_responses_tomo_scale_dependence(self, lens, source, source_sels, delta_gamma, average_type, path_test, lens_or_random):
+    def run_responses_tomo(self, lens, source, source_sels, delta_gamma, average_type, path_test, lens_or_random):
         """
         Function that computes mean response for each source bin or scale dependent responses for each lens-source combination.
         Uses NK TreeCorr correlation for scale dependence.
@@ -1318,11 +1318,11 @@ class ResponsesScale(GGL):
                 lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
                 responses_mean[sbin] = self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='mean', path_test=path_test, lens_or_random='lens')
                 #comment:responses_nk_no_jackknife = self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='NK_no_jackknife', path_test=path_test, lens_or_random='lens') #much slower
-                #self.run_responses_tomo_scale_dependence(lens, source, source_sels, delta_gamma, average_type='NK_jackknife',path_test=path_test, lens_or_random='lens')
+                self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='NK_jackknife',path_test=path_test, lens_or_random='lens')
 
                 #comment:random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
                 #comment:responses_nk_no_jackknife = self.run_responses_tomo(random, source, source_sels, delta_gamma, average_type='NK_no_jackknife', path_test=path_test, lens_or_random='random') #super slow
-                #comment:self.run_responses_tomo_scale_dependence(random, source, source_sels, delta_gamma, average_type='NK_jackknife', path_test=path_test, lens_or_random='random')
+                #comment:self.run_responses_tomo(random, source, source_sels, delta_gamma, average_type='NK_jackknife', path_test=path_test, lens_or_random='random')
 
 
         print resp
@@ -1350,6 +1350,8 @@ class ResponsesScale(GGL):
         fig.subplots_adjust(hspace=0.1, wspace=0.1)
 
         R_mean_all = self.load_responses_mean('xcorr')
+
+        err_Rmean = np.array([0.0003528, 0.0004943, 0.0004696, 0.0005272]) #values from Marco from JK, see slack on 14th of March, propagate errors
         print R_mean_all
         for l in range(len(self.zbins['lbins'])):
 
@@ -1375,21 +1377,24 @@ class ResponsesScale(GGL):
                     c, err_c, chi2_c, ndf_c = self.fit_constant_minuit(datavector=R_nk_jk, cov=cov)
                     c_ls = self.fit_constant_least_squares(datavector=R_nk_jk, cov=cov, R0=R_mean)
 
-                ax[s][l].margins(x=0, y=0.5) 
-                ax[s][l].plot(theta, [R_mean] * len(theta), '-', lw=2, color=c1, mec=c1, label=r'$R_{\mathrm{mean}}$')
+                ax[s][l].margins(x=0, y=0.3)
+                t = np.linspace(0,max(theta)*2, 10)
+                ax[s][l].plot(t, [R_mean] * len(t), '-', lw=2, color=c1, mec=c1, label=r'$R_{\mathrm{mean}}$')
+                ax[s][l].fill_between(t, np.array([R_mean - err_Rmean[s] for i in t]), 
+                              np.array([R_mean + err_Rmean[s] for i in t]), alpha=0.4, edgecolor=c1, facecolor=c1)
                 #ax[s][l].plot(theta, R_nk, '-', lw=2, color=c2, mec=c2, label=r'$R_{\mathrm{nk}}$')
                 #ax[s][l].plot(theta, [np.mean(R_nk)] * len(theta), '--', lw=2, color=c2, mec=c2,
                 #              label=r'$\overline{R_{\mathrm{nk}}}$')
                 ax[s][l].errorbar(theta, R_nk_jk, err, fmt = 'o', color=c3, mec=c3, markersize=3., label=r'$R_{\mathrm{nk, jk}}$')
-                ax[s][l].plot(theta, [np.mean(R_nk_jk)] * len(theta), ':', lw=2, color=c3, mec=c3,
-                              label=r'$\overline{R_{\mathrm{nk, jk}}}$')
+                #ax[s][l].plot(theta, [np.mean(R_nk_jk)] * len(theta), ':', lw=2, color=c3, mec=c3,
+                #              label=r'$\overline{R_{\mathrm{nk, jk}}}$')
 
 
-                ax[s][l].plot(theta, [c_ls] * len(theta), '--', lw=2, color=c3, mec=c3,
-                              label=r'Fit with least squares')
-                ax[s][l].fill_between(theta, np.array([c - err_c for i in theta]), 
-                              np.array([c + err_c for i in theta]), alpha=0.4, edgecolor=c3, facecolor=c3, 
-                              label='Fit Minuit')
+                #ax[s][l].plot(theta, [c_ls] * len(theta), '--', lw=2, color=c3, mec=c3,
+                #              label=r'Fit with least squares')
+                ax[s][l].fill_between(t, np.array([c - err_c for i in t]), 
+                              np.array([c + err_c for i in t]), alpha=0.4, edgecolor=c3, facecolor=c3, 
+                              label='Fit to a constant')
 
                 ax[s][l].set_xscale('log')
                 ax[s][l].set_xlim(self.config['thlims'][0], self.config['thlims'][1])
@@ -1406,23 +1411,23 @@ class ResponsesScale(GGL):
 
                 diff = R_mean/R_nk_jk - 1
 
-                ax[s][l].text(0.5, 0.88,
-                              r'Mean $R_{\mathrm{mean}}/R_{\mathrm{nk}}-1 = %0.2f \%%$' % (100 * np.mean(diff)),
-                              horizontalalignment='center', verticalalignment='center', transform=ax[s][l].transAxes,
-                              fontsize='medium')
+                #ax[s][l].text(0.5, 0.88,
+                #              r'Mean $R_{\mathrm{mean}}/R_{\mathrm{nk}}-1 = %0.2f \%%$' % (100 * np.mean(diff)),
+                #              horizontalalignment='center', verticalalignment='center', transform=ax[s][l].transAxes,
+                #              fontsize='medium')
 
-                ax[s][l].text(0.5, 0.79,
-                              r'Max $R_{\mathrm{mean}}/R_{\mathrm{nk}}-1 = %0.2f \%%$' % (100 * np.max(np.absolute(diff))),
-                              horizontalalignment='center', verticalalignment='center', transform=ax[s][l].transAxes,
-                              fontsize='medium')
+                #ax[s][l].text(0.5, 0.79,
+                #              r'Max $R_{\mathrm{mean}}/R_{\mathrm{nk}}-1 = %0.2f \%%$' % (100 * np.max(np.absolute(diff))),
+                #              horizontalalignment='center', verticalalignment='center', transform=ax[s][l].transAxes,
+                #              fontsize='medium')
 
-                ax[s][l].text(0.5, 0.70,
+                ax[s][l].text(0.5, 0.85,
                               r'$\chi^2$/ndf$ = %0.1f/%d$' % (chi2, ndf),
                               horizontalalignment='center', verticalalignment='center', transform=ax[s][l].transAxes,
                               fontsize='medium')
 
         ax[0][4].legend(frameon=False, fontsize=10, loc='lower right')
-        self.save_plot('plot_responses_jk_only_%s_%s'%(save, lens_random))
+        self.save_plot('plot_responses_scale_dependence_%s_%s'%(save, lens_random))
 
 
     def plot_sigmas(self, lens_random, mask_scales):

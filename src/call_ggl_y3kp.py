@@ -5,8 +5,8 @@ T = True
 F = False
 
 run_measurement = F
-run_responses_nk = F
-run_responses_ng = T
+run_responses_nk = T
+run_responses_ng = F
 run_stars = F
 run_psf = F
 run_size_snr = F
@@ -34,9 +34,9 @@ if run_measurement:
 
 if run_responses_nk:
     responses = ResponsesScale(basic, config, paths, zbins, plotting)
-    responses.run()
-    #responses.plot('lens', mask_scales =False)
-    #responses.plot('lens', mask_scales =True)
+    #responses.run()
+    responses.plot('lens', mask_scales =False)
+    responses.plot('lens', mask_scales =True)
     #responses.plot_sigmas('lens', mask_scales =False)
     #responses.plot('random')
 
