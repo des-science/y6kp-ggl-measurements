@@ -168,7 +168,7 @@ class GGL(object):
             source_bin['R22'] = calibrator.calibrate('e_2', return_full=True, mask=photoz_masks)[0]
             
         source_bin['Rmean'] = np.mean([R11, R22])
-        print 'Mean response redshift bin (%0.2f, %0.2f):'%(zlim_low, zlim_high), source_bin['Rmean'], np.mean(source_bin['Rgamma'])
+        print 'Mean response redshift bin (%0.2f, %0.2f):'%(zlim_low, zlim_high), source_bin['Rmean'], np.mean(source_bin['Rgamma']), np.mean(source_bin['R11']), np.mean(source_bin['R22'])
         return source_bin
 
 
@@ -296,7 +296,6 @@ class GGL(object):
                 pixsjk = np.append(pixsjk, pixjk)
                 bool_s = np.in1d(pix, pixsjk)
 
-                print 'jk, nlens, nsource = ', jk, len(ra_l_jk), len(ra_s[bool_s])
                 cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
  
                 if type_corr == 'NG' or type_corr == 'NN':
@@ -366,7 +365,7 @@ class GGL(object):
         gxs = [manager.list() for x in range(self.config['njk'])]
         errs = [manager.list() for x in range(self.config['njk'])]
         xi_nks = [manager.list() for x in range(self.config['njk'])]
-        
+
         p = mp.Pool(10, worker_init)
         p.map(run_jki, range(self.config['njk']))
         p.close()
@@ -438,6 +437,10 @@ class GGL(object):
         Computes the boost factor for a given set of weights for the lenses and randoms.
         Uses Eq. from Sheldon et al. (2004)
         It does so for each N-1 jk regions.
+        jk_l: number of assigned jk region per each galaxy
+        jk_r: number of assigned jk region per random point
+        wnum: array of weights for the lenses, for all jk regions -1, each time different region.
+        wnum_r: array of weights for the randoms, for all jk regions -1, each time different region. 
         """
 
         bf_jk = []
@@ -608,7 +611,6 @@ class Measurement(GGL):
 		if self.basic['mode'] == 'data':
 		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
 		    R = source['Rmean']
-                    print 'R = source[Rmean]', R, sbin
 
 		if self.basic['mode'] == 'data_y1sources':
 		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
@@ -662,7 +664,8 @@ class Measurement(GGL):
         Then, it builds the TwoPointFile objet from the above objects,
         and saves it to a file.
         """
-
+        
+        # Preparing spectrum
         length = self.config['nthbins'] * len(self.zbins['lbins']) * len(self.zbins['sbins'])
         values = np.zeros(length, dtype=float)
         bin1 = np.zeros(length, dtype=int)
@@ -687,10 +690,19 @@ class Measurement(GGL):
                 dv_start += self.config['nthbins']
                 cov[bin_pair_inds[0]:bin_pair_inds[-1]+1, bin_pair_inds] = cov_ls
 
-        # Load Y1 twopoint file to get the N(z)'s for the blinding script
-        y1 = twopoint.TwoPointFile.from_fits('y1_2pt_NG_mcal_1110.fits')
-        y1_lensnz = y1.get_kernel('nz_lens')
-        y1_sourcenz = y1.get_kernel('nz_source')
+        # Preparing N(z) for the blinding script
+        if 'y1_2pt_NG_mcal_1110' in self.paths['lens_nz']:
+            file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
+            lens_nz = file_lens_nz.get_kernel('nz_lens')
+
+        if 'stellar_mass' in self.paths['lens_nz']:
+            import astropy
+            ext = astropy.io.fits.open(self.paths['lens_nz'])['nz_lens']
+            lens_nz = twopoint.NumberDensity.from_fits(ext)
+
+        if 'y1_2pt_NG_mcal_1110' in self.paths['source_nz']:
+            file_source_nz = twopoint.TwoPointFile.from_fits(self.paths['source_nz'])
+            source_nz = file_source_nz.get_kernel('nz_source')
 
         if string == 'gt':
             gammat = twopoint.SpectrumMeasurement('gammat', (bin1, bin2),
@@ -700,8 +712,9 @@ class Measurement(GGL):
                                                   angle=angle, angle_unit='arcmin')
 
             cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['gammat'], [length], cov)
-            print 'Saving TwoPointFile with Y1 N(z)s'
-            gammat_twopoint = twopoint.TwoPointFile([gammat], [y1_lensnz, y1_sourcenz], windows=None, covmat_info=cov_mat_info)
+            print 'Saving TwoPointFile with lens N(z) from %s'%(self.paths['lens_nz'])
+            print 'Saving TwoPointFile with source N(z) from %s'%(self.paths['source_nz'])
+            gammat_twopoint = twopoint.TwoPointFile([gammat], [lens_nz, source_nz], windows=None, covmat_info=cov_mat_info)
             twopointfile_unblind = self.get_twopointfile_name()
 
             # Remove file if it exists already because to_fits function doesn't overwrite
@@ -763,7 +776,7 @@ class Measurement(GGL):
         (boost_factors.to_fits()).writeto(path_save + filename)
 
 
-    def plot(self):
+    def plot_NO_BLINDED(self):
         """"
         Makes plot of the fiducial measurement for all redshift bins.
         """
@@ -784,7 +797,6 @@ class Measurement(GGL):
             # To iterate between the three columns and two lines
             j = 0 if l < 3 else 1
             ax[j][l % 3].axvspan(self.config['thlims'][0]*0.8, self.plotting['th_limit'][l], color='gray', alpha=0.2)
-            print self.config['thlims'][0]*0.8
             for s in range(len(self.zbins['sbins'])):
 
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])

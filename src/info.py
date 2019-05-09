@@ -35,7 +35,7 @@ measurements, not the systematics tests.
 basic = {
     'mode':'data',
     'blind': True,
-    'plot_blinded': True
+    'plot_blinded': False
 }
 
 
@@ -49,7 +49,7 @@ config_mice.
 """
 
 config_data = {
-    'njk': 100,
+    'njk': 200,
     'bslop': 0.1,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
@@ -99,6 +99,8 @@ paths['redmagic', config['redmagic_v']] = '../lens_cats/redmagic/%s/%s/njk_%d/'%
 paths['redmagic', 'y1'] = '../lens_cats/redmagic/y1/'
 paths['lens'] = paths['redmagic', '%s'%config['redmagic_v']] + 'lens.fits'
 paths['randoms'] = paths['redmagic', '%s'%config['redmagic_v']] + 'random.fits'
+paths['lens_nz'] = 'y1_2pt_NG_mcal_1110.fits'
+paths['source_nz'] = 'y1_2pt_NG_mcal_1110.fits'
 paths['mice'] = '/global/project/projectdirs/des/y3-bias/mice2/' 
 paths['lens_mice'] = paths['mice'] + 'lens.fits'
 paths['source_mice'] = paths['mice'] + 'source.fits'
