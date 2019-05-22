@@ -342,13 +342,9 @@ class GGL(object):
             # multiprocessing gives an error (cell is empty), because one has to define
             # all variables even when they are not needed for correct execution.
             scalar = np.zeros(len(e1))
-            #print 'Doing correlations with responses!!!! e1=R11 and e2=R22!!'
         if 'NK' in type_corr:
             print type_corr, type_corr[3:]
             scalar = source['%s'%type_corr[3:]]
-            # We still need to define these variables because otherwise 
-            # multiprocessing gives an error (cell is empty), because one has to define
-            # all variables even when they are not needed for correct execution.
             e1 = np.zeros(len(scalar))
             e2 = np.zeros(len(scalar))
             
@@ -598,8 +594,8 @@ class Measurement(GGL):
     def get_path_test_allzbins(self):
         return os.path.join(self.paths['runs_config'], 'measurement') + '/'
 
-    def get_twopointfile_name(self):
-        return os.path.join(self.get_path_test_allzbins() + 'gammat_twopointfile.fits')
+    def get_twopointfile_name(self, string):
+        return os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits'%string)
 
     def run(self):
 
@@ -646,11 +642,14 @@ class Measurement(GGL):
     		    gx_all = (gxnum / wnum) / R - (gxnum_r / wnum_r) / R
 
     		    bf_all = self.compute_boost_factor(lens['jk'], random['jk'], wnum, wnum_r)
+                    gt_all_boosted = bf_all*(gtnum / wnum)/R - (gtnum_r / wnum_r) / R 
 
     		    self.process_run(gt_all, theta, path_test, 'gt')
     		    self.process_run(gx_all, theta, path_test, 'gx')
     		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
     		    self.process_run(bf_all, theta, path_test, 'boost_factor')
+    		    self.process_run(gt_all*bf_all, theta, path_test, 'gt_boosted_to_all')
+    		    self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
 
     def save_2pointfile(self, string):
         """
@@ -704,7 +703,7 @@ class Measurement(GGL):
             file_source_nz = twopoint.TwoPointFile.from_fits(self.paths['source_nz'])
             source_nz = file_source_nz.get_kernel('nz_source')
 
-        if string == 'gt':
+        if 'gt' in string:
             gammat = twopoint.SpectrumMeasurement('gammat', (bin1, bin2),
                                                   (twopoint.Types.galaxy_position_real,
                                                    twopoint.Types.galaxy_shear_plus_real),
@@ -715,7 +714,7 @@ class Measurement(GGL):
             print 'Saving TwoPointFile with lens N(z) from %s'%(self.paths['lens_nz'])
             print 'Saving TwoPointFile with source N(z) from %s'%(self.paths['source_nz'])
             gammat_twopoint = twopoint.TwoPointFile([gammat], [lens_nz, source_nz], windows=None, covmat_info=cov_mat_info)
-            twopointfile_unblind = self.get_twopointfile_name()
+            twopointfile_unblind = self.get_twopointfile_name(string)
 
             # Remove file if it exists already because to_fits function doesn't overwrite
             if os.path.isfile(twopointfile_unblind):
@@ -733,7 +732,7 @@ class Measurement(GGL):
 
             cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['boost_factor'], [length], cov)
             print 'Saving TwoPointFile with Y1 N(z)s'
-            boost_factor_twopoint = twopoint.TwoPointFile([boost_factor], [y1_lensnz, y1_sourcenz], windows=None, covmat_info=cov_mat_info)
+            boost_factor_twopoint = twopoint.TwoPointFile([boost_factor], [lens_nz, source_nz], windows=None, covmat_info=cov_mat_info)
             save_path = os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits'%string)
             boost_factor_twopoint.to_fits(save_path)
 
@@ -850,23 +849,23 @@ class Measurement(GGL):
         fig.subplots_adjust(top=0.93)
         self.save_plot('plot_measurement')
 
-    def load_twopointfile(self):
+    def load_twopointfile(self, string):
         '''
         Loads TwoPointFile and returns it.
         '''
-        filename = self.get_twopointfile_name()
+        filename = self.get_twopointfile_name(string)
         if self.basic['blind']: gammat_file = twopoint.TwoPointFile.from_fits('%s_BLINDED.fits'%filename[:-5])
         else: gammat_file = twopoint.TwoPointFile.from_fits('%s.fits'%filename[:-5])
         return gammat_file
 
-    def compute_sn_ratio(self):
+    def compute_sn_ratio(self, string):
         '''
         Compute S/N ratio using null chi2. 
         S/N = sqrt(null chi2 - ndof)
         Uses full jackknife covariance.
         '''
 
-        gammat_file = self.load_twopointfile()
+        gammat_file = self.load_twopointfile(string)
         gammat = gammat_file.spectra[0].value
         cov = gammat_file.covmat
         
@@ -878,10 +877,10 @@ class Measurement(GGL):
         
         path_save = self.get_path_test_allzbins()
         print 'S/N of the full measurements:', float(sn)
-        np.savetxt(path_save + 'sn_ratio_full_measurements', sn, fmt = '%0.5g', header = 'S/N ratio computed with JK covariance, S/N = sqrt(null chi2 - ndof)')
+        np.savetxt(path_save + 'sn_ratio_full_measurements_%s'%string, sn, fmt = '%0.5g', header = 'S/N ratio computed with JK covariance, S/N = sqrt(null chi2 - ndof)')
 
 
-    def plot_from_twopointfile(self):
+    def plot_from_twopointfile(self, string):
         
         """"
         Makes plot of the fiducial measurement for all redshift bins, from a twopoint file, like Y1 style.
@@ -893,7 +892,7 @@ class Measurement(GGL):
         plt.rc('text', usetex=self.plotting['latex'])
         plt.rc('font', family='serif')
 
-        gammat_file = self.load_twopointfile()
+        gammat_file = self.load_twopointfile(string)
 
         gammat = gammat_file.spectra[0]
         pairs = gammat.bin_pairs
@@ -970,7 +969,7 @@ class Measurement(GGL):
         self.save_plot('plot_measurement_BLINDED')
 
         # Use twopoint library to make the rest of the plots
-        gammat_file.plots(self.paths['plots_config'] + 'gammat_twopointfile_BLINDED', blind_yaxis=self.basic['blind'], latex = self.plotting['latex'])
+        gammat_file.plots(self.paths['plots_config'] + '%s_twopointfile_BLINDED'%string, blind_yaxis=self.basic['blind'], latex = self.plotting['latex'])
 
 
     def plot_boostfactors(self):
@@ -1442,10 +1441,11 @@ class ResponsesScale(GGL):
         self.save_plot('plot_responses_scale_dependence_%s_%s'%(save, lens_random))
 
 
-    def plot_sigmas(self, lens_random, mask_scales):
+    def plot_sigmas(self, lens_random, mask_scales, string):
         """
         Makes plot comparing the NK responses to the mean ones, divided by the uncertainty on the measurement. 
         lens_random: string, can be lens or random.
+        string: indicates which twopointfile to load the sigmas from, i.e. from gt, from gt boosted etc.
         Indicates which is the foreground sample when computing the NK correlations.
         """
 
@@ -1463,7 +1463,7 @@ class ResponsesScale(GGL):
         print R_mean_all
 
         measurement = Measurement(self.basic, self.config, self.paths, self.zbins, self.plotting)
-        gammat_file = measurement.load_twopointfile()
+        gammat_file = measurement.load_twopointfile(string)
         gammat = gammat_file.spectra[0]
 
 
@@ -1516,7 +1516,7 @@ class ResponsesScale(GGL):
                               fontsize='medium')
 
         ax[0][4].legend(frameon=False, fontsize=16, loc='lower right')
-        self.save_plot('plot_responses_%s_diff' % lens_random)
+        self.save_plot('plot_responses_%s_diff_%s'%(lens_random, string))
 
 
 

@@ -4,8 +4,8 @@ from ggl import GGL, Measurement, ResponsesScale, ResponsesProjection, TestStars
 T = True
 F = False
 
-run_measurement = F
-run_responses_nk = T
+run_measurement = T
+run_responses_nk = F
 run_responses_ng = F
 run_stars = F
 run_psf = F
@@ -18,9 +18,11 @@ if run_measurement:
     #gglensing = GGL(basic, config, paths)
     measurement = Measurement(basic, config, paths, zbins, plotting)
     if not basic['plot_blinded']:
-        measurement.run()
-        #measurement.save_boostfactors_2pointfile() #deprecated, without errors
+        #measurement.run()
+        #measurement.save_boostfactors_2pointfile() #deprecated
         measurement.save_2pointfile('gt')
+        measurement.save_2pointfile('gt_boosted')
+        measurement.save_2pointfile('gt_boosted_to_all')
         measurement.save_2pointfile('boost_factor')
         if not basic['blind']:
             measurement.plot()
@@ -29,8 +31,12 @@ if run_measurement:
         measurement.plot_gammax()
 
     if basic['blind'] and basic['plot_blinded']:
-        measurement.compute_sn_ratio()
-        measurement.plot_from_twopointfile()
+        measurement.compute_sn_ratio('gt')
+        measurement.compute_sn_ratio('gt_boosted')
+        measurement.compute_sn_ratio('gt_boosted_to_all')
+        measurement.plot_from_twopointfile('gt')
+        measurement.plot_from_twopointfile('gt_boosted')
+        measurement.plot_from_twopointfile('gt_boosted_to_all')
 
 if run_responses_nk:
     responses = ResponsesScale(basic, config, paths, zbins, plotting)
