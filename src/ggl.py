@@ -966,7 +966,7 @@ class Measurement(GGL):
                         bbox_to_anchor=(2.45, -0.52))
         fig.suptitle(title_source, fontsize=16)
         fig.subplots_adjust(top=0.93)
-        self.save_plot('plot_measurement_BLINDED')
+        self.save_plot('plot_measurement_BLINDED_%s'%string)
 
         # Use twopoint library to make the rest of the plots
         gammat_file.plots(self.paths['plots_config'] + '%s_twopointfile_BLINDED'%string, blind_yaxis=self.basic['blind'], latex = self.plotting['latex'])
