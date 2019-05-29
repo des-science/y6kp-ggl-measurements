@@ -648,7 +648,6 @@ class Measurement(GGL):
     		    self.process_run(gx_all, theta, path_test, 'gx')
     		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
     		    self.process_run(bf_all, theta, path_test, 'boost_factor')
-    		    self.process_run(gt_all*bf_all, theta, path_test, 'gt_boosted_to_all')
     		    self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
 
     def save_2pointfile(self, string):
