@@ -35,7 +35,7 @@ measurements, not the systematics tests.
 basic = {
     'mode':'data',
     'blind': True,
-    'plot_blinded': False
+    'plot_blinded': True
 }
 
 
@@ -49,7 +49,7 @@ config_mice.
 """
 
 config_data = {
-    'njk': 200,
+    'njk': 150,
     'bslop': 0.1,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
@@ -61,6 +61,20 @@ config_data = {
     }
 
 config_data['mastercat_v'] = config_data['filename_mastercat'][53:-3]
+
+config_buzzard = {
+    'njk': 150,
+    'bslop': 0.1,
+    'nthbins': 20,
+    'thlims': np.array([2.5,250.]),
+    'filename_mastercat': '/global/cscratch1/sd/jderose/BCC/Chinchilla/Herd/Chinchilla-3/sampleselection/Y3/Y3_mastercat_w_y3rmg_b3_v1.9.2.h5',
+    'redmagic_v': 'combined_sample_fid',
+    'zslim_v': 'y1',
+    'zs_v': 'bpz',
+    'zllim_v': 'y3'
+    }
+
+config_buzzard['mastercat_v'] = config_data['filename_mastercat'][81:-3]
 
 config_mice = {
     'njk': 300,
@@ -78,8 +92,10 @@ if basic['mode'] == 'data':
     config = config_data
 if basic['mode'] == 'mice':
     config = config_mice
+if basic['mode'] == 'buzzard':
+    config = config_buzzard
 
-#print '\nChosen configuration:\n--------------------------\n', config
+print '\nChosen configuration:\n--------------------------\n', config
 
 """
 PATHS
@@ -110,6 +126,12 @@ paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], '
                         'redmagic_%s'%config_data['redmagic_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
                         'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
                         'bslop_%0.1g'%config_data['bslop']) 
+
+paths['config_buzzard'] = os.path.join('mastercat_%s'%config_buzzard['mastercat_v'], 'zslim_%s'%config_buzzard['zslim_v'], 'zs_%s'%config_buzzard['zs_v'],
+                        'redmagic_%s'%config_buzzard['redmagic_v'], 'zllim_%s'%config_buzzard['zllim_v'], 'njk_%d'%config_buzzard['njk'],
+                        'thbin_%0.1f_%d_%d'%(config_buzzard['thlims'][0], config_buzzard['thlims'][1], config_buzzard['nthbins']),
+                        'bslop_%0.1g'%config_buzzard['bslop']) 
+
 
 paths['config_mice'] = os.path.join('mice', 'v_%s'%config_mice['version'], 'zslim_%s'%config_mice['zslim_v'], 'zs_%s'%config_mice['zs_v'],
                         'redmagic_%s'%config_mice['redmagic_v'], 'zllim_%s'%config_mice['zllim_v'], 'njk_%d'%config_mice['njk'],
@@ -158,6 +180,8 @@ if basic['mode'] == 'data':
     plotting['catname'] = r'Metacalibration PSF ' + config['mastercat_v'][0:2]
 if basic['mode'] == 'mice':
     plotting['catname'] = r'\textsc{MICE}'
+if basic['mode'] == 'buzzard':
+    plotting['catname'] = r'\textsc{Buzzard}' + config['mastercat_v']
 
 plotting['latex'] = False
 plotting['cmap'] = viridis
