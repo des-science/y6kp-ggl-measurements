@@ -53,14 +53,14 @@ config_data = {
     'bslop': 0.1,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
-    'filename_mastercat': '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_5_24_19.h5'
+    'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_5_24_19.h5',
     'redmagic_v': 'combined_sample_fid',
     'zslim_v': 'y1',
     'zs_v': 'bpz',
     'zllim_v': 'y3'
     }
 
-config_data['mastercat_v'] = config_data['filename_mastercat'][53:-3]
+config_data['mastercat_v'] = config_data['filename_mastercat'][37:-3]
 
 config_buzzard = {
     'njk': 150,
@@ -111,7 +111,7 @@ paths['runs'] =  '../runs/'
 paths['plots'] = '../plots/'
 paths['y3'] = '../../ggl_results/'
 paths['y3_exp'] = '../../ggl_data/'
-paths['redmagic', config['redmagic_v']] = '../lens_cats/redmagic/%s/%s/njk_%d/'%(config_data['mastercat_v'], config['redmagic_v'], config['njk'])
+paths['redmagic', config['redmagic_v']] = '../lens_cats/%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], config['redmagic_v'],config['njk'])
 paths['redmagic', 'y1'] = '../lens_cats/redmagic/y1/'
 paths['lens'] = paths['redmagic', '%s'%config['redmagic_v']] + 'lens.fits'
 paths['randoms'] = paths['redmagic', '%s'%config['redmagic_v']] + 'random.fits'
@@ -121,7 +121,7 @@ paths['mice'] = '/global/project/projectdirs/des/y3-bias/mice2/'
 paths['lens_mice'] = paths['mice'] + 'lens.fits'
 paths['source_mice'] = paths['mice'] + 'source.fits'
 paths['randoms_mice'] = paths['mice'] + 'random.fits'
-paths['yaml'] = 'destest/cats.yaml' 
+paths['yaml'] = 'cats.yaml' 
 paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
                         'redmagic_%s'%config_data['redmagic_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
                         'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),

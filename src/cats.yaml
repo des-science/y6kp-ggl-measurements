@@ -1,0 +1,49 @@
+# Main data file
+datafile : 
+# Reuse cached masking and selections - speeds up repeated calculations
+load_cache : True
+# Where to put the cache dir
+output : '.'
+
+# The path in the h5 file for the catalog
+gold_regions_group :  'regions/catalog'
+# The list of tables (only one for gold, but five for metacal below)
+gold_regions_table :  ['gold']
+# The selection index path.
+gold_regions_path :  'index/select'
+
+lens_regions_group :  'regions/catalog/redmagic'
+lens_regions_table :  ['combined_sample_fid']
+lens_regions_path :  'index/redmagic/combined_sample_fid/select'
+
+lens_randoms_regions_group :  'regions/randoms/redmagic'
+lens_randoms_regions_table :  ['combined_sample_fid']
+lens_randoms_regions_path :  'index/redmagic/combined_sample_fid/random_select'
+
+centers_group :  'regions/'
+centers_table :  ['centers']
+centers_path :  'index/select'
+
+source_group : 'catalog/metacal'
+source_table : ['unsheared', 'sheared_1p', 'sheared_1m', 'sheared_2p', 'sheared_2m']
+source_path  : 'index/select'
+
+gold_group : 'catalog'
+gold_table : ['gold']
+gold_path  : 'index/select'
+
+lens_group : 'catalog/redmagic'
+lens_table : ['combined_sample_fid']
+lens_path  : 'index/redmagic/combined_sample_fid/select'
+
+alt_lens_group : 'catalog'
+alt_lens_table : ['gold']
+alt_lens_path  : 'index/maglim/select'
+
+pz_group : 'catalog/bpz'
+pz_table : ['unsheared', 'sheared_1p', 'sheared_1m', 'sheared_2p', 'sheared_2m']
+pz_path  : 'index/select'
+
+ran_group : 'randoms/redmagic'
+ran_table : ['combined_sample_fid']
+ran_path  : 'index/redmagic/combined_sample_fid/random_select'
