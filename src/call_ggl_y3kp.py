@@ -18,7 +18,7 @@ if run_measurement:
     #gglensing = GGL(basic, config, paths)
     measurement = Measurement(basic, config, paths, zbins, plotting)
     if not basic['plot_blinded']:
-        #measurement.run()
+        measurement.run()
         #measurement.save_boostfactors_2pointfile() #deprecated
         measurement.save_2pointfile('gt')
         measurement.save_2pointfile('gt_boosted')

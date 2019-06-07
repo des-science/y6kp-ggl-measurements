@@ -17,15 +17,15 @@ params['param_file'] = paths['yaml']
 
 # Redmagic catalog
 lens_selector, lens_calibrator = destest_functions.load_catalog(
-    params, None, params['lens_group'], params['lens_table'], params['lens_path'], return_calibrator=destest.NoCalib)
+    params, 'rm', None, params['lens_group'], params['lens_table'], params['lens_path'], return_calibrator=destest.NoCalib)
 
 # Redmagic random catalog
 ran_selector = destest_functions.load_catalog(
-    params, None, params['ran_group'], params['ran_table'], params['ran_path'])
+    params, 'ran', None, params['ran_group'], params['ran_table'], params['ran_path'])
 
 # Mag lim catalog
 alt_lens_selector, alt_lens_calibrator = destest_functions.load_catalog(
-    params, None, params['alt_lens_group'], params['alt_lens_table'], params['alt_lens_path'], return_calibrator=destest.NoCalib)
+    params, 'maglim', None, params['alt_lens_group'], params['alt_lens_table'], params['alt_lens_path'], return_calibrator=destest.NoCalib)
 
 # Load ra,dec from redmagic catalog
 ra_l  = lens_selector.get_col('ra')[0]

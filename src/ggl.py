@@ -19,6 +19,7 @@ import sys
 import yaml
 sys.path.append('../../destest/')
 import destest
+import destest_functions
 import ipdb
 
 def make_directory(directory):
@@ -61,18 +62,21 @@ class GGL(object):
         
         """
 
-        # Source catalog
-        source_selector, source_calibrator = load_catalog(
-            params, 'mcal', params['source_group'], params['source_table'], params['source_path'], return_calibrator=destest.MetaCalib)
+        # Read yaml file that defines all the catalog selections used
+        params = yaml.load(open(self.paths['yaml']))
+        params['param_file'] = self.paths['yaml']
 
-        # BPZ (or DNF) catalog, depending on paths in cats.yaml file (exchange bpz and dnf)
-        pz_selector = load_catalog(
-            params, 'mcal', params['pz_group'], params['pz_table'], params['pz_path'], inherit=source_selector)
+        # Source catalog
+        source_selector, source_calibrator = destest_functions.load_catalog(
+            params, 'mcal', 'mcal', params['source_group'], params['source_table'], params['source_path'], return_calibrator=destest.MetaCalib)
 
         # Gold catalog
-        gold_selector = load_catalog(
-            params, 'mcal', params['gold_group'], params['gold_table'], params['gold_path'], inherit=source_selector)
+        gold_selector = destest_functions.load_catalog(
+            params, 'gold', 'mcal', params['gold_group'], params['gold_table'], params['gold_path'], inherit=source_selector)
 
+        # BPZ (or DNF) catalog, depending on paths in cats.yaml file (exchange bpz and dnf)
+        pz_selector = destest_functions.load_catalog(
+            params, 'pz', 'mcal', params['pz_group'], params['pz_table'], params['pz_path'], inherit=source_selector)
 
         # Dictionary with the unsheared version of each quantity with the selections from: unsheared, 1p, 1m, 2p, 2m. 
         source_5sels = {}
@@ -104,26 +108,20 @@ class GGL(object):
         source['bpz_mean'] = source_5sels['sheared']['bpz_mean'][0]
         source['bpz_zmc'] = source_5sels['sheared']['bpz_zmc'][0]
 
-        calibrator = destest.MetaCalib(params_mcal, source_selector)
-        if 'v1' in self.config['mastercat_v']:
-            R11, _, _ = calibrator.calibrate('e1')
-            R22, _, _ = calibrator.calibrate('e2')
-            source['Rgamma'] = calibrator.calibrate('e1', return_wRg=True)
+        R11, _, _ = source_calibrator.calibrate('e_1')
+        R22, _, _ = source_calibrator.calibrate('e_2')
+        source['Rgamma'] = source_calibrator.calibrate('e_1', return_wRg=True)
+        source['R11'] = source_calibrator.calibrate('e_1', return_full=True)[0]
+        source['R22'] = source_calibrator.calibrate('e_2', return_full=True)[0]
 
-        if 'v2' in self.config['mastercat_v']:
-            R11, _, _ = calibrator.calibrate('e_1')
-            R22, _, _ = calibrator.calibrate('e_2')
-            # Note: This returns the Rgamma per galaxy already averaged over e1, e2.
-            # So source['Rmean'] is equal to source['Rgamma'].mean()
-            source['Rgamma'] = calibrator.calibrate('e_1', return_wRg=True)
-            source['R11'] = calibrator.calibrate('e_1', return_full=True)[0]
-            source['R22'] = calibrator.calibrate('e_2', return_full=True)[0]
-
+        print 'source[R11]', R11, source['R11']
+        print 'source[R22]', R22, source['R22']
+        print 'source[Rgamma] e1, e2', source['Rgamma'], source_calibrator.calibrate('e_2', return_wRg=True)  
         source['Rmean'] = np.mean([R11, R22])
 
         print 'Response full sample', source['Rmean']
-
-        return source, source_5sels, calibrator
+        print sldkfj
+        return source, source_5sels, source_calibrator
 
     def load_metacal_bin(self, source, source_5sels, calibrator, zlim_low, zlim_high):
         """
