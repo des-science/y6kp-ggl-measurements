@@ -61,26 +61,17 @@ class GGL(object):
         
         """
 
-        mcal_file = self.paths['yaml'] + 'destest_mcal.yaml'
-        params_mcal = yaml.load(open(mcal_file))
-        params_mcal['param_file'] = mcal_file
-        params_mcal['filename'] = self.config['filename_mastercat']
-        source_mcal = destest.H5Source(params_mcal)
-        source_selector = destest.Selector(params_mcal,source_mcal)
-        source_calibrator = destest.MetaCalib(params_mcal,source_selector)
+        # Source catalog
+        source_selector, source_calibrator = load_catalog(
+            params, 'mcal', params['source_group'], params['source_table'], params['source_path'], return_calibrator=destest.MetaCalib)
 
-        gold_file = self.paths['yaml'] + 'destest_gold.yaml'
-        params_gold = yaml.load(open(gold_file))
-        params_gold['param_file'] = gold_file
-        params_gold['filename'] = self.config['filename_mastercat']
-        source_gold = destest.H5Source(params_gold)
-        gold_selector = destest.Selector(params_gold,source_gold,inherit=source_selector)
+        # BPZ (or DNF) catalog, depending on paths in cats.yaml file (exchange bpz and dnf)
+        pz_selector = load_catalog(
+            params, 'mcal', params['pz_group'], params['pz_table'], params['pz_path'], inherit=source_selector)
 
-        param_file = self.paths['yaml'] + './destest_pz.yaml'
-        params_pz = yaml.load(open(param_file))
-        params_pz['filename'] = self.config['filename_mastercat']
-        source_pz = destest.H5Source(params_pz)
-        pz_selector = destest.Selector(params_pz, source_pz, inherit=source_selector)
+        # Gold catalog
+        gold_selector = load_catalog(
+            params, 'mcal', params['gold_group'], params['gold_table'], params['gold_path'], inherit=source_selector)
 
 
         # Dictionary with the unsheared version of each quantity with the selections from: unsheared, 1p, 1m, 2p, 2m. 

@@ -61,7 +61,10 @@ n_lens = np.array([len(ra_l[(z_l<zbins[i+1])&(z_l>zbins[i])]) for i in range(len
 n_rand = np.array([len(ra_r[(z_r<zbins[i+1])&(z_r>zbins[i])]) for i in range(len(zbins)-1)])
 
 # Downsample randoms by this quantity: we want 10 times as many randoms as lenses per z-bin
-d = 1/((n_rand/n_lens/10.))
+d = (n_lens*10.)/n_rand
+print 'd', d
+print 'n_lens', len(ra_l), n_lens
+print 'n_rand', len(ra_r), n_rand
 
 # Downsample
 np.random.seed(0)
@@ -69,6 +72,8 @@ r = [np.random.rand(n_rand[i]) for i in range(len(n_rand))]
 ra_r = np.concatenate([ra_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i in range(len(zbins)-1)]) 
 dec_r = np.concatenate([dec_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i in range(len(zbins)-1)]) 
 z_r = np.concatenate([z_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i in range(len(zbins)-1)]) 
+
+print 'nrand after', len(ra_r)
 
 # Path to save the lens catalogs already jackknifed
 path_redmagic = paths['redmagic', config['redmagic_v']]
