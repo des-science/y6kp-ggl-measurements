@@ -108,19 +108,28 @@ class GGL(object):
         source['bpz_mean'] = source_5sels['sheared']['bpz_mean'][0]
         source['bpz_zmc'] = source_5sels['sheared']['bpz_zmc'][0]
 
+
+        # -------------------------------
+        # Notes from Troxel on responses: 
+        # -------------------------------
+        # R1,c,w = source_calibrator.calibrate('e_1', mask=mask) 
+        # Optionally pass an additional mask to use when calculating the selection response. The returned R1 is <Rg_1 + Rs_1>. 
+        # To get an array of R's, use return_wRg=True to get [Rg_1+Rg_2]/2 for each object or return_wRgS=True to include the selection response. 
+        # return_full=True returns the non-component-averaged version of the full response.                
+        # --------------
+        # Also note that:
+        # --------------
+        # R11 is a scalar, source['R11'] is an array of length the number of galaxies
+        # R11 is equal to np.mean(source['R11']).
+
+        source['Rgamma'] = source_calibrator.calibrate('e_1', return_wRg=True)
+        print 'Mean Rgamma', np.mean(source['Rgamma'])
         R11, _, _ = source_calibrator.calibrate('e_1')
         R22, _, _ = source_calibrator.calibrate('e_2')
-        source['Rgamma'] = source_calibrator.calibrate('e_1', return_wRg=True)
+        source['Rmean'] = np.mean([R11, R22])
         source['R11'] = source_calibrator.calibrate('e_1', return_full=True)[0]
         source['R22'] = source_calibrator.calibrate('e_2', return_full=True)[0]
-
-        print 'source[R11]', R11, source['R11']
-        print 'source[R22]', R22, source['R22']
-        print 'source[Rgamma] e1, e2', source['Rgamma'], source_calibrator.calibrate('e_2', return_wRg=True)  
-        source['Rmean'] = np.mean([R11, R22])
-
         print 'Response full sample', source['Rmean']
-        print sldkfj
         return source, source_5sels, source_calibrator
 
     def load_metacal_bin(self, source, source_5sels, calibrator, zlim_low, zlim_high):
@@ -146,17 +155,12 @@ class GGL(object):
         source_bin['bpz_mean'] = source['bpz_mean'][photoz_masks[0]]
         source_bin['bpz_zmc'] = source['bpz_zmc'][photoz_masks[0]]
         source_bin['Rgamma'] = source['Rgamma'][photoz_masks[0]]
-
-        if 'v1' in self.config['mastercat_v']:
-            R11, _, _ = calibrator.calibrate('e1', mask=photoz_masks)
-            R22, _, _ = calibrator.calibrate('e2', mask=photoz_masks)
-        if 'v2' in self.config['mastercat_v']:
-            R11, _, _ = calibrator.calibrate('e_1', mask=photoz_masks)
-            R22, _, _ = calibrator.calibrate('e_2', mask=photoz_masks)
-            source_bin['R11'] = calibrator.calibrate('e_1', return_full=True, mask=photoz_masks)[0]
-            source_bin['R22'] = calibrator.calibrate('e_2', return_full=True, mask=photoz_masks)[0]
-            
+        
+        R11, _, _ = calibrator.calibrate('e_1', mask=photoz_masks)
+        R22, _, _ = calibrator.calibrate('e_2', mask=photoz_masks)
         source_bin['Rmean'] = np.mean([R11, R22])
+        source_bin['R11'] = calibrator.calibrate('e_1', return_full=True, mask=photoz_masks)[0]
+        source_bin['R22'] = calibrator.calibrate('e_2', return_full=True, mask=photoz_masks)[0]
         print 'Mean response redshift bin (%0.2f, %0.2f):'%(zlim_low, zlim_high), source_bin['Rmean'], np.mean(source_bin['Rgamma']), np.mean(source_bin['R11']), np.mean(source_bin['R22'])
         return source_bin
 

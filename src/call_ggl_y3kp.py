@@ -22,7 +22,6 @@ if run_measurement:
         #measurement.save_boostfactors_2pointfile() #deprecated
         measurement.save_2pointfile('gt')
         measurement.save_2pointfile('gt_boosted')
-        measurement.save_2pointfile('gt_boosted_to_all')
         measurement.save_2pointfile('boost_factor')
         if not basic['blind']:
             measurement.plot()
