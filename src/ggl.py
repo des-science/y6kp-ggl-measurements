@@ -21,6 +21,7 @@ sys.path.append('../../destest/')
 import destest
 import destest_functions
 import ipdb
+import h5py as h
 
 def make_directory(directory):
     if not os.path.exists(directory):
@@ -35,6 +36,23 @@ class GGL(object):
         self.basic = basic
         self.config = config
         self.paths = paths
+
+    def load_buzzard(self):
+
+	#Here self.paths['yaml'] will be shearratio/src/buzzard.yaml
+        params = yaml.load(open(self.paths['yaml']))
+	data = h.File(params['datafile'])
+
+        # Dictionary with the unsheared version and selection only:
+        source = {}
+	source['ra'] = data[params['source_group']]['ra'][:]
+	source['dec'] = data[params['source_group']]['dec'][:]
+	source['e1'] = data[params['source_group']]['e1'][:]
+	source['e2'] = data[params['source_group']]['e1'][:]
+	source['z'] = data[params['sourcez_group']]['z'][:]
+
+	return source
+
 
     def load_metacal(self):
         """
@@ -292,7 +310,7 @@ class GGL(object):
                 cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
  
                 if type_corr == 'NG' or type_corr == 'NN':
-                    if self.basic['mode'] == 'data' or self.basic['mode'] =='data_y1sources':
+                    if self.basic['mode'] == 'data' or self.basic['mode'] =='data_y1sources' or self.basic['mode'] =='buzzard':
                         cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s], w=w[bool_s],
                                                  ra_units='deg', dec_units='deg')
                     if self.basic['mode']  == 'mice':
@@ -563,6 +581,11 @@ class GGL(object):
             random_all = pf.getdata(self.paths['randoms_mice'])
             source_all = pf.getdata(self.paths['source_mice'])
 
+        if self.basic['mode'] == 'buzzard':
+            lens_all = pf.getdata(self.paths['lens_buzzard'])
+            random_all = pf.getdata(self.paths['randoms_buzzard'])
+            source_all = self.load_buzzard()
+
         return lens_all, random_all, source_all, source_all_5sels, calibrator
 
 
@@ -611,6 +634,13 @@ class Measurement(GGL):
     		    R = 1.
                     source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
 
+		if self.basic['mode'] == 'buzzard':
+    		    """
+    		    In this case there are no responses, so we set it to one.
+    		    """
+    		    R = 1.
+                    source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
+
     		for l, lbin in enumerate(self.zbins['lbins']):
     		    print 'Running measurement for lens %s.' % lbin
     		    path_test = self.get_path_test(lbin, sbin)
@@ -623,6 +653,8 @@ class Measurement(GGL):
     		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
 
     		    if self.basic['mode']  == 'data':
+    			random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+    		    if self.basic['mode']  == 'buzzard':
     			random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
     		    if self.basic['mode']  == 'mice':
     			random = random_all[l*len(random_all)/len(self.zbins['lbins']):(l+1)*len(random_all)/len(self.zbins['lbins'])]
