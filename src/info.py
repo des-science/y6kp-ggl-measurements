@@ -177,7 +177,7 @@ accross several plots, to ensure consistency.
 
 plotting = {}
 if basic['mode'] == 'data':
-    plotting['catname'] = r'Metacalibration PSF ' + config['mastercat_v'][0:2]
+    plotting['catname'] = r'Metacalibration ' + config['mastercat_v'][0:2]
 if basic['mode'] == 'mice':
     plotting['catname'] = r'\textsc{MICE}'
 if basic['mode'] == 'buzzard':
