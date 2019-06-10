@@ -22,5 +22,4 @@ def blind_measurements(name):
             os.system('rm %s'%name_twopointfile)
 
 blind_measurements('gt')
-blind_measurements('gt_boosted_to_all')
 blind_measurements('gt_boosted')

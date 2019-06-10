@@ -32,10 +32,8 @@ if run_measurement:
     if basic['blind'] and basic['plot_blinded']:
         measurement.compute_sn_ratio('gt')
         measurement.compute_sn_ratio('gt_boosted')
-        measurement.compute_sn_ratio('gt_boosted_to_all')
         measurement.plot_from_twopointfile('gt')
         measurement.plot_from_twopointfile('gt_boosted')
-        measurement.plot_from_twopointfile('gt_boosted_to_all')
 
 if run_responses_nk:
     responses = ResponsesScale(basic, config, paths, zbins, plotting)
