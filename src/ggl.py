@@ -646,7 +646,9 @@ class Measurement(GGL):
     		    In this case there are no responses, so we set it to one.
     		    """
     		    R = 1.
-                    source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
+		    source = {}
+		    for k in source_all.keys():
+			source[k] = source_all[k][(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
 
     		for l, lbin in enumerate(self.zbins['lbins']):
     		    print 'Running measurement for lens %s.' % lbin
