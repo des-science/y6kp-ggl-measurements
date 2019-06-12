@@ -571,22 +571,25 @@ class GGL(object):
             lens_all = pf.getdata(self.paths['lens'])
             random_all = pf.getdata(self.paths['randoms'])
             source_all, source_all_5sels, calibrator = self.load_metacal()
+            return lens_all, random_all, source_all, source_all_5sels, calibrator
 
         if self.basic['mode'] == 'data_y1sources':
             lens_all = pf.getdata(self.paths['lens'])
             random_all = pf.getdata(self.paths['randoms'])
-
+            return lens_all, random_all
+            
         if self.basic['mode'] == 'mice':
             lens_all = pf.getdata(self.paths['lens_mice'])
             random_all = pf.getdata(self.paths['randoms_mice'])
             source_all = pf.getdata(self.paths['source_mice'])
+            return lens_all, random_all, source_all
 
         if self.basic['mode'] == 'buzzard':
             lens_all = pf.getdata(self.paths['lens_buzzard'])
             random_all = pf.getdata(self.paths['randoms_buzzard'])
             source_all = self.load_buzzard()
+            return lens_all, random_all, source_all
 
-        return lens_all, random_all, source_all, source_all_5sels, calibrator
 
 
 class Measurement(GGL):
@@ -615,7 +618,11 @@ class Measurement(GGL):
 
     def run(self):
 
-        lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
+        if self.basic['mode'] == 'data':
+            lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
+
+        if not self.basic['mode'] == 'data':
+            lens_all, random_all, source_all = self.load_data_or_sims()
 
         for sbin in self.zbins['sbins']:
     		print 'Running measurement for source %s.' % sbin
