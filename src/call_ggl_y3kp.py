@@ -19,7 +19,6 @@ if run_measurement:
     measurement = Measurement(basic, config, paths, zbins, plotting)
     if not basic['plot_blinded']:
         measurement.run()
-        #measurement.save_boostfactors_2pointfile() #deprecated
         measurement.save_2pointfile('gt')
         measurement.save_2pointfile('gt_boosted')
         measurement.save_2pointfile('boost_factor')
@@ -37,7 +36,7 @@ if run_measurement:
 
 if run_responses_nk:
     responses = ResponsesScale(basic, config, paths, zbins, plotting)
-    #responses.run()
+    responses.run()
     responses.plot('lens', mask_scales =False)
     responses.plot('lens', mask_scales =True)
     #responses.plot_sigmas('lens', mask_scales =False)

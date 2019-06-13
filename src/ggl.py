@@ -211,10 +211,15 @@ class GGL(object):
         jk_l = lens['jk']
         try:
             w_l = lens['w']
-            print 'Weights found in lens catalog.'
+            print 'Weights found in foreground catalog.'
         except:
-            print 'There are no identified weights for the lenses.'
+            print 'There are no identified weights for the foreground sample.'
             w_l = np.ones(len(ra_l))
+
+
+        if 'noLSSweights' in self.config['redmagic_v']:
+            print 'Running in mode with no LSS weights. They are set to one.'
+            w_l = np.ones(len(ra_l)) 
 
         return ra_l, dec_l, jk_l, w_l
 
@@ -345,6 +350,8 @@ class GGL(object):
                 npairs[jk].append(zeros)
 
         ra_l, dec_l, jk_l, w_l = self.get_lens(lens)
+        if 'noLSSweights' in self.config['redmagic_v']:
+            print 'Checking weights of lens sample are one:', w_l
         ra_s, dec_s, w = self.get_source(source)
         if type_corr == 'NG' or type_corr == 'NN':
             e1 = source['e1']
@@ -372,8 +379,8 @@ class GGL(object):
         gxs = [manager.list() for x in range(self.config['njk'])]
         errs = [manager.list() for x in range(self.config['njk'])]
         xi_nks = [manager.list() for x in range(self.config['njk'])]
-
-        p = mp.Pool(10, worker_init)
+        print 'Only 5 cores now!!'
+        p = mp.Pool(5, worker_init)
         p.map(run_jki, range(self.config['njk']))
         p.close()
 
