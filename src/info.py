@@ -54,7 +54,8 @@ config_data = {
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_5_24_19.h5',
-    'redmagic_v': 'combined_sample_fid',
+    'redmagic_v': 'combined_sample_fid_noLSSweights',
+    #'redmagic_v': 'combined_sample_fid',
     'zslim_v': 'y1',
     'zs_v': 'bpz',
     'zllim_v': 'y3'
@@ -97,6 +98,7 @@ paths['plots'] = '../plots/'
 paths['y3'] = '../../ggl_results/'
 paths['y3_exp'] = '../../ggl_data/'
 paths['redmagic', config['redmagic_v']] = '../lens_cats/%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], config['redmagic_v'],config['njk'])
+if 'noLSSweights' in config['redmagic_v']: paths['redmagic', config['redmagic_v']] = '../lens_cats/%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], 'combined_sample_fid',config['njk'])
 paths['redmagic', 'y1'] = '../lens_cats/redmagic/y1/'
 paths['lens'] = paths['redmagic', '%s'%config['redmagic_v']] + 'lens.fits'
 paths['randoms'] = paths['redmagic', '%s'%config['redmagic_v']] + 'random.fits'

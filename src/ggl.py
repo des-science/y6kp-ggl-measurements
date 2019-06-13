@@ -637,6 +637,7 @@ class Measurement(GGL):
 		if self.basic['mode'] == 'data':
 		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
 		    R = source['Rmean']
+                    print 'Length source', sbin, len(source['ra'])
 
 		if self.basic['mode'] == 'data_y1sources':
 		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
@@ -656,6 +657,7 @@ class Measurement(GGL):
 		    source = {}
 		    for k in source_all.keys():
 			source[k] = source_all[k][(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
+                    print 'Length source', sbin, len(source['ra'])
 
     		for l, lbin in enumerate(self.zbins['lbins']):
     		    print 'Running measurement for lens %s.' % lbin
@@ -663,7 +665,8 @@ class Measurement(GGL):
     		    make_directory(path_test)
 
     		    lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
-
+                    print 'Length lens', lbin, len(lens['ra'])
+                    '''
     		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
     		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
     		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
@@ -690,7 +693,7 @@ class Measurement(GGL):
     		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
     		    self.process_run(bf_all, theta, path_test, 'boost_factor')
     		    self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
-
+                    '''
     def save_2pointfile(self, string):
         """
         Save the correlation function measurements (i.e. gammat, boost factors, etc),
@@ -978,6 +981,7 @@ class Measurement(GGL):
                     ax[j][l % 3].set_xscale('log')
                     ax[j][l % 3].set_yscale('log')
 
+                    ax[j][l % 3].set_ylim(10**(-6), 0.999*10**(-2))
                     ax[j][l % 3].text(0.5, 0.9, self.plotting['redshift_l'][l], horizontalalignment='center',
                                       verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
                     #ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
