@@ -862,9 +862,9 @@ class Measurement(GGL):
                     #                  verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
 
                     #if l % 3 > 0:  # In case we want to keep labels on the left y-axis
-                    ax[j][l % 3].yaxis.set_ticklabels([])  # to remove the ticks labels
-                    if l < 2:
-                        ax[0][l].xaxis.set_ticklabels([])  # to remove the ticks labels
+                    #ax[j][l % 3].yaxis.set_ticklabels([])  # to remove the ticks labels
+                    #if l < 2:
+                        #ax[0][l].xaxis.set_ticklabels([])  # to remove the ticks labels
 
                     ax[j][l % 3].set_xlabel(r'$\theta$ [arcmin]', size='large')
                     ax[j][0].set_ylabel(r'$\gamma_t (\theta)$', size='large')
@@ -878,8 +878,8 @@ class Measurement(GGL):
                              horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 12, color = plt.get_cmap(cmap)(cmap_step*s))
                     """
 
-        #ax[1][0].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
-        #ax[1][1].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
+        ax[1][0].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
+        ax[1][1].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
         # handles, labels = ax[0][0].get_legend_handles_labels()
         fig.delaxes(ax[1, 2])
         # ax[1][1].legend(handles[::-1], labels[::-1], frameon=True, fancybox = True,prop={'size':12}, numpoints = 1, loc='center left', bbox_to_anchor=(1, 0.5))
