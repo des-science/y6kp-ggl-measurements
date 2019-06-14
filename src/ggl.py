@@ -49,7 +49,8 @@ class GGL(object):
 	source['dec'] = data[params['source_group']]['dec'][:]
 	source['e1'] = data[params['source_group']]['e1'][:]
 	source['e2'] = data[params['source_group']]['e1'][:]
-	source['z'] = data[params['sourcez_group']]['z'][:]
+	source['z'] = data[params['sourcez_group']]['zmean_sof'][:]
+	source['ztrue'] = data[params['sourcez_group']]['z'][:]
 
 	return source
 
@@ -379,8 +380,7 @@ class GGL(object):
         gxs = [manager.list() for x in range(self.config['njk'])]
         errs = [manager.list() for x in range(self.config['njk'])]
         xi_nks = [manager.list() for x in range(self.config['njk'])]
-        print 'Only 5 cores now!!'
-        p = mp.Pool(5, worker_init)
+        p = mp.Pool(10, worker_init)
         p.map(run_jki, range(self.config['njk']))
         p.close()
 
@@ -666,7 +666,7 @@ class Measurement(GGL):
 
     		    lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
                     print 'Length lens', lbin, len(lens['ra'])
-                    '''
+                    
     		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
     		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
     		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
@@ -693,7 +693,7 @@ class Measurement(GGL):
     		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
     		    self.process_run(bf_all, theta, path_test, 'boost_factor')
     		    self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
-                    '''
+                    
     def save_2pointfile(self, string):
         """
         Save the correlation function measurements (i.e. gammat, boost factors, etc),
