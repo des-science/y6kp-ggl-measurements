@@ -53,9 +53,9 @@ config_data = {
     'bslop': 0.1,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
-    'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_5_24_19.h5',
-    'redmagic_v': 'combined_sample_fid_noLSSweights',
-    #'redmagic_v': 'combined_sample_fid',
+    'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_6_15_19.h5',
+    #'redmagic_v': 'combined_sample_fid_noLSSweights',
+    'redmagic_v': 'combined_sample_fid',
     'zslim_v': 'y1',
     'zs_v': 'bpz',
     'zllim_v': 'y3'
