@@ -35,7 +35,7 @@ measurements, not the systematics tests.
 basic = {
     'mode':'data',
     'blind': True,
-    'plot_blinded': True
+    'plot_blinded': False
 }
 
 
@@ -55,7 +55,8 @@ config_data = {
     'thlims': np.array([2.5,250.]),
     'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_6_15_19.h5',
     #'lens_v': 'combined_sample_fid_noLSSweights',
-    'lens_v': 'combined_sample_fid',
+    #'lens_v': 'combined_sample_fid',
+    'lens_v': 'maglim',
     'zslim_v': 'y1',
     'zs_v': 'bpz',
     'zllim_v': 'y3'
@@ -95,11 +96,8 @@ paths['runs'] =  '../runs/'
 paths['plots'] = '../plots/'
 paths['y3'] = '../../ggl_results/'
 paths['y3_exp'] = '../../ggl_data/'
-paths['redmagic'] = '../lens_cats/%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk'])
-paths['maglim'] = '../lens_cats/%s/maglim/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk'])
-if 'noLSSweights' in config['lens_v']: 
-    paths['redmagic'] = '../lens_cats/%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], 'combined_sample_fid',config['njk'])
-    paths['maglim'] = '../lens_cats/%s/maglim/%s/njk_%d/'%(config['mastercat_v'], 'maglim',config['njk'])
+paths['redmagic'] = '../lens_cats/%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], 'combined_sample_fid',config['njk'])
+paths['maglim'] = '../lens_cats/%s/maglim/%s/njk_%d/'%(config['mastercat_v'], 'maglim',config['njk'])
 
 if 'combined_sample_fid' in config['lens_v']:
     paths['lens'] = paths['redmagic'] + 'lens.fits'

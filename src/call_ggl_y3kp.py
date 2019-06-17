@@ -4,8 +4,8 @@ from ggl import GGL, Measurement, ResponsesScale, ResponsesProjection, TestStars
 T = True
 F = False
 
-run_measurement_redmagic = T
-run_measurement_maglim = F
+run_measurement_redmagic = F
+run_measurement_maglim = T
 run_responses_nk = F
 run_responses_ng = F
 run_stars = F
@@ -38,6 +38,7 @@ if run_measurement_redmagic:
 if run_measurement_maglim:
     print 'Starting measurement class...'
     measurement = Measurement(basic, config, paths, alt_zbins, plotting)
+    print alt_zbins
     if not basic['plot_blinded']:
         measurement.run()
         measurement.save_2pointfile('gt')

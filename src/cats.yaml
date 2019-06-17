@@ -37,7 +37,7 @@ lens_table : ['combined_sample_fid']
 lens_path  : 'index/redmagic/combined_sample_fid/select'
 
 alt_lens_group : 'catalog'
-alt_lens_table : ['gold']
+alt_lens_table : ['maglim']
 alt_lens_path  : 'index/maglim/select'
 
 pz_group : 'catalog/bpz'

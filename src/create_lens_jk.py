@@ -13,7 +13,7 @@ import jk
 import ipdb
 
 
-def create_lens(lens_selector, ran_selector, pz_selector, zbins, path_save, sample):
+def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, path_save, sample):
 
         """
         Function that saves lens.fits and random.fits files, after splitting into JK regions.
@@ -21,6 +21,7 @@ def create_lens(lens_selector, ran_selector, pz_selector, zbins, path_save, samp
         ran_selector: destest object to load the random sample from the hdf5 file.
         pz_selector: destest object to load the redshift sample from the hdf5 file, 
                      only necessary for the alternative lens sample. Redmagic has their own z already.
+        gold_selector: only necessary for maglimit sample.
         zbins: dictionary from info with the limits of the sample. Here we only use the low and high limits 
                to avoid selecting galaxies we will not use later.
         path_save: where the files are saved.
@@ -32,10 +33,11 @@ def create_lens(lens_selector, ran_selector, pz_selector, zbins, path_save, samp
         if sample == 'redmagic': 
                 z_l = lens_selector.get_col('zredmagic')[0]
                 zerr_l = lens_selector.get_col('zredmagic_e')[0]
+                ids = lens_selector.get_col('coadd_object_id')[0]
         if sample == 'maglim':
                 z_l = pz_selector.get_col('zmean_sof')[0]
                 zerr_l = pz_selector.get_col('zmc_sof')[0]
-        ids = lens_selector.get_col('coadd_object_id')[0]
+                ids = gold_selector.get_col('coadd_object_id')[0]
         w_l = lens_selector.get_col('weight')[0]
         print 'Weights lenses:', w_l
         assert len(ra_l)==len(ids), 'Something is wrong.' 
@@ -90,6 +92,7 @@ def create_lens(lens_selector, ran_selector, pz_selector, zbins, path_save, samp
         jk_r = jk.jk(ra_r,dec_r,path_save)
 
         print 'Number of lenses:', len(ra_l)
+
         c1 = pf.Column(name='RA', format='E', array=ra_l)
         c2 = pf.Column(name='DEC', format='E', array=dec_l)
         c3 = pf.Column(name='Z', format='E', array=z_l)
@@ -135,8 +138,13 @@ alt_ran_selector = destest_functions.load_catalog(
 pz_selector = destest_functions.load_catalog(
         params, 'pzdnf', None, params['dnf_group'], params['dnf_table'], params['dnf_path'], inherit=alt_lens_selector)
 
+# Gold catalog for the alternative lens sample
+gold_selector = destest_functions.load_catalog(
+        params, 'gold', 'mcal', params['gold_group'], params['gold_table'], params['gold_path'], inherit=alt_lens_selector)
+
+
 # First create the redmagic lens.fits and random.fits
-#create_lens(red_lens_selector, red_ran_selector, None, zbins, paths['redmagic'], 'redmagic')
+#create_lens(red_lens_selector, red_ran_selector, None, None, zbins, paths['redmagic'], 'redmagic')
 
 # Create lens.fits and random.fits for maglimit sample
-create_lens(alt_lens_selector, alt_ran_selector, pz_selector, alt_zbins, paths['maglim'], 'maglim')
+create_lens(alt_lens_selector, alt_ran_selector, pz_selector, gold_selector, alt_zbins, paths['maglim'], 'maglim')
