@@ -218,10 +218,11 @@ class GGL(object):
             w_l = np.ones(len(ra_l))
 
 
-        if 'noLSSweights' in self.config['redmagic_v']:
+        if 'noLSSweights' in self.config['lens_v']:
             print 'Running in mode with no LSS weights. They are set to one.'
             w_l = np.ones(len(ra_l)) 
 
+        print 'Lens weights:', w_l 
         return ra_l, dec_l, jk_l, w_l
 
     def get_source(self, source):
@@ -351,7 +352,7 @@ class GGL(object):
                 npairs[jk].append(zeros)
 
         ra_l, dec_l, jk_l, w_l = self.get_lens(lens)
-        if 'noLSSweights' in self.config['redmagic_v']:
+        if 'noLSSweights' in self.config['lens_v']:
             print 'Checking weights of lens sample are one:', w_l
         ra_s, dec_s, w = self.get_source(source)
         if type_corr == 'NG' or type_corr == 'NN':

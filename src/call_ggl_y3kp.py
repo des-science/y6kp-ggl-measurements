@@ -1,10 +1,11 @@
-from info import basic, paths, config, zbins, plotting, source_nofz_pars, sysmaps
+from info import basic, paths, config, zbins, alt_zbins, plotting, source_nofz_pars, sysmaps
 from ggl import GGL, Measurement, ResponsesScale, ResponsesProjection, TestStars, TestPSF, TestSizeSNR, TestSysMaps
 
 T = True
 F = False
 
-run_measurement = T
+run_measurement_redmagic = T
+run_measurement_maglim = F
 run_responses_nk = F
 run_responses_ng = F
 run_stars = F
@@ -13,7 +14,7 @@ run_size_snr = F
 run_sysmaps = F
 
 
-if run_measurement:
+if run_measurement_redmagic:
     print 'Starting measurement class...'
     #gglensing = GGL(basic, config, paths)
     measurement = Measurement(basic, config, paths, zbins, plotting)
@@ -29,10 +30,31 @@ if run_measurement:
         measurement.plot_gammax()
 
     if basic['blind'] and basic['plot_blinded']:
-        #measurement.compute_sn_ratio('gt')
-        #measurement.compute_sn_ratio('gt_boosted')
+        measurement.compute_sn_ratio('gt')
+        measurement.compute_sn_ratio('gt_boosted')
         measurement.plot_from_twopointfile('gt')
         measurement.plot_from_twopointfile('gt_boosted')
+
+if run_measurement_maglim:
+    print 'Starting measurement class...'
+    measurement = Measurement(basic, config, paths, alt_zbins, plotting)
+    if not basic['plot_blinded']:
+        measurement.run()
+        measurement.save_2pointfile('gt')
+        measurement.save_2pointfile('gt_boosted')
+        measurement.save_2pointfile('boost_factor')
+        if not basic['blind']:
+            measurement.plot()
+        measurement.plot_boostfactors()
+        measurement.plot_randoms()
+        measurement.plot_gammax()
+
+    if basic['blind'] and basic['plot_blinded']:
+        measurement.compute_sn_ratio('gt')
+        measurement.compute_sn_ratio('gt_boosted')
+        measurement.plot_from_twopointfile('gt')
+        measurement.plot_from_twopointfile('gt_boosted')
+
 
 if run_responses_nk:
     responses = ResponsesScale(basic, config, paths, zbins, plotting)

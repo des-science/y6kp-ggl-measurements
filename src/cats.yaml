@@ -1,7 +1,7 @@
 # Main data file
 datafile : 
 # Reuse cached masking and selections - speeds up repeated calculations
-load_cache : True
+load_cache : False
 # Where to put the cache dir
 output : '.'
 
@@ -44,6 +44,14 @@ pz_group : 'catalog/bpz'
 pz_table : ['unsheared', 'sheared_1p', 'sheared_1m', 'sheared_2p', 'sheared_2m']
 pz_path  : 'index/select'
 
+dnf_group : 'catalog/dnf'
+dnf_table : ['unsheared']
+dnf_path  : None'
+
 ran_group : 'randoms/redmagic'
 ran_table : ['combined_sample_fid']
 ran_path  : 'index/redmagic/combined_sample_fid/random_select'
+
+alt_ran_group : 'randoms'
+alt_ran_table : ['maglim']
+alt_ran_path  : None
