@@ -35,7 +35,7 @@ measurements, not the systematics tests.
 basic = {
     'mode':'data',
     'blind': True,
-    'plot_blinded': False
+    'plot_blinded': True
 }
 
 
@@ -59,7 +59,8 @@ config_data = {
     'lens_v': 'maglim',
     'zslim_v': 'y1',
     'zs_v': 'bpz',
-    'zllim_v': 'y3'
+    'zllim_v': 'y3',
+    'num_threads': 10
     }
 
 config_data['mastercat_v'] = config_data['filename_mastercat'][37:-3]
@@ -96,17 +97,20 @@ paths['runs'] =  '../runs/'
 paths['plots'] = '../plots/'
 paths['y3'] = '../../ggl_results/'
 paths['y3_exp'] = '../../ggl_data/'
-paths['redmagic'] = '../lens_cats/%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], 'combined_sample_fid',config['njk'])
-paths['maglim'] = '../lens_cats/%s/maglim/%s/njk_%d/'%(config['mastercat_v'], 'maglim',config['njk'])
-
+paths['redmagic'] = '../lens_cats/%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk'])
+paths['maglim'] = '../lens_cats/%s/maglim/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk'])
+if 'noLSSweights' in config['lens_v']: 
+    paths['redmagic'] = '../lens_cats/%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], 'combined_sample_fid',config['njk'])
+    paths['maglim'] = '../lens_cats/%s/maglim/%s/njk_%d/'%(config['mastercat_v'], 'maglim',config['njk'])
+	
 if 'combined_sample_fid' in config['lens_v']:
     paths['lens'] = paths['redmagic'] + 'lens.fits'
     paths['randoms'] = paths['redmagic'] + 'random.fits'
-
+	
 if 'maglim' in config['lens_v']:
     paths['lens'] = paths['maglim'] + 'lens.fits'
     paths['randoms'] = paths['maglim'] + 'random.fits'
-
+	
 print '--------------------------\nUsing lens file in:\n', paths['lens'] 
 print '--------------------------\nUsing randoms file in:\n', paths['randoms'] 
 
@@ -117,19 +121,23 @@ paths['lens_mice'] = paths['mice'] + 'lens.fits'
 paths['source_mice'] = paths['mice'] + 'source.fits'
 paths['randoms_mice'] = paths['mice'] + 'random.fits'
 paths['yaml'] = 'cats.yaml' 
-
 if 'combined_sample_fid' in config['lens_v']:
     paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
-                            'redmagic_%s'%config_data['lens_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
-                            'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
-                            'bslop_%0.1g'%config_data['bslop']) 
-
+	                            'redmagic_%s'%config_data['lens_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
+	                            'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
+	                            'bslop_%0.1g'%config_data['bslop']) 
+	
 if 'maglim' in config['lens_v']:
     paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
-                            'maglim_%s'%config_data['lens_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
-                            'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
-                            'bslop_%0.1g'%config_data['bslop']) 
+	                            'maglim_%s'%config_data['lens_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
+	                            'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
+	                            'bslop_%0.1g'%config_data['bslop']) 
 
+
+paths['theory_size_all_covmat'] = paths['runs']+paths['config_data'] + '/size/theory_size_all_covmat.fits'
+paths['hist_n_of_z_lenses_witherr_size'] = paths['runs']+paths['config_data'] +'/size/hist_n_of_z_lenses_witherr_size'
+paths['hist_n_of_z_low_size'] = paths['runs']+paths['config_data']+'/size/hist_n_of_z_low_size'
+paths['hist_n_of_z_high_size'] = paths['runs']+paths['config_data']+'/size/hist_n_of_z_high_size'
 
 paths['config_mice'] = os.path.join('mice', 'v_%s'%config_mice['version'], 'zslim_%s'%config_mice['zslim_v'], 'zs_%s'%config_mice['zs_v'],
                         'redmagic_%s'%config_mice['lens_v'], 'zllim_%s'%config_mice['zllim_v'], 'njk_%d'%config_mice['njk'],
@@ -147,8 +155,7 @@ Define the zbins dictionary. This dictionary is imported
 in the other scripts and it defines the number of lens and source
 redshift bins and their limits. 
 """
-
-# Redmagic zbins:
+# Redmagic bins:
 zbins = {}
 zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5']
 zbins['sbins'] = ['s1', 's2', 's3', 's4']
@@ -185,7 +192,7 @@ alt_zbins['s2'] = [0.43, 0.63]
 alt_zbins['s3'] = [0.63, 0.90] 
 alt_zbins['s4'] = [0.90, 1.30] 
 alt_zbins['source_lims'] = [alt_zbins['s1'][0], alt_zbins['s2'][0], alt_zbins['s3'][0], alt_zbins['s4'][0], alt_zbins['s4'][1]]
-
+	
 
 """
 PLOTTING

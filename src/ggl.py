@@ -222,7 +222,7 @@ class GGL(object):
             print 'Running in mode with no LSS weights. They are set to one.'
             w_l = np.ones(len(ra_l)) 
 
-        print 'Lens weights:', w_l 
+	print 'Lens weigths:', w_l
         return ra_l, dec_l, jk_l, w_l
 
     def get_source(self, source):
@@ -287,19 +287,19 @@ class GGL(object):
                 if jk == 0: print 'Doing NG correlation.'
                 corr = treecorr.NGCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
                                               max_sep=self.config['thlims'][1], sep_units='arcmin',
-                                              bin_slop=self.config['bslop'])
+                                              bin_slop=self.config['bslop'], num_threads=self.config['num_threads'])
 
             if type_corr == 'NN':
                 if jk == 0: print 'Doing NN correlation.'
                 corr = treecorr.NNCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
                                               max_sep=self.config['thlims'][1], sep_units='arcmin',
-                                              bin_slop=self.config['bslop'])
+                                              bin_slop=self.config['bslop'], num_threads=self.config['num_threads'])
                 
             if 'NK' in type_corr:
                 if jk == 0: print 'Doing NK correlation with variable %s.'%type_corr[3:]
                 corr = treecorr.NKCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
                                               max_sep=self.config['thlims'][1], sep_units='arcmin',
-                                              bin_slop=self.config['bslop'])
+                                              bin_slop=self.config['bslop'], num_threads=self.config['num_threads'])
 
             if len(ra_l_jk) > 1:
 
@@ -381,9 +381,12 @@ class GGL(object):
         gxs = [manager.list() for x in range(self.config['njk'])]
         errs = [manager.list() for x in range(self.config['njk'])]
         xi_nks = [manager.list() for x in range(self.config['njk'])]
-        p = mp.Pool(10, worker_init)
-        p.map(run_jki, range(self.config['njk']))
-        p.close()
+        #p = mp.Pool(10, worker_init)
+        #p.map(run_jki, range(self.config['njk']))
+        #p.close()
+
+	for jk in range(self.config['njk']):
+		run_jki(jk)
 
         def reshape_manager(obj):
             return (np.array(list(obj))).reshape(self.config['njk'], self.config['nthbins'])
@@ -424,7 +427,7 @@ class GGL(object):
         ra_s, dec_s, w = self.get_source(source)
 
         nk = treecorr.NKCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
-                                    max_sep=self.config['thlims'][1], sep_units='arcmin', bin_slop=self.config['bslop'])
+                                    max_sep=self.config['thlims'][1], sep_units='arcmin', bin_slop=self.config['bslop'], num_threads=self.config['num_threads'])
 
         cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, w=w_l, ra_units='deg', dec_units='deg')
         cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, k=scalar, w=w, ra_units='deg', dec_units='deg')
@@ -556,7 +559,7 @@ class GGL(object):
         chi2fit_h = np.zeros(len(gth_all))
         chi2fit_l = np.zeros(len(gth_all))
 
-        mask = (theta >= source_nofz_pars['thetamin'])
+        mask = (theta >= self.source_nofz_pars['thetamin'])
         for i in range(len(gth_all)):
             Ah, chi2fit_h[i], _ = functions.minimize_chi2_fit_amplitude((cov_sims[mask].T)[mask].T, gth_all[i][mask],
                                                                         sims[mask])
@@ -2095,6 +2098,42 @@ class TestSizeSNR(GGL):
         ratio_theory, err_ratio_theory = np.loadtxt(path_test + '%s_theory' % size_snr, unpack=True)
         return ratio_data, err_ratio_data, ratio_theory, err_ratio_theory
 
+    def load_metacal_bin_size_snr(self, source, source_5sels, calibrator, size_snr, high_low, zlim_low, zlim_high):
+        """
+        source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
+        source_5sels: dictionary containing relevant columns for the sources, with the baseline selection applied already,
+                     for each of the 5 selections 1p, 1m, 2p, 2m. 
+        calibrator: class to compute the response. Taken from baseline selection.
+        zlim_low, zlim_high: limits to select the tomographic bin.
+        Obtains 5 masks (unsheared, sheared 1p, 1m, 2p, 2m) to obtain the new selection response.
+        Returns: Source dictionary masked with the unsheared mask and with the mean response updated.
+        """
+        if high_low == 'low':
+                masks = [(source_5sels['sheared']['bpz_mean'][i] > zlim_low) & (source_5sels['sheared']['bpz_mean'][i] < zlim_high) & (source_5sels['sheared'][size_snr][i] <= np.median(source_5sels['sheared'][size_snr][i])) for i in range(5)]
+        else:
+                masks = [(source_5sels['sheared']['bpz_mean'][i] > zlim_low) & (source_5sels['sheared']['bpz_mean'][i] < zlim_high) & (source_5sels['sheared'][size_snr][i] > np.median(source_5sels['sheared'][size_snr][i])) for i in range(5)]
+	
+        source_bin = {}
+        source_bin['ra'] = source['ra'][masks[0]]
+        source_bin['dec'] = source['dec'][masks[0]]
+        source_bin['e1'] = source['e1'][masks[0]]
+        source_bin['e2'] = source['e2'][masks[0]]
+        source_bin['psf_e1'] = source['psf_e1'][masks[0]]
+        source_bin['psf_e2'] = source['psf_e2'][masks[0]]
+        source_bin['snr'] = source['snr'][masks[0]]
+        source_bin['size'] = source['size'][masks[0]]
+        source_bin['bpz_mean'] = source['bpz_mean'][masks[0]]
+        source_bin['bpz_zmc'] = source['bpz_zmc'][masks[0]]
+        source_bin['Rgamma'] = source['Rgamma'][masks[0]]
+	
+        R11, _, _ = calibrator.calibrate('e_1', mask=masks)
+        R22, _, _ = calibrator.calibrate('e_2', mask=masks)
+        source_bin['Rmean'] = np.mean([R11, R22])
+	source_bin['R11'] = calibrator.calibrate('e_1', return_full=True, mask=masks)[0]
+	source_bin['R22'] = calibrator.calibrate('e_2', return_full=True, mask=masks)[0]
+        print 'Mean response redshift bin (%0.2f, %0.2f):'%(zlim_low, zlim_high), source_bin['Rmean'], np.mean(source_bin['Rgamma']), np.mean(source_bin['R11']), np.mean(source_bin['R22'])
+        return source_bin
+
     def run_responses_mean_notomo_size_snr(self, Rgamma, size_snr, cut, high_low, delta_gamma):
         """
         Computes responses when there is an extra selection on size or snr.
@@ -2149,59 +2188,102 @@ class TestSizeSNR(GGL):
         return zl, nzl, zs, nzsl, nzsh
 
     def run(self, size_snr):
-        lens_all = pf.getdata(self.paths['y1'] + 'lens.fits')
-        lens = lens_all[(lens_all['z'] > self.zbins['l1'][0]) & (lens_all['z'] < self.zbins['l1'][1])]
-        random_all = pf.getdata(self.paths['y1'] + 'random.fits')
-        random = random_all[(random_all['z'] > self.zbins['l1'][0]) & (random_all['z'] < self.zbins['l1'][1])]
+	lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
+	source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins['s1'][0], zlim_high=self.zbins['s4'][1])
+	sourcel = self.load_metacal_bin_size_snr(source_all, source_all_5sels, calibrator, size_snr, 'low', zlim_low=self.zbins['s1'][0], zlim_high=self.zbins['s4'][1])
+	Rl = sourcel['Rmean']
 
-        sources = pf.getdata(self.paths['y1'] + 'metacal_sel_allbins.fits')
+        sourceh = self.load_metacal_bin_size_snr(source_all, source_all_5sels, calibrator, size_snr, 'high', zlim_low=self.zbins['s1'][0], zlim_high=self.zbins['s4'][1])
+	Rh = sourceh['Rmean']
 
-        # Source size or snr split, selecting the two halves of the split
-        par = sources[size_snr]
-        cut = np.median(par)
-        print 'len(sources)', len(sources)
-        maskl = par <= cut
-        maskh = par > cut
+	lens = lens_all[(lens_all['z'] > self.zbins['l1'][0]) & (lens_all['z'] < self.zbins['l1'][1])]
+	random = random_all[(random_all['z'] > self.zbins['l1'][0]) & (random_all['z'] < self.zbins['l1'][1])]
 
         path_test = self.get_path_test(size_snr)
         make_directory(path_test)
-        print size_snr
-        print 'NEW len(sources[maskl])', len(sources[maskl])
-        print 'NEW len(sources[maskh])', len(sources[maskh])
 
         # Computing the measurements for the split halves, both around lenses and randoms
-        theta, gtsl, gxsl, errsl, weightsl, npairsl = self.run_treecorr_jackknife(lens, sources[maskl], 'NG')
-        self.save_runs(path_test, theta, gtsl, gxsl, errsl, weightsl, npairsl, False)
+        theta, gtsl, gxsl, errsl, weightsl, npairsl = self.run_treecorr_jackknife(lens, sourcel, 'NG')
+	self.save_runs(path_test, theta, gtsl, gxsl, errsl, weightsl, npairsl, False)
         gtlnum, gxlnum, wlnum = self.numerators_jackknife(gtsl, gxsl, weightsl)
 
-        theta, gtsl_r, gxsl_r, errsl_r, weightsl_r, npairsl_r = self.run_treecorr_jackknife(random, sources[maskl],
-                                                                                            'NG')
-        self.save_runs(path_test, theta, gtsl_r, gxsl_r, errsl_r, weightsl_r, npairsl_r, True)
+        theta, gtsl_r, gxsl_r, errsl_r, weightsl_r, npairsl_r = self.run_treecorr_jackknife(random, sourcel, 'NG')
+	self.save_runs(path_test, theta, gtsl_r, gxsl_r, errsl_r, weightsl_r, npairsl_r, True)
         gtlnum_r, gxlnum_r, wlnum_r = self.numerators_jackknife(gtsl_r, gxsl_r, weightsl_r)
 
-        theta, gtsh, gxsh, errsh, weightsh, npairsh = self.run_treecorr_jackknife(lens, sources[maskh], 'NG')
-        gthnum, gxhnum, whnum = self.numerators_jackknife(gtsh, gxsh, weightsh)
+        theta, gtsh, gxsh, errsh, weightsh, npairsh = self.run_treecorr_jackknife(lens, sourceh, 'NG')
+	gthnum, gxhnum, whnum = self.numerators_jackknife(gtsh, gxsh, weightsh)
 
-        theta, gtsh_r, gxsh_r, errsh_r, weightsh_r, npairsh_r = self.run_treecorr_jackknife(random, sources[maskh],
-                                                                                            'NG')
-        gthnum_r, gxhnum_r, whnum_r = self.numerators_jackknife(gtsh_r, gxsh_r, weightsh_r)
-
-        # Computing the responses for the split halves
-        Rl = self.run_responses_mean_notomo_size_snr(sources['Rgamma'][maskl], size_snr, cut, 'low')
-        Rh = self.run_responses_mean_notomo_size_snr(sources['Rgamma'][maskh], size_snr, cut, 'high')
+        theta, gtsh_r, gxsh_r, errsh_r, weightsh_r, npairsh_r = self.run_treecorr_jackknife(random, sourceh, 'NG')
+	gthnum_r, gxhnum_r, whnum_r = self.numerators_jackknife(gtsh_r, gxsh_r, weightsh_r)
 
         # Combining measurements and responses to get gammat
         gtl_all = (gtlnum / wlnum) / Rl - (gtlnum_r / wlnum_r) / Rl
         gth_all = (gthnum / whnum) / Rh - (gthnum_r / whnum_r) / Rh
-        np.savetxt(path_test + 'gtl_all', gtl_all)
+
+	bfl_all = self.compute_boost_factor(lens['jk'], random['jk'], wlnum, wlnum_r)
+	gtl_all_boosted = bfl_all*(gtlnum / wlnum)/Rl -(gtlnum_r / wlnum_r)/Rl
+	
+	bfh_all = self.compute_boost_factor(lens['jk'], random['jk'], whnum, whnum_r)
+	gth_all_boosted = bfh_all*(gthnum / whnum)/Rh -(gthnum_r / whnum_r)/Rh
+
+	print('Measurements done. Saving n(z)s')
+	
+	np.savetxt(path_test + 'gtl_all', gtl_all)
         np.savetxt(path_test + 'gth_all', gth_all)
+	
+	self.process_run(gtl_all, theta, path_test, 'gtl')
+        self.process_run(gth_all, theta, path_test, 'gth')
+        self.process_run((gtlnum_r / wlnum_r) / Rl, theta, path_test, 'randomsl')
+        self.process_run((gthnum_r / whnum_r) / Rh, theta, path_test, 'randomsh')
+	
+	self.process_run(bfl_all, theta, path_test, 'boost_factorl')
+	self.process_run(bfh_all, theta, path_test, 'boost_factorh')
+	self.process_run(gtl_all_boosted, theta, path_test, 'gtl_boosted')
+	self.process_run(gth_all_boosted, theta, path_test, 'gth_boosted')
+	
+	
+        # Saving the n(z)'s
+
+	np.savetxt(path_test + 'n_of_z_lenses', lens['z'])
+        np.savetxt(path_test + 'n_of_z_lenses_err', lens['zerr'])
+	if size_snr == 'size':
+                np.savetxt(path_test + 'n_of_z_low_size', sourcel['bpz_zmc'])
+                np.savetxt(path_test + 'n_of_z_high_size', sourceh['bpz_zmc'])
+                np.savetxt(path_test + 'n_of_z_all_size', source['bpz_zmc'])
+        else:
+                np.savetxt(path_test + 'n_of_z_low_snr', sourcel['bpz_zmc'])
+                np.savetxt(path_test + 'n_of_z_high_snr', sourceh['bpz_zmc'])
+                np.savetxt(path_test + 'n_of_z_all_snr', source['bpz_zmc'])
+	
+	print('All done')
+	stop
+	
 
         # Getting the data ratio using the simulations
-        sims, cov_sims = self.load_sims()
-        ratio, err_ratio = self.ratio_from_sims(theta, gtl_all, gth_all, sims, cov_sims)
+        #sims, cov_sims = self.load_sims()
+        
+	import astropy.io.fits
+	cov_theory=astropy.io.fits.open(self.paths['theory_size_all_covmat'])
+
+	theory=[]
+	for i in range(len(cov_theory[2].data)):
+		theory.append(cov_theory[2].data[i][-2])
+
+	theory=np.array(theory)
+
+	ratio, err_ratio = self.ratio_from_sims(theta, gtl_all, gth_all, theory, cov_theory[1].data)
 
         # Load N(z)'s and corrects the mean using Cosmos calibration.
-        zl, nzl, zs, nzsl, nzsh = self.load_nzs(size_snr)
+        #zl, nzl, zs, nzsl, nzsh = self.load_nzs(size_snr)
+	zl, nzl = np.loadtxt(self.paths['hist_n_of_z_lenses_witherr_size'], unpack=True, usecols=(0, 1))
+	zs, nzsl = np.loadtxt(self.paths['hist_n_of_z_low_size'], unpack=True, usecols=(0,1))
+	zs, nzsh = np.loadtxt(self.paths['hist_n_of_z_high_size'], unpack=True, usecols=(0,1))
+
+	nzsl = interpolate.interp1d(zs + self.source_nofz_pars['dzs', size_snr][0], nzsl, bounds_error=False,
+                                    fill_value=0)(zs)
+        nzsh = interpolate.interp1d(zs + self.source_nofz_pars['dzs', size_snr][1], nzsh, bounds_error=False,
+                                    fill_value=0)(zs)
 
         # Computing inverse sigma_crit for the splits
         isch = functions.inv_sigma_crit_eff(zl, zs, nzl, nzsh)
