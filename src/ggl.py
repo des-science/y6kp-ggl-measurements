@@ -42,7 +42,8 @@ class GGL(object):
 	zbins = np.linspace(0,2.5,500)	
 	zbinsc = zbins[:-1] + (zbins[1]-zbins[0])/2.
 	nz, _ = np.histogram(z,zbins)
-        nz = nz/nz.sum()
+        nz = nz/float(nz.sum())
+	print nz
 	return zbins, nz 
 
 
