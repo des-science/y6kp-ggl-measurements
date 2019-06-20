@@ -689,7 +689,7 @@ class Measurement(GGL):
                         np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
                     
 
-		    '''
+
     		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
     		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
     		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
@@ -716,7 +716,7 @@ class Measurement(GGL):
     		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
     		    self.process_run(bf_all, theta, path_test, 'boost_factor')
     		    self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
-		    '''
+
 
                     
     def save_2pointfile(self, string):
