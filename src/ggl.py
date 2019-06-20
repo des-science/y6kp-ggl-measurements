@@ -1023,7 +1023,7 @@ class Measurement(GGL):
         plt.rc('font', family='serif')
 
         cmap = self.plotting['cmap']
-        fig, ax = plt.subplots(4, 5, figsize=(12.5, 9.375), sharey=True, sharex=True)
+        fig, ax = plt.subplots(len(self.zbins['sbins']), len(self.zbins['lbins']), figsize=(12.5, 9.375), sharey=True, sharex=True)
         fig.subplots_adjust(hspace=0.1, wspace=0.1)
         c1 = plt.get_cmap(cmap)(0.)
 
@@ -1051,7 +1051,7 @@ class Measurement(GGL):
 
                 ax[s][l].axvspan(2.5, self.plotting['th_limit'][l], color='gray', alpha=0.2)
 
-        ax[0][4].legend(frameon=False, fontsize=16, loc='lower right')
+        ax[0][len(self.zbins['sbins'])].legend(frameon=False, fontsize=16, loc='lower right')
         self.save_plot('boost_factors')
 
     def plot_randoms(self):
@@ -1068,7 +1068,7 @@ class Measurement(GGL):
         fs = 18  # fontsize
         cmap = self.plotting['cmap']
         cmap_step = 0.25
-        fig, ax = plt.subplots(4, 5, figsize=(17.25, 13.8), sharey=True, sharex=True)
+        fig, ax = plt.subplots(len(self.zbins['sbins']), len(self.zbins['lbins']), figsize=(17.25, 13.8), sharey=True, sharex=True)
         fig.subplots_adjust(hspace=0.0, wspace=0.0)
 
         for l in range(0, len(self.zbins['lbins'])):
@@ -1101,7 +1101,7 @@ class Measurement(GGL):
                 if s == 0:
                     ax[s][l].set_title(self.plotting['redshift_l'][l], fontsize=fs)
 
-        ax[0][4].legend(frameon=False, fancybox=True, prop={'size': 13}, numpoints=1, loc='upper right')
+        ax[0][len(self.zbins['sbins'])].legend(frameon=False, fancybox=True, prop={'size': 13}, numpoints=1, loc='upper right')
         self.save_plot('plot_randoms')
 
     def plot_gammax(self):
