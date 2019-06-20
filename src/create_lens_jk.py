@@ -53,11 +53,12 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
         ids = ids[maskzl]
         w_l = w_l[maskzl]
 
-        #Load ra,dec, from random catalog of redmagic
+        #Load ra,dec, from random catalog 
         ra_r = ran_selector.get_col('ra')[0] 
         dec_r = ran_selector.get_col('dec')[0] 
         z_r = ran_selector.get_col('z')[0] 
-        w_r = ran_selector.get_col('weight')[0] 
+        #w_r = ran_selector.get_col('weight')[0] 
+        w_r = np.ones(len(ra_r))
         print 'Weights randoms:', w_r
 
         # Number of galaxies in each lens bin

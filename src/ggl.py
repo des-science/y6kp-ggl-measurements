@@ -37,6 +37,16 @@ class GGL(object):
         self.config = config
         self.paths = paths
 
+
+    def get_nz(self,z):
+	zbins = np.linspace(0,2.5,500)	
+	zbinsc = zbins[:-1] + (zbins[1]-zbins[0])/2.
+	nz, _ = np.histogram(z,zbins)
+        nz = nz/float(nz.sum())
+	print nz
+	return zbins, nz 
+
+
     def load_buzzard(self):
 
 	#Here self.paths['yaml'] will be shearratio/src/buzzard.yaml
@@ -629,6 +639,8 @@ class Measurement(GGL):
 
     def run(self):
 
+	make_directory(self.get_path_test_allzbins()+'/nzs/')
+
         if self.basic['mode'] == 'data':
             lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
 
@@ -663,6 +675,10 @@ class Measurement(GGL):
 			source[k] = source_all[k][(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
                     print 'Length source', sbin, len(source['ra'])
 
+                    zbins, nz_s = self.get_nz(source['ztrue'])		    
+                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'zbins',zbins,header='zbin limits')
+                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
+
     		for l, lbin in enumerate(self.zbins['lbins']):
     		    print 'Running measurement for lens %s.' % lbin
     		    path_test = self.get_path_test(lbin, sbin)
@@ -670,7 +686,13 @@ class Measurement(GGL):
 
     		    lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
                     print 'Length lens', lbin, len(lens['ra'])
+
+                    if self.basic['mode'] == 'buzzard':
+                        zbins, nz_l = self.get_nz(lens['ztrue'])		    
+                        np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
                     
+
+
     		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
     		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
     		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
@@ -697,6 +719,8 @@ class Measurement(GGL):
     		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
     		    self.process_run(bf_all, theta, path_test, 'boost_factor')
     		    self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
+
+
                     
     def save_2pointfile(self, string):
         """
@@ -737,18 +761,44 @@ class Measurement(GGL):
                 cov[bin_pair_inds[0]:bin_pair_inds[-1]+1, bin_pair_inds] = cov_ls
 
         # Preparing N(z) for the blinding script
-        if 'y1_2pt_NG_mcal_1110' in self.paths['lens_nz']:
-            file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
-            lens_nz = file_lens_nz.get_kernel('nz_lens')
+        if self.basic['mode'] == 'data':
+            if 'y1_2pt_NG_mcal_1110' in self.paths['lens_nz']:
+                file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
+                lens_nz = file_lens_nz.get_kernel('nz_lens')
 
-        if 'stellar_mass' in self.paths['lens_nz']:
-            import astropy
-            ext = astropy.io.fits.open(self.paths['lens_nz'])['nz_lens']
-            lens_nz = twopoint.NumberDensity.from_fits(ext)
+            if 'stellar_mass' in self.paths['lens_nz']:
+                import astropy
+                ext = astropy.io.fits.open(self.paths['lens_nz'])['nz_lens']
+                lens_nz = twopoint.NumberDensity.from_fits(ext)
 
-        if 'y1_2pt_NG_mcal_1110' in self.paths['source_nz']:
-            file_source_nz = twopoint.TwoPointFile.from_fits(self.paths['source_nz'])
-            source_nz = file_source_nz.get_kernel('nz_source')
+            if 'y1_2pt_NG_mcal_1110' in self.paths['source_nz']:
+                file_source_nz = twopoint.TwoPointFile.from_fits(self.paths['source_nz'])
+                source_nz = file_source_nz.get_kernel('nz_source')
+
+            print 'Saving TwoPointFile with lens N(z) from %s'%(self.paths['lens_nz'])
+            print 'Saving TwoPointFile with source N(z) from %s'%(self.paths['source_nz'])
+
+        if self.basic['mode'] == 'buzzard':
+            # zbins
+            zbins = np.loadtxt(self.get_path_test_allzbins() +'nzs/'+ 'zbins')
+            zlow = zbins[:-1]
+            z = zlow + (zbins[1]-zbins[0])/2.
+            zhigh = zbins[1:]
+
+            # Lenses
+            nzs = []
+            for lbin in self.zbins['lbins']:
+                nz = np.loadtxt(self.get_path_test_allzbins() +'nzs/'+ 'nz_%s'%lbin)
+                nzs.append(nz)
+            lens_nz = twopoint.NumberDensity('nz_lens', zlow, z, zhigh, nzs)
+
+            # Sources
+            nzs = []
+            for sbin in self.zbins['sbins']:
+                nz = np.loadtxt(self.get_path_test_allzbins() +'nzs/'+ 'nz_%s'%sbin)
+                nzs.append(nz)
+            source_nz = twopoint.NumberDensity('nz_source', zlow, z, zhigh, nzs)
+
 
         if 'gt' in string:
             gammat = twopoint.SpectrumMeasurement('gammat', (bin1, bin2),
@@ -758,8 +808,6 @@ class Measurement(GGL):
                                                   angle=angle, angle_unit='arcmin')
 
             cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['gammat'], [length], cov)
-            print 'Saving TwoPointFile with lens N(z) from %s'%(self.paths['lens_nz'])
-            print 'Saving TwoPointFile with source N(z) from %s'%(self.paths['source_nz'])
             gammat_twopoint = twopoint.TwoPointFile([gammat], [lens_nz, source_nz], windows=None, covmat_info=cov_mat_info)
             twopointfile_unblind = self.get_twopointfile_name(string)
 
@@ -778,7 +826,7 @@ class Measurement(GGL):
                                                   angle=angle, angle_unit='arcmin')
 
             cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['boost_factor'], [length], cov)
-            print 'Saving TwoPointFile with Y1 N(z)s'
+            print 'Saving TwoPointFile'
             boost_factor_twopoint = twopoint.TwoPointFile([boost_factor], [lens_nz, source_nz], windows=None, covmat_info=cov_mat_info)
             save_path = os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits'%string)
             boost_factor_twopoint.to_fits(save_path)
@@ -1026,7 +1074,7 @@ class Measurement(GGL):
         plt.rc('font', family='serif')
 
         cmap = self.plotting['cmap']
-        fig, ax = plt.subplots(4, 5, figsize=(12.5, 9.375), sharey=True, sharex=True)
+        fig, ax = plt.subplots(len(self.zbins['sbins']), len(self.zbins['lbins']), figsize=(12.5, 9.375), sharey=True, sharex=True)
         fig.subplots_adjust(hspace=0.1, wspace=0.1)
         c1 = plt.get_cmap(cmap)(0.)
 
@@ -1054,7 +1102,7 @@ class Measurement(GGL):
 
                 ax[s][l].axvspan(2.5, self.plotting['th_limit'][l], color='gray', alpha=0.2)
 
-        ax[0][4].legend(frameon=False, fontsize=16, loc='lower right')
+        ax[0][len(self.zbins['sbins'])].legend(frameon=False, fontsize=16, loc='lower right')
         self.save_plot('boost_factors')
 
     def plot_randoms(self):
@@ -1071,7 +1119,7 @@ class Measurement(GGL):
         fs = 18  # fontsize
         cmap = self.plotting['cmap']
         cmap_step = 0.25
-        fig, ax = plt.subplots(4, 5, figsize=(17.25, 13.8), sharey=True, sharex=True)
+        fig, ax = plt.subplots(len(self.zbins['sbins']), len(self.zbins['lbins']), figsize=(17.25, 13.8), sharey=True, sharex=True)
         fig.subplots_adjust(hspace=0.0, wspace=0.0)
 
         for l in range(0, len(self.zbins['lbins'])):
@@ -1104,7 +1152,7 @@ class Measurement(GGL):
                 if s == 0:
                     ax[s][l].set_title(self.plotting['redshift_l'][l], fontsize=fs)
 
-        ax[0][4].legend(frameon=False, fancybox=True, prop={'size': 13}, numpoints=1, loc='upper right')
+        ax[0][len(self.zbins['sbins'])].legend(frameon=False, fancybox=True, prop={'size': 13}, numpoints=1, loc='upper right')
         self.save_plot('plot_randoms')
 
     def plot_gammax(self):

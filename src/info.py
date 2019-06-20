@@ -210,10 +210,16 @@ if basic['mode'] == 'mice':
 
 plotting['latex'] = False
 plotting['cmap'] = viridis
-plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(zbins['lims'][i], zbins['lims'][i+1]) for i in range(len(zbins['lims'])-1)]
+if 'combined_sample_fid' in config['lens_v']:
+    plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(zbins['lims'][i], zbins['lims'][i+1]) for i in range(len(zbins['lims'])-1)]
+    #plotting['th_limit'] = [64.,40.,30., 24., 21.] # 12 Mpc/h 
+    #plotting['th_limit'] = [42.67, 26.67 ,20., 16., 14.] # 8 Mpc/h (double check)
+    plotting['th_limit'] = [21.33, 13.33 , 10., 8., 7.] # 4 Mpc/h (double check)
+if 'maglim' in config['lens_v']:
+    plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(alt_zbins['lims'][i], alt_zbins['lims'][i+1]) for i in range(len(alt_zbins['lims'])-1)]
+    plotting['th_limit'] = [21.33, 13.33 , 10., 8., 7., 6.] # 4 Mpc/h (double check)
 plotting['redshift_s'] = [r'$%0.2f < z_s < %0.2f $'%(zbins['source_lims'][i], zbins['source_lims'][i+1]) for i in range(len(zbins['source_lims'])-1)]
 plotting['titles_redmagic'] = ['redMaGiC HiDens', 'redMaGiC HiDens', 'redMaGiC HiDens', 'redMaGiC HiLum', 'redMaGiC HiLum']
-plotting['th_limit'] = [64.,40.,30., 24., 21.] 
 
 
 """
