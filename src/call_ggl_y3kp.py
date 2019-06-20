@@ -4,12 +4,15 @@ from ggl import GGL, Measurement, ResponsesScale, ResponsesProjection, TestStars
 T = True
 F = False
 
-run_measurement = T
+
+run_measurement_redmagic = F
+run_measurement_maglim = F
+
 run_responses_nk = F
 run_responses_ng = F
 run_stars = F
 run_psf = F
-run_size_snr = F
+run_size_snr = T
 run_sysmaps = F
 
 
@@ -30,7 +33,7 @@ if run_measurement:
         measurement.plot_boostfactors()
         measurement.plot_randoms()
         measurement.plot_gammax()
-
+	
     if basic['blind'] and basic['plot_blinded']:
         measurement.compute_sn_ratio('gt')
         measurement.compute_sn_ratio('gt_boosted')
@@ -65,7 +68,7 @@ if run_psf:
 
 if run_size_snr:
     size_snr = TestSizeSNR(basic, config, paths, zbins, plotting, source_nofz_pars)
-    size_snr.run('size')
+    #size_snr.run('size')
     size_snr.run('snr')
     size_snr.plot()
 
