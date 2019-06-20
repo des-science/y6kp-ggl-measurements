@@ -37,6 +37,14 @@ class GGL(object):
         self.config = config
         self.paths = paths
 
+
+    def get_nz(self,z):
+	zbins = np.linspace(0,2.5,500)	
+	zbinsc = zbins[:-1] + (zbins[1]-zbins[0])/2.
+	nz, _ = np.histogram(z,zbins)
+	return zbins, nz 
+
+
     def load_buzzard(self):
 
 	#Here self.paths['yaml'] will be shearratio/src/buzzard.yaml
@@ -626,6 +634,8 @@ class Measurement(GGL):
 
     def run(self):
 
+	make_directory(self.get_path_test_allzbins()+'/nzs/')
+
         if self.basic['mode'] == 'data':
             lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
 
@@ -660,6 +670,10 @@ class Measurement(GGL):
 			source[k] = source_all[k][(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
                     print 'Length source', sbin, len(source['ra'])
 
+		zbins, nz_s = self.get_nz(source['ztrue'])		    
+		np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'zbins',zbins,header='zbin limits')
+		np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
+
     		for l, lbin in enumerate(self.zbins['lbins']):
     		    print 'Running measurement for lens %s.' % lbin
     		    path_test = self.get_path_test(lbin, sbin)
@@ -667,7 +681,11 @@ class Measurement(GGL):
 
     		    lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
                     print 'Length lens', lbin, len(lens['ra'])
+
+		    zbins, nz_l = self.get_nz(lens['ztrue'])		    
+		    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
                     
+		    '''
     		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
     		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
     		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
@@ -694,6 +712,7 @@ class Measurement(GGL):
     		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
     		    self.process_run(bf_all, theta, path_test, 'boost_factor')
     		    self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
+		    '''
                     
     def save_2pointfile(self, string):
         """
