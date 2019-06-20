@@ -42,6 +42,7 @@ class GGL(object):
 	zbins = np.linspace(0,2.5,500)	
 	zbinsc = zbins[:-1] + (zbins[1]-zbins[0])/2.
 	nz, _ = np.histogram(z,zbins)
+        nz = nz/nz.sum()
 	return zbins, nz 
 
 
@@ -670,9 +671,9 @@ class Measurement(GGL):
 			source[k] = source_all[k][(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
                     print 'Length source', sbin, len(source['ra'])
 
-		zbins, nz_s = self.get_nz(source['ztrue'])		    
-		np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'zbins',zbins,header='zbin limits')
-		np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
+                    zbins, nz_s = self.get_nz(source['ztrue'])		    
+                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'zbins',zbins,header='zbin limits')
+                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
 
     		for l, lbin in enumerate(self.zbins['lbins']):
     		    print 'Running measurement for lens %s.' % lbin
@@ -682,10 +683,11 @@ class Measurement(GGL):
     		    lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
                     print 'Length lens', lbin, len(lens['ra'])
 
-		    zbins, nz_l = self.get_nz(lens['ztrue'])		    
-		    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
+                    if self.basic['mode'] == 'buzzard':
+                        zbins, nz_l = self.get_nz(lens['ztrue'])		    
+                        np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
                     
-		    '''
+
     		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
     		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
     		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
@@ -712,7 +714,7 @@ class Measurement(GGL):
     		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
     		    self.process_run(bf_all, theta, path_test, 'boost_factor')
     		    self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
-		    '''
+
                     
     def save_2pointfile(self, string):
         """
@@ -753,18 +755,41 @@ class Measurement(GGL):
                 cov[bin_pair_inds[0]:bin_pair_inds[-1]+1, bin_pair_inds] = cov_ls
 
         # Preparing N(z) for the blinding script
-        if 'y1_2pt_NG_mcal_1110' in self.paths['lens_nz']:
-            file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
-            lens_nz = file_lens_nz.get_kernel('nz_lens')
+        if self.basic['mode'] == 'data':
+            if 'y1_2pt_NG_mcal_1110' in self.paths['lens_nz']:
+                file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
+                lens_nz = file_lens_nz.get_kernel('nz_lens')
 
-        if 'stellar_mass' in self.paths['lens_nz']:
-            import astropy
-            ext = astropy.io.fits.open(self.paths['lens_nz'])['nz_lens']
-            lens_nz = twopoint.NumberDensity.from_fits(ext)
+            if 'stellar_mass' in self.paths['lens_nz']:
+                import astropy
+                ext = astropy.io.fits.open(self.paths['lens_nz'])['nz_lens']
+                lens_nz = twopoint.NumberDensity.from_fits(ext)
 
-        if 'y1_2pt_NG_mcal_1110' in self.paths['source_nz']:
-            file_source_nz = twopoint.TwoPointFile.from_fits(self.paths['source_nz'])
-            source_nz = file_source_nz.get_kernel('nz_source')
+            if 'y1_2pt_NG_mcal_1110' in self.paths['source_nz']:
+                file_source_nz = twopoint.TwoPointFile.from_fits(self.paths['source_nz'])
+                source_nz = file_source_nz.get_kernel('nz_source')
+
+        if self.basic['mode'] == 'buzzard':
+            # zbins
+            nz = np.loadtxt(self.get_path_test_allzbins() +'nz/'+ 'zbins')
+            zlow = zlims[:-1]
+            z = zlow + (zlims[1]-zlims[0])/2.
+            zhigh = zlims[1:]
+
+            # Lenses
+            nzs = []
+            for lbin in self.zbins['lbins']:
+                zlims, nz = np.loadtxt(self.get_path_test_allzbins() +'nz/'+ 'nz_%s'%lbin)
+                nzs.append(nz)
+            lens_nz = twopoint.NumberDensity('nz_lens', zlow, z, zhigh, nzs)
+
+            # Sources
+            nzs = []
+            for sbin in self.zbins['sbins']:
+                nz = np.loadtxt(self.get_path_test_allzbins() +'nz/'+ 'nz_%s'%sbin)
+                nzs.append(nz)
+            source_nz = twopoint.NumberDensity('nz_source', zlow, z, zhigh, nzs)
+
 
         if 'gt' in string:
             gammat = twopoint.SpectrumMeasurement('gammat', (bin1, bin2),
