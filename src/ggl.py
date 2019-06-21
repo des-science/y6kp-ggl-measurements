@@ -391,11 +391,13 @@ class GGL(object):
         gxs = [manager.list() for x in range(self.config['njk'])]
         errs = [manager.list() for x in range(self.config['njk'])]
         xi_nks = [manager.list() for x in range(self.config['njk'])]
-        #p = mp.Pool(10, worker_init)
-        #p.map(run_jki, range(self.config['njk']))
-        #p.close()
+        if pool: 
+            p = mp.Pool(10, worker_init)
+            p.map(run_jki, range(self.config['njk']))
+            p.close()
 
-	for jk in range(self.config['njk']):
+        if not pool:
+            for jk in range(self.config['njk']):
 		run_jki(jk)
 
         def reshape_manager(obj):

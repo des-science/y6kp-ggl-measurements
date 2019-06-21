@@ -5,23 +5,23 @@ T = True
 F = False
 
 
-run_measurement_redmagic = F
-run_measurement_maglim = F
-
+run_measurement = T
 run_responses_nk = F
 run_responses_ng = F
 run_stars = F
 run_psf = F
-run_size_snr = T
+run_size_snr = F
 run_sysmaps = F
 
 
+if 'combined_sample_fid' in config['lens_v']:
+    zbinning = zbins
+if 'maglim' in config['lens_v']:
+    zbinning = alt_zbins
+
 if run_measurement:
     print 'Starting measurement class...'
-    if 'combined_sample_fid' in config['lens_v']:
-        measurement = Measurement(basic, config, paths, zbins, plotting)
-    if 'maglim' in config['lens_v']:
-        measurement = Measurement(basic, config, paths, alt_zbins, plotting)
+    measurement = Measurement(basic, config, paths, zbinning, plotting)
 
     if not basic['plot_blinded']:
         #measurement.run()
@@ -41,7 +41,7 @@ if run_measurement:
         measurement.plot_from_twopointfile('gt_boosted')
 
 if run_responses_nk:
-    responses = ResponsesScale(basic, config, paths, zbins, plotting)
+    responses = ResponsesScale(basic, config, paths, zbinning, plotting)
     #responses.run()
     responses.plot('lens', mask_scales =False)
     responses.plot('lens', mask_scales =True)
@@ -49,17 +49,17 @@ if run_responses_nk:
     #responses.plot('random')
 
 if run_responses_ng:
-    responses = ResponsesProjection(basic, config, paths, zbins, plotting)
+    responses = ResponsesProjection(basic, config, paths, zbinning, plotting)
     responses.run()
 
 if run_stars:
-    stars = TestStars(basic, config, paths, zbins, plotting)
+    stars = TestStars(basic, config, paths, zbinning, plotting)
     stars.run('bright')
     stars.run('faint')
     stars.plot()
 
 if run_psf:
-    psf = TestPSF(basic, config, paths, zbins, plotting)
+    psf = TestPSF(basic, config, paths, zbinning, plotting)
     ra_lims = (-1, 361)
     dec_lims = (-90, -35)
     psf.save_psf_residuals_y3(ra_lims, dec_lims)
@@ -67,12 +67,12 @@ if run_psf:
     # psf.plot()
 
 if run_size_snr:
-    size_snr = TestSizeSNR(basic, config, paths, zbins, plotting, source_nofz_pars)
+    size_snr = TestSizeSNR(basic, config, paths, zbinning, plotting, source_nofz_pars)
     #size_snr.run('size')
     size_snr.run('snr')
     size_snr.plot()
 
 if run_sysmaps:
-    sysmaps = TestSysMaps(basic, config, paths, zbins, plotting, source_nofz_pars, sysmaps)
+    sysmaps = TestSysMaps(basic, config, paths, zbinning, plotting, source_nofz_pars, sysmaps)
     sysmaps.run(['airmass', 'fwhm', 'maglimit', 'skybrite'], ['r'])
     sysmaps.plot()

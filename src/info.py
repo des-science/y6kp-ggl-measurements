@@ -35,9 +35,11 @@ measurements, not the systematics tests.
 basic = {
     'mode':'data',
     'blind': True,
-    'plot_blinded': True
+    'plot_blinded': True,
+    'pool': True
 }
-
+if basic['pool']: basic['num_threads'] = 1
+if not basic['pool']: basic['num_threads'] = 10
 
 """
 CONFIGURATION
@@ -60,7 +62,6 @@ config_data = {
     'zslim_v': 'y1',
     'zs_v': 'bpz',
     'zllim_v': 'y3',
-    'num_threads': 10
     }
 
 config_data['mastercat_v'] = config_data['filename_mastercat'][37:-3]
@@ -97,11 +98,12 @@ paths['runs'] =  '../runs/'
 paths['plots'] = '../plots/'
 paths['y3'] = '../../ggl_results/'
 paths['y3_exp'] = '../../ggl_data/'
-paths['redmagic'] = '../lens_cats/%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk'])
-paths['maglim'] = '../lens_cats/%s/maglim/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk'])
+paths['lens_cats'] = '/global/project/projectdirs/des/ggl/lens_cats/'
+paths['redmagic'] = paths['lens_cats'] + '%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk'])
+paths['maglim'] = paths['lens_cats'] + '%s/maglim/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk'])
 if 'noLSSweights' in config['lens_v']: 
-    paths['redmagic'] = '../lens_cats/%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], 'combined_sample_fid',config['njk'])
-    paths['maglim'] = '../lens_cats/%s/maglim/%s/njk_%d/'%(config['mastercat_v'], 'maglim',config['njk'])
+    paths['redmagic'] = paths['lens_cats'] + '%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], 'combined_sample_fid',config['njk'])
+    paths['maglim'] = paths['lens_cats'] + '%s/maglim/%s/njk_%d/'%(config['mastercat_v'], 'maglim',config['njk'])
 	
 if 'combined_sample_fid' in config['lens_v']:
     paths['lens'] = paths['redmagic'] + 'lens.fits'
