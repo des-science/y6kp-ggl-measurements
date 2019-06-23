@@ -5,6 +5,7 @@ import astropy.io.fits as pf
 import pathos.multiprocessing as mp
 from multiprocessing import Manager
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib import ticker
@@ -17,15 +18,18 @@ from scipy import interpolate
 import functions
 import sys
 import yaml
+
 sys.path.append('../../destest/')
 import destest
 import destest_functions
 import ipdb
 import h5py as h
 
+
 def make_directory(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
+
 
 class GGL(object):
     """
@@ -49,12 +53,13 @@ class GGL(object):
 
     def load_buzzard(self):
 
-	#Here self.paths['yaml'] will be shearratio/src/buzzard.yaml
+        # Here self.paths['yaml'] will be shearratio/src/buzzard.yaml
         params = yaml.load(open(self.paths['yaml']))
-	data = h.File(params['datafile'])
+        data = h.File(params['datafile'])
 
         # Dictionary with the unsheared version and selection only:
         source = {}
+
 	source['ra'] = data[params['source_group']]['ra'][:]
 	source['dec'] = data[params['source_group']]['dec'][:]
 	source['e1'] = data[params['source_group']]['e1'][:]
@@ -64,6 +69,8 @@ class GGL(object):
 
 	return source
 
+
+        return source
 
     def load_metacal(self):
         """
@@ -97,11 +104,13 @@ class GGL(object):
 
         # Source catalog
         source_selector, source_calibrator = destest_functions.load_catalog(
-            params, 'mcal', 'mcal', params['source_group'], params['source_table'], params['source_path'], return_calibrator=destest.MetaCalib)
+            params, 'mcal', 'mcal', params['source_group'], params['source_table'], params['source_path'],
+            return_calibrator=destest.MetaCalib)
 
         # Gold catalog
         gold_selector = destest_functions.load_catalog(
-            params, 'gold', 'mcal', params['gold_group'], params['gold_table'], params['gold_path'], inherit=source_selector)
+            params, 'gold', 'mcal', params['gold_group'], params['gold_table'], params['gold_path'],
+            inherit=source_selector)
 
         # BPZ (or DNF) catalog, depending on paths in cats.yaml file (exchange bpz and dnf)
         pz_selector = destest_functions.load_catalog(
@@ -110,10 +119,14 @@ class GGL(object):
         # Dictionary with the unsheared version of each quantity with the selections from: unsheared, 1p, 1m, 2p, 2m. 
         source_5sels = {}
         source_5sels['unsheared'] = {}
-        source_5sels['unsheared']['ra'] = [gold_selector.get_col('ra', uncut=True)[0][gold_selector.get_mask()[i]] for i in range(5)]
-        source_5sels['unsheared']['dec'] = [gold_selector.get_col('dec', uncut=True)[0][gold_selector.get_mask()[i]] for i in range(5)]
-        source_5sels['unsheared']['e1'] = [source_selector.get_col('e_1', uncut=True)[0][source_selector.get_mask()[i]] for i in range(5)]
-        source_5sels['unsheared']['e2'] = [source_selector.get_col('e_2', uncut=True)[0][source_selector.get_mask()[i]] for i in range(5)]
+        source_5sels['unsheared']['ra'] = [gold_selector.get_col('ra', uncut=True)[0][gold_selector.get_mask()[i]] for i
+                                           in range(5)]
+        source_5sels['unsheared']['dec'] = [gold_selector.get_col('dec', uncut=True)[0][gold_selector.get_mask()[i]] for
+                                            i in range(5)]
+        source_5sels['unsheared']['e1'] = [source_selector.get_col('e_1', uncut=True)[0][source_selector.get_mask()[i]]
+                                           for i in range(5)]
+        source_5sels['unsheared']['e2'] = [source_selector.get_col('e_2', uncut=True)[0][source_selector.get_mask()[i]]
+                                           for i in range(5)]
 
         # Dictionary with the 5 selections (1p, 1m, 2p, 2m), in which the quantities are obtained from sheared images or using fluxes measured on sheared images.   
         source_5sels['sheared'] = {}
@@ -136,7 +149,6 @@ class GGL(object):
         source['size'] = source_5sels['sheared']['size'][0]
         source['bpz_mean'] = source_5sels['sheared']['bpz_mean'][0]
         source['bpz_zmc'] = source_5sels['sheared']['bpz_zmc'][0]
-
 
         # -------------------------------
         # Notes from Troxel on responses: 
@@ -171,7 +183,9 @@ class GGL(object):
         Obtains 5 masks (unsheared, sheared 1p, 1m, 2p, 2m) to obtain the new selection response.
         Returns: Source dictionary masked with the unsheared mask and with the mean response updated.
         """
-        photoz_masks = [(source_5sels['sheared']['bpz_mean'][i] > zlim_low) & (source_5sels['sheared']['bpz_mean'][i] < zlim_high) for i in range(5)]
+        photoz_masks = [
+            (source_5sels['sheared']['bpz_mean'][i] > zlim_low) & (source_5sels['sheared']['bpz_mean'][i] < zlim_high)
+            for i in range(5)]
         source_bin = {}
         source_bin['ra'] = source['ra'][photoz_masks[0]]
         source_bin['dec'] = source['dec'][photoz_masks[0]]
@@ -184,15 +198,15 @@ class GGL(object):
         source_bin['bpz_mean'] = source['bpz_mean'][photoz_masks[0]]
         source_bin['bpz_zmc'] = source['bpz_zmc'][photoz_masks[0]]
         source_bin['Rgamma'] = source['Rgamma'][photoz_masks[0]]
-        
+
         R11, _, _ = calibrator.calibrate('e_1', mask=photoz_masks)
         R22, _, _ = calibrator.calibrate('e_2', mask=photoz_masks)
         source_bin['Rmean'] = np.mean([R11, R22])
         source_bin['R11'] = calibrator.calibrate('e_1', return_full=True, mask=photoz_masks)[0]
         source_bin['R22'] = calibrator.calibrate('e_2', return_full=True, mask=photoz_masks)[0]
-        print 'Mean response redshift bin (%0.2f, %0.2f):'%(zlim_low, zlim_high), source_bin['Rmean'], np.mean(source_bin['Rgamma']), np.mean(source_bin['R11']), np.mean(source_bin['R22'])
+        print 'Mean response redshift bin (%0.2f, %0.2f):' % (zlim_low, zlim_high), source_bin['Rmean'], np.mean(
+            source_bin['Rgamma']), np.mean(source_bin['R11']), np.mean(source_bin['R22'])
         return source_bin
-
 
     def load_metacal_bin_sels_responses(self, source_5sels, zlim_low, zlim_high):
         """
@@ -202,7 +216,9 @@ class GGL(object):
         Returns: Source dictionary masked each time with one of the photo-z masks, to compute the selection response manually and
                  test its scale dependence. 
         """
-        photoz_masks = [(source_5sels['sheared']['bpz_mean'][i] > zlim_low) & (source_5sels['sheared']['bpz_mean'][i] < zlim_high) for i in range(5)]
+        photoz_masks = [
+            (source_5sels['sheared']['bpz_mean'][i] > zlim_low) & (source_5sels['sheared']['bpz_mean'][i] < zlim_high)
+            for i in range(5)]
         source_bin_sels = {}
         source_bin_sels['ra'] = [source_5sels['unsheared']['ra'][i][photoz_masks[i]] for i in range(1, 5)]
         source_bin_sels['dec'] = [source_5sels['unsheared']['dec'][i][photoz_masks[i]] for i in range(1, 5)]
@@ -210,7 +226,6 @@ class GGL(object):
         source_bin_sels['e2'] = [source_5sels['unsheared']['e2'][i][photoz_masks[i]] for i in range(1, 5)]
 
         return source_bin_sels
-
 
     def get_lens(self, lens):
         """
@@ -305,8 +320,9 @@ class GGL(object):
                                               max_sep=self.config['thlims'][1], sep_units='arcmin',
                                               bin_slop=self.config['bslop'], num_threads=self.config['num_threads'])
                 
+
             if 'NK' in type_corr:
-                if jk == 0: print 'Doing NK correlation with variable %s.'%type_corr[3:]
+                if jk == 0: print 'Doing NK correlation with variable %s.' % type_corr[3:]
                 corr = treecorr.NKCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
                                               max_sep=self.config['thlims'][1], sep_units='arcmin',
                                               bin_slop=self.config['bslop'], num_threads=self.config['num_threads'])
@@ -325,18 +341,21 @@ class GGL(object):
                 bool_s = np.in1d(pix, pixsjk)
 
                 cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
- 
+
                 if type_corr == 'NG' or type_corr == 'NN':
-                    if self.basic['mode'] == 'data' or self.basic['mode'] =='data_y1sources' or self.basic['mode'] =='buzzard':
-                        cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s], w=w[bool_s],
+                    if self.basic['mode'] == 'data' or self.basic['mode'] == 'data_y1sources' or self.basic[
+                        'mode'] == 'buzzard':
+                        cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s],
+                                                 w=w[bool_s],
                                                  ra_units='deg', dec_units='deg')
-                    if self.basic['mode']  == 'mice':
-                        cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=-e1[bool_s], g2=e2[bool_s], w=w[bool_s],
+                    if self.basic['mode'] == 'mice':
+                        cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=-e1[bool_s], g2=e2[bool_s],
+                                                 w=w[bool_s],
                                                  ra_units='deg', dec_units='deg')
                 if 'NK' in type_corr:
-                    cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], k=scalar[bool_s], w=w[bool_s], 
+                    cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], k=scalar[bool_s], w=w[bool_s],
                                              ra_units='deg', dec_units='deg')
- 
+
                 corr.process(cat_l, cat_s)
 
                 if jk == 0: theta.append(np.exp(corr.logr))
@@ -374,10 +393,10 @@ class GGL(object):
             scalar = np.zeros(len(e1))
         if 'NK' in type_corr:
             print type_corr, type_corr[3:]
-            scalar = source['%s'%type_corr[3:]]
+            scalar = source['%s' % type_corr[3:]]
             e1 = np.zeros(len(scalar))
             e2 = np.zeros(len(scalar))
-            
+
         nside = 8
         theta = (90.0 - dec_s) * np.pi / 180.
         phi = ra_s * np.pi / 180.
@@ -420,7 +439,7 @@ class GGL(object):
         if type_corr == 'NN':
             print 'returning NN'
             return theta, weights, npairs
-            
+
         if 'NK' in type_corr:
             print 'returning NK'
             xi_nks = reshape_manager(xi_nks)
@@ -551,7 +570,7 @@ class GGL(object):
         make_directory(self.paths['plots_config'])
         plt.savefig(self.paths['plots_config'] + '%s.pdf' % name_plot, bbox_inches='tight')
         plt.savefig(self.paths['plots_config'] + '%s.png' % name_plot, bbox_inches='tight', dpi=400)
-        print 'Plot saved in:', self.paths['plots_config'] + '%s.pdf'% name_plot
+        print 'Plot saved in:', self.paths['plots_config'] + '%s.pdf' % name_plot
 
     def load_sims(self):
         """
@@ -584,7 +603,6 @@ class GGL(object):
         err_A = np.sqrt(COV_A)
         return ratioA_mean, err_A
 
-
     def load_data_or_sims(self):
         '''
         Loads and returns lens, randoms and sources, either from data or from simulations.
@@ -600,7 +618,7 @@ class GGL(object):
             lens_all = pf.getdata(self.paths['lens'])
             random_all = pf.getdata(self.paths['randoms'])
             return lens_all, random_all
-            
+
         if self.basic['mode'] == 'mice':
             lens_all = pf.getdata(self.paths['lens_mice'])
             random_all = pf.getdata(self.paths['randoms_mice'])
@@ -637,7 +655,7 @@ class Measurement(GGL):
         return os.path.join(self.paths['runs_config'], 'measurement') + '/'
 
     def get_twopointfile_name(self, string):
-        return os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits'%string)
+        return os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits' % string)
 
     def run(self):
 
@@ -650,6 +668,7 @@ class Measurement(GGL):
             lens_all, random_all, source_all = self.load_data_or_sims()
 
         for sbin in self.zbins['sbins']:
+
     		print 'Running measurement for source %s.' % sbin
 
 		if self.basic['mode'] == 'data':
@@ -736,7 +755,7 @@ class Measurement(GGL):
         Then, it builds the TwoPointFile objet from the above objects,
         and saves it to a file.
         """
-        
+
         # Preparing spectrum
         length = self.config['nthbins'] * len(self.zbins['lbins']) * len(self.zbins['sbins'])
         values = np.zeros(length, dtype=float)
@@ -750,17 +769,17 @@ class Measurement(GGL):
         for l in range(0, len(self.zbins['lbins'])):
             for s in range(len(self.zbins['sbins'])):
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
-                theta, xi, xi_err = np.loadtxt(path_test + 'mean_%s'%string, unpack=True)
-                cov_ls = np.loadtxt(path_test + 'cov_%s'%string)
+                theta, xi, xi_err = np.loadtxt(path_test + 'mean_%s' % string, unpack=True)
+                cov_ls = np.loadtxt(path_test + 'cov_%s' % string)
 
                 bin_pair_inds = np.arange(dv_start, dv_start + self.config['nthbins'])
                 values[bin_pair_inds] = xi
-                bin1[bin_pair_inds] = l+1
-                bin2[bin_pair_inds] = s+1
+                bin1[bin_pair_inds] = l + 1
+                bin2[bin_pair_inds] = s + 1
                 angular_bin[bin_pair_inds] = np.arange(self.config['nthbins'])
                 angle[bin_pair_inds] = theta
                 dv_start += self.config['nthbins']
-                cov[bin_pair_inds[0]:bin_pair_inds[-1]+1, bin_pair_inds] = cov_ls
+                cov[bin_pair_inds[0]:bin_pair_inds[-1] + 1, bin_pair_inds] = cov_ls
 
         # Preparing N(z) for the blinding script
         if self.basic['mode'] == 'data':
@@ -810,29 +829,31 @@ class Measurement(GGL):
                                                   angle=angle, angle_unit='arcmin')
 
             cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['gammat'], [length], cov)
+
             gammat_twopoint = twopoint.TwoPointFile([gammat], [lens_nz, source_nz], windows=None, covmat_info=cov_mat_info)
+
             twopointfile_unblind = self.get_twopointfile_name(string)
 
             # Remove file if it exists already because to_fits function doesn't overwrite
             if os.path.isfile(twopointfile_unblind):
-                os.system('rm %s'%(twopointfile_unblind))
+                os.system('rm %s' % (twopointfile_unblind))
 
             gammat_twopoint.to_fits(twopointfile_unblind)
 
-
         if string == 'boost_factor':
             boost_factor = twopoint.SpectrumMeasurement('boost_factor', (bin1, bin2),
-                                                  (twopoint.Types.galaxy_position_real,
-                                                   twopoint.Types.galaxy_shear_plus_real),
-                                                  ('nz_lens', 'nz_source'), 'SAMPLE', angular_bin, values,
-                                                  angle=angle, angle_unit='arcmin')
+                                                        (twopoint.Types.galaxy_position_real,
+                                                         twopoint.Types.galaxy_shear_plus_real),
+                                                        ('nz_lens', 'nz_source'), 'SAMPLE', angular_bin, values,
+                                                        angle=angle, angle_unit='arcmin')
 
             cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['boost_factor'], [length], cov)
+
             print 'Saving TwoPointFile'
             boost_factor_twopoint = twopoint.TwoPointFile([boost_factor], [lens_nz, source_nz], windows=None, covmat_info=cov_mat_info)
             save_path = os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits'%string)
-            boost_factor_twopoint.to_fits(save_path)
 
+            boost_factor_twopoint.to_fits(save_path)
 
     def save_spectrum_measurement_file(self):
         """
@@ -871,7 +892,6 @@ class Measurement(GGL):
         filename = 'boost_factors.fits'
         (boost_factors.to_fits()).writeto(path_save + filename)
 
-
     def plot_NO_BLINDED(self):
         """"
         Makes plot of the fiducial measurement for all redshift bins.
@@ -892,7 +912,7 @@ class Measurement(GGL):
 
             # To iterate between the three columns and two lines
             j = 0 if l < 3 else 1
-            ax[j][l % 3].axvspan(self.config['thlims'][0]*0.8, self.plotting['th_limit'][l], color='gray', alpha=0.2)
+            ax[j][l % 3].axvspan(self.config['thlims'][0] * 0.8, self.plotting['th_limit'][l], color='gray', alpha=0.2)
             for s in range(len(self.zbins['sbins'])):
 
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
@@ -902,30 +922,35 @@ class Measurement(GGL):
                     mask_neg = gt < 0
                     mask_pos = gt > 0
 
-                    #chi2, ndf = self.get_chi2(path_test, 'gt')
-                    ax[j][l % 3].errorbar(th[mask_neg] * (1 + 0.05 * s), -gt[mask_neg], err[mask_neg], fmt='.', mfc='None',
-                                          mec=plt.get_cmap(cmap)(cmap_step * s), ecolor=plt.get_cmap(cmap)(cmap_step * s), capsize=2)
+                    # chi2, ndf = self.get_chi2(path_test, 'gt')
+                    ax[j][l % 3].errorbar(th[mask_neg] * (1 + 0.05 * s), -gt[mask_neg], err[mask_neg], fmt='.',
+                                          mfc='None',
+                                          mec=plt.get_cmap(cmap)(cmap_step * s),
+                                          ecolor=plt.get_cmap(cmap)(cmap_step * s), capsize=2)
                     ax[j][l % 3].errorbar(th[mask_pos] * (1 + 0.05 * s), gt[mask_pos], err[mask_pos], fmt='.',
                                           color=plt.get_cmap(cmap)(cmap_step * s),
-                                          mec=plt.get_cmap(cmap)(cmap_step * s), label=self.plotting['redshift_s'][s], capsize=2)
+                                          mec=plt.get_cmap(cmap)(cmap_step * s), label=self.plotting['redshift_s'][s],
+                                          capsize=2)
 
-                    ax[j][l % 3].set_xlim(self.config['thlims'][0]*0.8, self.config['thlims'][1]*1.2)
+                    ax[j][l % 3].set_xlim(self.config['thlims'][0] * 0.8, self.config['thlims'][1] * 1.2)
                     ax[j][l % 3].set_xscale('log')
                     ax[j][l % 3].set_yscale('log')
 
                     ax[j][l % 3].text(0.5, 0.9, self.plotting['redshift_l'][l], horizontalalignment='center',
                                       verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
-                    #ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
+                    # ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
                     #                  verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
+
 
                     #if l % 3 > 0:  # In case we want to keep labels on the left y-axis
                     #ax[j][l % 3].yaxis.set_ticklabels([])  # to remove the ticks labels
                     #if l < 2:
                         #ax[0][l].xaxis.set_ticklabels([])  # to remove the ticks labels
 
+
                     ax[j][l % 3].set_xlabel(r'$\theta$ [arcmin]', size='large')
                     ax[j][0].set_ylabel(r'$\gamma_t (\theta)$', size='large')
-                    #ax[j][l % 3].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%d$'))
+                    # ax[j][l % 3].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%d$'))
 
                     """
                     # Chi2
@@ -935,8 +960,10 @@ class Measurement(GGL):
                              horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 12, color = plt.get_cmap(cmap)(cmap_step*s))
                     """
 
+
         ax[1][0].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
         ax[1][1].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
+
         # handles, labels = ax[0][0].get_legend_handles_labels()
         fig.delaxes(ax[1, 2])
         # ax[1][1].legend(handles[::-1], labels[::-1], frameon=True, fancybox = True,prop={'size':12}, numpoints = 1, loc='center left', bbox_to_anchor=(1, 0.5))
@@ -951,8 +978,10 @@ class Measurement(GGL):
         Loads TwoPointFile and returns it.
         '''
         filename = self.get_twopointfile_name(string)
-        if self.basic['blind']: gammat_file = twopoint.TwoPointFile.from_fits('%s_BLINDED.fits'%filename[:-5])
-        else: gammat_file = twopoint.TwoPointFile.from_fits('%s.fits'%filename[:-5])
+        if self.basic['blind']:
+            gammat_file = twopoint.TwoPointFile.from_fits('%s_BLINDED.fits' % filename[:-5])
+        else:
+            gammat_file = twopoint.TwoPointFile.from_fits('%s.fits' % filename[:-5])
         return gammat_file
 
     def compute_sn_ratio(self, string):
@@ -965,20 +994,20 @@ class Measurement(GGL):
         gammat_file = self.load_twopointfile(string)
         gammat = gammat_file.spectra[0].value
         cov = gammat_file.covmat
-        
+
         COV = np.array(cov)
         INVCOV = np.linalg.inv(COV)
-        null_chi2 = np.mat(gammat)*INVCOV*np.transpose(np.mat(gammat))
+        null_chi2 = np.mat(gammat) * INVCOV * np.transpose(np.mat(gammat))
         dof = gammat.shape[0]
         sn = np.sqrt(null_chi2 - dof)
-        
+
         path_save = self.get_path_test_allzbins()
         print 'S/N of the full measurements:', float(sn)
-        np.savetxt(path_save + 'sn_ratio_full_measurements_%s'%string, sn, fmt = '%0.5g', header = 'S/N ratio computed with JK covariance, S/N = sqrt(null chi2 - ndof)')
-
+        np.savetxt(path_save + 'sn_ratio_full_measurements_%s' % string, sn, fmt='%0.5g',
+                   header='S/N ratio computed with JK covariance, S/N = sqrt(null chi2 - ndof)')
 
     def plot_from_twopointfile(self, string):
-        
+
         """"
         Makes plot of the fiducial measurement for all redshift bins, from a twopoint file, like Y1 style.
         It also uses the twopoint plotting functions to plot the measurements in a different style,
@@ -999,8 +1028,10 @@ class Measurement(GGL):
         bins_s = np.transpose(pairs)[1]
         nbins_l = np.max(bins_l)
         nbins_s = np.max(bins_s)
-        assert len(self.zbins['lbins']) == nbins_l, 'Number of lens bins in info does not match with the one in the two-point file.'
-        assert len(self.zbins['sbins']) == nbins_s, 'Number of source bins in info does not match with the one in the two-point file.'
+        assert len(self.zbins[
+                       'lbins']) == nbins_l, 'Number of lens bins in info does not match with the one in the two-point file.'
+        assert len(self.zbins[
+                       'sbins']) == nbins_s, 'Number of source bins in info does not match with the one in the two-point file.'
 
         cmap = self.plotting['cmap']
         cmap_step = 0.25
@@ -1014,9 +1045,10 @@ class Measurement(GGL):
 
             # To iterate between the three columns and two lines
             j = 0 if l < 3 else 1
-            ax[j][l % 3].axvspan(self.config['thlims'][0]*0.8, self.plotting['th_limit'][l], color='gray', alpha=0.2)
+            ax[j][l % 3].axvspan(self.config['thlims'][0] * 0.8, self.plotting['th_limit'][l], color='gray', alpha=0.2)
 
             for s in range(len(self.zbins['sbins'])):
+
 
                     path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
                     th, gt = gammat.get_pair(l+1, s+1)
@@ -1058,17 +1090,18 @@ class Measurement(GGL):
                              horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 12, color = plt.get_cmap(cmap)(cmap_step*s))
                     """
 
+
         fig.delaxes(ax[1, 2])
         # ax[1][1].legend(handles[::-1], labels[::-1], frameon=True, fancybox = True,prop={'size':12}, numpoints = 1, loc='center left', bbox_to_anchor=(1, 0.5))
         ax[0][0].legend(frameon=False, fancybox=True, prop={'size': 12}, numpoints=1, loc='center',
                         bbox_to_anchor=(2.45, -0.52))
         fig.suptitle(title_source, fontsize=16)
         fig.subplots_adjust(top=0.93)
-        self.save_plot('plot_measurement_BLINDED_%s'%string)
+        self.save_plot('plot_measurement_BLINDED_%s' % string)
 
         # Use twopoint library to make the rest of the plots
-        gammat_file.plots(self.paths['plots_config'] + '%s_twopointfile_BLINDED'%string, blind_yaxis=self.basic['blind'], latex = self.plotting['latex'])
-
+        gammat_file.plots(self.paths['plots_config'] + '%s_twopointfile_BLINDED' % string,
+                          blind_yaxis=self.basic['blind'], latex=self.plotting['latex'])
 
     def plot_boostfactors(self):
 
@@ -1241,7 +1274,8 @@ class ResponsesScale(GGL):
         return os.path.join(self.paths['runs_config'], 'responses_nk', lbin + '_' + sbin) + '/'
 
     def save_responses_nk(self, path_test, responses, end):
-        np.savetxt(path_test + 'responses_nk_no_jackknife_%s' % end, responses, header='theta(arcmin), R_nk, Rgamma_nk, Rs_nk')
+        np.savetxt(path_test + 'responses_nk_no_jackknife_%s' % end, responses,
+                   header='theta(arcmin), R_nk, Rgamma_nk, Rs_nk')
 
     def load_responses_nk(self, path_test, end):
         theta, R_nk, Rgamma_nk, Rs_nk = np.loadtxt(path_test + 'responses_nk_%s' % end, unpack=True)
@@ -1253,12 +1287,12 @@ class ResponsesScale(GGL):
 
     def save_responses_mean(self, responses_mean, end):
         responses_mean = np.array([responses_mean[sbin] for sbin in self.zbins['sbins']])
-        np.savetxt(self.get_path_test_allzbins() + 'responses_mean_%s'%end, responses_mean,
+        np.savetxt(self.get_path_test_allzbins() + 'responses_mean_%s' % end, responses_mean,
                    header='R_mean, Rgamma_mean, Rs_mean')
 
     def load_responses_mean(self, end):
-        R_mean, Rgamma, Rs = np.loadtxt(self.get_path_test_allzbins() + 'responses_mean_%s'%end, unpack=True)
-        return R_mean 
+        R_mean, Rgamma, Rs = np.loadtxt(self.get_path_test_allzbins() + 'responses_mean_%s' % end, unpack=True)
+        return R_mean
 
     def compute_Rs(self, e_ix, delta_gamma):
         """
@@ -1267,13 +1301,13 @@ class ResponsesScale(GGL):
         delta_gamma: value of the artificially applied shear to the images. 
         It can be averaged over all angular scales, or averaged in angular bins using NK correlation.
         """
-        Rs11_mean = (e_ix['1p'] - e_ix['1m'])/delta_gamma
-        Rs22_mean = (e_ix['2p'] - e_ix['2m'])/delta_gamma
+        Rs11_mean = (e_ix['1p'] - e_ix['1m']) / delta_gamma
+        Rs22_mean = (e_ix['2p'] - e_ix['2m']) / delta_gamma
         Rs_mean = 0.5 * (Rs11_mean + Rs22_mean)
         return Rs_mean
 
     def compute_chi2_consistency(self, datavector, constant, cov):
-        diff = datavector-constant
+        diff = datavector - constant
         chi2 = np.dot(diff.T, np.dot(np.linalg.inv(cov), diff))
 
         # Hartlap factor
@@ -1290,19 +1324,19 @@ class ResponsesScale(GGL):
         """
         from iminuit import Minuit
         data_mat = np.mat(datavector)
-        def f(c):
-            return np.abs(np.array((data_mat - c)*np.linalg.inv(cov)*(data_mat.T - c))[0][0])
 
-        m = Minuit(f, print_level=0, errordef=1, pedantic = False)
+        def f(c):
+            return np.abs(np.array((data_mat - c) * np.linalg.inv(cov) * (data_mat.T - c))[0][0])
+
+        m = Minuit(f, print_level=0, errordef=1, pedantic=False)
         m.migrad()
         fit, err_fit = m.values['c'], m.errors['c']
         hartlap_factor = (self.config['njk'] - len(datavector) - 2) / float(self.config['njk'] - 1)
-        chi2_fit = f(fit)*hartlap_factor
-        
-        print 'fit, err_fit = %0.3e +- %0.3e (Minuit)'%(fit, err_fit)
-        print 'chi2_fit/ndf: %0.2f/%d (Minuit)'%(chi2_fit, (len(datavector)-1))
-        return fit, err_fit, chi2_fit, len(datavector)-1
+        chi2_fit = f(fit) * hartlap_factor
 
+        print 'fit, err_fit = %0.3e +- %0.3e (Minuit)' % (fit, err_fit)
+        print 'chi2_fit/ndf: %0.2f/%d (Minuit)' % (chi2_fit, (len(datavector) - 1))
+        return fit, err_fit, chi2_fit, len(datavector) - 1
 
     def fit_constant_least_squares(self, datavector, cov, R0):
         """
@@ -1312,20 +1346,21 @@ class ResponsesScale(GGL):
         """
         from scipy import optimize
         data_mat = np.mat(datavector)
+
         def f(c):
-            return np.abs(np.array((data_mat - c)*np.linalg.inv(cov)*(data_mat.T - c))[0][0])
-        #ipdb.set_trace()
+            return np.abs(np.array((data_mat - c) * np.linalg.inv(cov) * (data_mat.T - c))[0][0])
+
+        # ipdb.set_trace()
         opt = optimize.least_squares(f, R0)
         fit = opt.x
         print 'Fit with least squares:', fit
 
         hartlap_factor = (self.config['njk'] - len(datavector) - 2) / float(self.config['njk'] - 1)
-        chi2_fit = f(fit[0])*hartlap_factor
-        
-        print 'fit = %0.3e (least squares)'%(fit[0])
-        print 'chi2_fit/ndf: %0.2f/%d (least squares)'%(chi2_fit, (len(datavector)-1))
-        return fit 
+        chi2_fit = f(fit[0]) * hartlap_factor
 
+        print 'fit = %0.3e (least squares)' % (fit[0])
+        print 'chi2_fit/ndf: %0.2f/%d (least squares)' % (chi2_fit, (len(datavector) - 1))
+        return fit
 
     def build_dictionary_e_ix(self, lens, source_sels, average_type):
         """
@@ -1335,23 +1370,26 @@ class ResponsesScale(GGL):
         from the selections 1p, 1m, 2p, 2m respectively. This dictionary is used 
         to compute the selection response Rs.
         """
-    
+
         e_ix = {}
         components = ['1p', '1m', '2p', '2m']
         for i, comp in enumerate(components):
             source_component_ix = {
                 'ra': source_sels['ra'][i],
                 'dec': source_sels['dec'][i],
-                'e_ix': source_sels['e%s'%comp[0]][i]} # Choose e1 for 1p, 1m selections, and e2 for 2p, 2m selections. 
+                'e_ix': source_sels['e%s' % comp[0]][
+                    i]}  # Choose e1 for 1p, 1m selections, and e2 for 2p, 2m selections.
             if average_type == 'mean':
                 e_ix[comp] = np.mean(source_component_ix['e_ix'])
             if average_type == 'NK_no_jackknife':
-                theta, e_ix[comp] = self.run_nk_no_jackknife(lens, source_component_ix, scalar = source_component_ix['e_ix'])
+                theta, e_ix[comp] = self.run_nk_no_jackknife(lens, source_component_ix,
+                                                             scalar=source_component_ix['e_ix'])
 
             if average_type == 'NK_jackknife':
-                theta, xi_nk, weights, npairs = self.run_treecorr_jackknife(lens, source_component_ix, type_corr = 'NK_e_ix')
+                theta, xi_nk, weights, npairs = self.run_treecorr_jackknife(lens, source_component_ix,
+                                                                            type_corr='NK_e_ix')
                 e_ixnum, _, wnum = self.numerators_jackknife(xi_nk, xi_nk, weights)
-                e_ix[comp] = e_ixnum / wnum # contains all the jackknife regions measurements
+                e_ix[comp] = e_ixnum / wnum  # contains all the jackknife regions measurements
 
         return e_ix
 
@@ -1375,13 +1413,13 @@ class ResponsesScale(GGL):
             Rgamma = np.mean(source['Rgamma'])
 
         if average_type == 'NK_no_jackknife':
-            theta, Rgamma = self.run_nk_no_jackknife(lens, source, scalar = source['Rgamma'])
+            theta, Rgamma = self.run_nk_no_jackknife(lens, source, scalar=source['Rgamma'])
 
         if average_type == 'NK_jackknife':
-            theta, xi_nk, weights, npairs = self.run_treecorr_jackknife(lens, source, type_corr = 'NK_Rgamma')
+            theta, xi_nk, weights, npairs = self.run_treecorr_jackknife(lens, source, type_corr='NK_Rgamma')
             Rgammanum, _, wnum = self.numerators_jackknife(xi_nk, xi_nk, weights)
-            Rgamma = Rgammanum / wnum # contains all the jackknife regions measurements (i.e. Rgamma_all)
-            
+            Rgamma = Rgammanum / wnum  # contains all the jackknife regions measurements (i.e. Rgamma_all)
+
         e_ix = self.build_dictionary_e_ix(lens, source_sels, average_type)
         Rs = self.compute_Rs(e_ix, delta_gamma)
 
@@ -1392,15 +1430,15 @@ class ResponsesScale(GGL):
         if average_type == 'mean':
             responses = [R, Rgamma, Rs]
             return responses
-        
+
         if average_type == 'NK_no_jackknife':
             responses = zip(theta, R, Rgamma, Rs)
             self.save_responses_nk(path_test, responses, lens_or_random)
 
         if average_type == 'NK_jackknife':
-            self.process_run(R, theta, path_test, 'R_nk_JK_%s'%lens_or_random)
-            self.process_run(Rgamma, theta, path_test, 'Rgamma_nk_JK_%s'%lens_or_random)
-            self.process_run(Rs, theta, path_test, 'Rs_nk_JK_%s'%lens_or_random)
+            self.process_run(R, theta, path_test, 'R_nk_JK_%s' % lens_or_random)
+            self.process_run(Rgamma, theta, path_test, 'Rgamma_nk_JK_%s' % lens_or_random)
+            self.process_run(Rs, theta, path_test, 'Rs_nk_JK_%s' % lens_or_random)
 
     def run(self):
         """
@@ -1413,11 +1451,13 @@ class ResponsesScale(GGL):
         for sbin in self.zbins['sbins']:
 
             print 'Running responses test for source %s.' % sbin
-            source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
+            source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins[sbin][0],
+                                           zlim_high=self.zbins[sbin][1])
             resp[sbin] = source['Rmean']
             print 'R = source[Rmean]', resp
-            source_sels = self.load_metacal_bin_sels_responses(source_all_5sels, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
-            delta_gamma = 2*0.01
+            source_sels = self.load_metacal_bin_sels_responses(source_all_5sels, zlim_low=self.zbins[sbin][0],
+                                                               zlim_high=self.zbins[sbin][1])
+            delta_gamma = 2 * 0.01
 
             for lbin in self.zbins['lbins']:
                 print 'Running responses test for lens %s.' % lbin
@@ -1425,20 +1465,22 @@ class ResponsesScale(GGL):
                 make_directory(path_test)
 
                 lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
-                responses_mean[sbin] = self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='mean', path_test=path_test, lens_or_random='lens')
-                #comment:responses_nk_no_jackknife = self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='NK_no_jackknife', path_test=path_test, lens_or_random='lens') #much slower
-                self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='NK_jackknife',path_test=path_test, lens_or_random='lens')
+                responses_mean[sbin] = self.run_responses_tomo(lens, source, source_sels, delta_gamma,
+                                                               average_type='mean', path_test=path_test,
+                                                               lens_or_random='lens')
+                # comment:responses_nk_no_jackknife = self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='NK_no_jackknife', path_test=path_test, lens_or_random='lens') #much slower
+                self.run_responses_tomo(lens, source, source_sels, delta_gamma, average_type='NK_jackknife',
+                                        path_test=path_test, lens_or_random='lens')
 
-                #comment:random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-                #comment:responses_nk_no_jackknife = self.run_responses_tomo(random, source, source_sels, delta_gamma, average_type='NK_no_jackknife', path_test=path_test, lens_or_random='random') #super slow
-                #comment:self.run_responses_tomo(random, source, source_sels, delta_gamma, average_type='NK_jackknife', path_test=path_test, lens_or_random='random')
-
+                # comment:random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+                # comment:responses_nk_no_jackknife = self.run_responses_tomo(random, source, source_sels, delta_gamma, average_type='NK_no_jackknife', path_test=path_test, lens_or_random='random') #super slow
+                # comment:self.run_responses_tomo(random, source, source_sels, delta_gamma, average_type='NK_jackknife', path_test=path_test, lens_or_random='random')
 
         print resp
         print responses_mean
         self.save_responses_mean(resp, 'destest')
         self.save_responses_mean(responses_mean, 'xcorr')
-            
+
     def plot(self, lens_random, mask_scales):
         """
         Makes plot comparing the NK responses to the mean ones.
@@ -1455,30 +1497,35 @@ class ResponsesScale(GGL):
         c1 = plt.get_cmap(cmap)(0.)
         c2 = plt.get_cmap(cmap)(0.25)
         c3 = plt.get_cmap(cmap)(0.5)
-        fig, ax = plt.subplots(len(self.zbins['sbins']), len(self.zbins['lbins']), figsize=(16.5, 13.2), sharey='row', sharex=True)
+        fig, ax = plt.subplots(len(self.zbins['sbins']), len(self.zbins['lbins']), figsize=(16.5, 13.2), sharey='row',
+                               sharex=True)
         fig.subplots_adjust(hspace=0.1, wspace=0.1)
 
         R_mean_all = self.load_responses_mean('xcorr')
 
-        err_Rmean = np.array([0.0003528, 0.0004943, 0.0004696, 0.0005272]) #values from Marco from JK, see slack on 14th of March, propagate errors
+        err_Rmean = np.array([0.0003528, 0.0004943, 0.0004696,
+                              0.0005272])  # values from Marco from JK, see slack on 14th of March, propagate errors
         print R_mean_all
         for l in range(len(self.zbins['lbins'])):
 
             for s in range(len(self.zbins['sbins'])):
                 R_mean = R_mean_all[s]
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
-                #theta, R_nk, _, _ = self.load_responses_nk(path_test, lens_random)
+                # theta, R_nk, _, _ = self.load_responses_nk(path_test, lens_random)
                 theta, R_nk_jk, err = self.load_responses_nk_errors(path_test, lens_random)
-                cov = np.loadtxt(path_test + 'cov_R_nk_JK_%s'%lens_random)
+                cov = np.loadtxt(path_test + 'cov_R_nk_JK_%s' % lens_random)
 
                 if mask_scales:
-                    ax[s][l].axvspan(self.config['thlims'][0]*0.8, self.plotting['th_limit'][l], color='gray', alpha=0.2)                
-                    mask = theta>self.plotting['th_limit'][l]
-                    chi2 = self.compute_chi2_consistency(datavector=R_nk_jk[mask], constant=R_mean, cov=(cov[mask].T)[mask].T)
+                    ax[s][l].axvspan(self.config['thlims'][0] * 0.8, self.plotting['th_limit'][l], color='gray',
+                                     alpha=0.2)
+                    mask = theta > self.plotting['th_limit'][l]
+                    chi2 = self.compute_chi2_consistency(datavector=R_nk_jk[mask], constant=R_mean,
+                                                         cov=(cov[mask].T)[mask].T)
                     save = 'mask_scales'
                     ndf = len(R_nk_jk[mask])
-                    c, err_c, chi2_c, ndf_c = self.fit_constant_minuit(datavector=R_nk_jk[mask], cov=(cov[mask].T)[mask].T)
-                    
+                    c, err_c, chi2_c, ndf_c = self.fit_constant_minuit(datavector=R_nk_jk[mask],
+                                                                       cov=(cov[mask].T)[mask].T)
+
                 else:
                     chi2 = self.compute_chi2_consistency(datavector=R_nk_jk, constant=R_mean, cov=cov)
                     save = 'all_scales'
@@ -1487,23 +1534,24 @@ class ResponsesScale(GGL):
                     c_ls = self.fit_constant_least_squares(datavector=R_nk_jk, cov=cov, R0=R_mean)
 
                 ax[s][l].margins(x=0, y=0.3)
-                t = np.linspace(0,max(theta)*2, 10)
+                t = np.linspace(0, max(theta) * 2, 10)
                 ax[s][l].plot(t, [R_mean] * len(t), '-', lw=2, color=c1, mec=c1, label=r'$R_{\mathrm{mean}}$')
-                ax[s][l].fill_between(t, np.array([R_mean - err_Rmean[s] for i in t]), 
-                              np.array([R_mean + err_Rmean[s] for i in t]), alpha=0.4, edgecolor=c1, facecolor=c1)
-                #ax[s][l].plot(theta, R_nk, '-', lw=2, color=c2, mec=c2, label=r'$R_{\mathrm{nk}}$')
-                #ax[s][l].plot(theta, [np.mean(R_nk)] * len(theta), '--', lw=2, color=c2, mec=c2,
+                ax[s][l].fill_between(t, np.array([R_mean - err_Rmean[s] for i in t]),
+                                      np.array([R_mean + err_Rmean[s] for i in t]), alpha=0.4, edgecolor=c1,
+                                      facecolor=c1)
+                # ax[s][l].plot(theta, R_nk, '-', lw=2, color=c2, mec=c2, label=r'$R_{\mathrm{nk}}$')
+                # ax[s][l].plot(theta, [np.mean(R_nk)] * len(theta), '--', lw=2, color=c2, mec=c2,
                 #              label=r'$\overline{R_{\mathrm{nk}}}$')
-                ax[s][l].errorbar(theta, R_nk_jk, err, fmt = 'o', color=c3, mec=c3, markersize=3., label=r'$R_{\mathrm{nk, jk}}$')
-                #ax[s][l].plot(theta, [np.mean(R_nk_jk)] * len(theta), ':', lw=2, color=c3, mec=c3,
+                ax[s][l].errorbar(theta, R_nk_jk, err, fmt='o', color=c3, mec=c3, markersize=3.,
+                                  label=r'$R_{\mathrm{nk, jk}}$')
+                # ax[s][l].plot(theta, [np.mean(R_nk_jk)] * len(theta), ':', lw=2, color=c3, mec=c3,
                 #              label=r'$\overline{R_{\mathrm{nk, jk}}}$')
 
-
-                #ax[s][l].plot(theta, [c_ls] * len(theta), '--', lw=2, color=c3, mec=c3,
+                # ax[s][l].plot(theta, [c_ls] * len(theta), '--', lw=2, color=c3, mec=c3,
                 #              label=r'Fit with least squares')
-                ax[s][l].fill_between(t, np.array([c - err_c for i in t]), 
-                              np.array([c + err_c for i in t]), alpha=0.4, edgecolor=c3, facecolor=c3, 
-                              label='Fit to a constant')
+                ax[s][l].fill_between(t, np.array([c - err_c for i in t]),
+                                      np.array([c + err_c for i in t]), alpha=0.4, edgecolor=c3, facecolor=c3,
+                                      label='Fit to a constant')
 
                 ax[s][l].set_xscale('log')
                 ax[s][l].set_xlim(self.config['thlims'][0], self.config['thlims'][1])
@@ -1514,18 +1562,19 @@ class ResponsesScale(GGL):
                 if s == 3:
                     ax[s][l].set_xlabel(r'$\theta$ [arcmin]', size='larger')
                 if l == 0:
-                    ax[s][l].set_ylabel('%s\n' % self.plotting['redshift_s'][s] + r'Responses', size='larger', linespacing=3)
+                    ax[s][l].set_ylabel('%s\n' % self.plotting['redshift_s'][s] + r'Responses', size='larger',
+                                        linespacing=3)
                 if s == 0:
                     ax[s][l].set_title(self.plotting['redshift_l'][l], size='larger')
 
-                diff = R_mean/R_nk_jk - 1
+                diff = R_mean / R_nk_jk - 1
 
-                #ax[s][l].text(0.5, 0.88,
+                # ax[s][l].text(0.5, 0.88,
                 #              r'Mean $R_{\mathrm{mean}}/R_{\mathrm{nk}}-1 = %0.2f \%%$' % (100 * np.mean(diff)),
                 #              horizontalalignment='center', verticalalignment='center', transform=ax[s][l].transAxes,
                 #              fontsize='medium')
 
-                #ax[s][l].text(0.5, 0.79,
+                # ax[s][l].text(0.5, 0.79,
                 #              r'Max $R_{\mathrm{mean}}/R_{\mathrm{nk}}-1 = %0.2f \%%$' % (100 * np.max(np.absolute(diff))),
                 #              horizontalalignment='center', verticalalignment='center', transform=ax[s][l].transAxes,
                 #              fontsize='medium')
@@ -1536,8 +1585,7 @@ class ResponsesScale(GGL):
                               fontsize='medium')
 
         ax[0][4].legend(frameon=False, fontsize=10, loc='lower right')
-        self.save_plot('plot_responses_scale_dependence_%s_%s'%(save, lens_random))
-
+        self.save_plot('plot_responses_scale_dependence_%s_%s' % (save, lens_random))
 
     def plot_sigmas(self, lens_random, mask_scales, string):
         """
@@ -1554,7 +1602,8 @@ class ResponsesScale(GGL):
         cmap_step = 0.25
         c1 = plt.get_cmap(cmap)(0.)
         c2 = plt.get_cmap(cmap)(0.6)
-        fig, ax = plt.subplots(len(self.zbins['sbins']), len(self.zbins['lbins']), figsize=(16.5, 13.2), sharey=True, sharex=True)
+        fig, ax = plt.subplots(len(self.zbins['sbins']), len(self.zbins['lbins']), figsize=(16.5, 13.2), sharey=True,
+                               sharex=True)
         fig.subplots_adjust(hspace=0.1, wspace=0.1)
 
         R_mean_all = self.load_responses_mean('xcorr')
@@ -1564,7 +1613,6 @@ class ResponsesScale(GGL):
         gammat_file = measurement.load_twopointfile(string)
         gammat = gammat_file.spectra[0]
 
-
         for l in range(len(self.zbins['lbins'])):
 
             for s in range(len(self.zbins['sbins'])):
@@ -1573,29 +1621,31 @@ class ResponsesScale(GGL):
                 theta, R_nk, _ = self.load_responses_nk_errors(path_test, lens_random)
                 path_test_measurement = measurement.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
                 cov = np.loadtxt(path_test_measurement + 'cov_gt')
-                _, gt = gammat.get_pair(l+1, s+1)
-                err = gammat.get_error(l+1, s+1)
-                diff_err = (R_mean/R_nk-1)*gt/err
-                diff = (R_mean/R_nk-1)*gt
+                _, gt = gammat.get_pair(l + 1, s + 1)
+                err = gammat.get_error(l + 1, s + 1)
+                diff_err = (R_mean / R_nk - 1) * gt / err
+                diff = (R_mean / R_nk - 1) * gt
 
                 if mask_scales:
-                    ax[s][l].axvspan(self.config['thlims'][0]*0.8, self.plotting['th_limit'][l], color='gray', alpha=0.2)                
-                    mask = theta>self.plotting['th_limit'][l]
-                    chi2 = self.compute_chi2_consistency(datavector=R_mean/R_nk[mask]*gt[mask], constant=gt[mask], cov=(cov[mask].T)[mask].T)
+                    ax[s][l].axvspan(self.config['thlims'][0] * 0.8, self.plotting['th_limit'][l], color='gray',
+                                     alpha=0.2)
+                    mask = theta > self.plotting['th_limit'][l]
+                    chi2 = self.compute_chi2_consistency(datavector=R_mean / R_nk[mask] * gt[mask], constant=gt[mask],
+                                                         cov=(cov[mask].T)[mask].T)
                     save = 'mask_scales'
                     ndf = len(R_nk[mask])
                 else:
-                    chi2 = self.compute_chi2_consistency(datavector=R_mean/R_nk*gt, constant=gt, cov=cov)
+                    chi2 = self.compute_chi2_consistency(datavector=R_mean / R_nk * gt, constant=gt, cov=cov)
                     save = 'all_scales'
                     ndf = len(R_nk)
 
                 print 'l, s, chi2:', l, s, chi2
                 ax[s][l].plot(theta, diff_err, lw=2, color=c1, mec=c1)
-                ax[s][l].axhline(y=0, color= 'k', ls=':')
-                #ax[s][l].plot(theta, err, lw=2, color=c2, mec=c2, label=r'$\sigma_{\gamma_t, \mathrm{JK}}$')
-                #ax[s][l].plot(theta, diff/err, lw=2, color=c2, mec=c2, label=r'$(R_{\mathrm{nk}} - R_{\mathrm{mean}})/\sigma_{\gamma_t}$')
+                ax[s][l].axhline(y=0, color='k', ls=':')
+                # ax[s][l].plot(theta, err, lw=2, color=c2, mec=c2, label=r'$\sigma_{\gamma_t, \mathrm{JK}}$')
+                # ax[s][l].plot(theta, diff/err, lw=2, color=c2, mec=c2, label=r'$(R_{\mathrm{nk}} - R_{\mathrm{mean}})/\sigma_{\gamma_t}$')
                 ax[s][l].set_xscale('log')
-                #ax[s][l].set_yscale('log')
+                # ax[s][l].set_yscale('log')
                 ax[s][l].set_xlim(self.config['thlims'][0], self.config['thlims'][1])
                 ax[s][l].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%0.0f$'))
                 ax[s][l].tick_params(axis='both', which='major', labelsize='larger')
@@ -1604,7 +1654,9 @@ class ResponsesScale(GGL):
                 if s == 3:
                     ax[s][l].set_xlabel(r'$\theta$ [arcmin]', size='larger')
                 if l == 0:
-                    ax[s][l].set_ylabel('%s\n' % self.plotting['redshift_s'][s] + r'$(R_{\mathrm{mean}}/R_{\mathrm{nk}}-1)\gamma_t/\sigma_{\gamma_t, \mathrm{JK}}$', size='larger', linespacing=3)
+                    ax[s][l].set_ylabel('%s\n' % self.plotting['redshift_s'][
+                        s] + r'$(R_{\mathrm{mean}}/R_{\mathrm{nk}}-1)\gamma_t/\sigma_{\gamma_t, \mathrm{JK}}$',
+                                        size='larger', linespacing=3)
                 if s == 0:
                     ax[s][l].set_title(self.plotting['redshift_l'][l], size='larger')
 
@@ -1614,8 +1666,7 @@ class ResponsesScale(GGL):
                               fontsize='medium')
 
         ax[0][4].legend(frameon=False, fontsize=16, loc='lower right')
-        self.save_plot('plot_responses_%s_diff_%s'%(lens_random, string))
-
+        self.save_plot('plot_responses_%s_diff_%s' % (lens_random, string))
 
 
 class ResponsesProjection(GGL):
@@ -1642,44 +1693,44 @@ class ResponsesProjection(GGL):
         lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
 
         for sbin in self.zbins['sbins']:
-    		print 'Running measurement for source %s.' % sbin
+            print 'Running measurement for source %s.' % sbin
 
-		if self.basic['mode'] == 'data':
-		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
-		    R = source['Rmean']
-                    print 'R = source[Rmean]', R, sbin
+            if self.basic['mode'] == 'data':
+                source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins[sbin][0],
+                                               zlim_high=self.zbins[sbin][1])
+                R = source['Rmean']
+                print 'R = source[Rmean]', R, sbin
 
-		if self.basic['mode'] == 'data_y1sources':
-		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
+            if self.basic['mode'] == 'data_y1sources':
+                source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits' % sbin[1])
 
-    		for l, lbin in enumerate(self.zbins['lbins']):
-    		    print 'Running measurement for lens %s.' % lbin
-    		    path_test = self.get_path_test(lbin, sbin)
-    		    make_directory(path_test)
+            for l, lbin in enumerate(self.zbins['lbins']):
+                print 'Running measurement for lens %s.' % lbin
+                path_test = self.get_path_test(lbin, sbin)
+                make_directory(path_test)
 
-    		    lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
+                lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
 
-    		    theta, R, Rx, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
-    		    #self.save_runs(path_test, theta, R, Rx, errs, weights, npairs, False)
-    		    Rnum, Rxnum, wnum = self.numerators_jackknife(R, Rx, weights)
+                theta, R, Rx, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
+                # self.save_runs(path_test, theta, R, Rx, errs, weights, npairs, False)
+                Rnum, Rxnum, wnum = self.numerators_jackknife(R, Rx, weights)
 
-                    random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+                random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
 
-    		    theta, R, Rx, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
-    		    #self.save_runs(path_test, theta, R, Rx, errs, weights, npairs, True)
-    		    Rnum_r, Rxnum_r, wnum_r = self.numerators_jackknife(R, Rx, weights)
+                theta, R, Rx, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
+                # self.save_runs(path_test, theta, R, Rx, errs, weights, npairs, True)
+                Rnum_r, Rxnum_r, wnum_r = self.numerators_jackknife(R, Rx, weights)
 
-    		    R_all = Rnum/wnum
-                    R_r_all = Rnum_r/wnum_r
-    		    Rx_all = Rxnum/wnum
-                    Rx_r_all = Rxnum_r/wnum_r
+                R_all = Rnum / wnum
+                R_r_all = Rnum_r / wnum_r
+                Rx_all = Rxnum / wnum
+                Rx_r_all = Rxnum_r / wnum_r
 
-    		    self.process_run(R_all, theta, path_test, 'R')
-    		    self.process_run(Rx_all, theta, path_test, 'Rx')
-    		    self.process_run(R_r_all, theta, path_test, 'R_randoms')
-    		    self.process_run(Rx_r_all, theta, path_test, 'Rx_randoms')
+                self.process_run(R_all, theta, path_test, 'R')
+                self.process_run(Rx_all, theta, path_test, 'Rx')
+                self.process_run(R_r_all, theta, path_test, 'R_randoms')
+                self.process_run(Rx_r_all, theta, path_test, 'Rx_randoms')
 
-        
 
 class TestStars(GGL):
     """
@@ -1771,119 +1822,37 @@ class TestStars(GGL):
         self.save_plot('plot_stars')
 
 
-class TestPSF(GGL):
+class TestPSF():
     """
     SubClass to test if the psf residuals are compatible with zero.
     Uses no tomography for the lens sample.
     """
 
-    def __init__(self, basic, config, paths, zbins, plotting):
-        GGL.__init__(self, basic, config, paths)
+    def __init__(self, ggl_class, config, paths, zbins, plotting):
         self.zbins = zbins
         self.plotting = plotting
+        self.ggl = ggl_class
+        self.paths = paths
+        self.config = config
 
-    def get_path_test(self):
-        return os.path.join(self.paths['runs_config'], 'psfresiduals') + '/'
+    def get_path_test(self, band):
+        return os.path.join(self.paths['runs_config'], 'psfresiduals_band_', band) + '/'
 
-    def save_psf_residuals(self, ra_lims, dec_lims):
-        """
-        Computes the psf residuals for the r band and saves them to a file.
-        """
-
-        info = pf.open(paths['y1base'] + 'cats/y1a1-v13/exposure_info_y1a1-v13.fits')[1].data
-        exp = info['exp']
-        print 'Original info:', len(exp)
-        fil = info['filter']
-        flag_info = info['flag']
-
-        min_ra, max_ra = ra_lims
-        min_dec, max_dec = dec_lims
-
-        # Use only r-band
-        mask_info = (fil == 'r')
-        exp = exp[mask_info]
-        print 'Only r band:', len(exp)
-
-        # To not have repeated exposure names due to different ccds (in info file every ccd has a line)
-        exp_unique = np.unique(exp)
-        print 'All ccds:', len(exp_unique)
-        print exp_unique
-
-        ra_all, dec_all, psf1_all, psf2_all, res1_all, res2_all, mag_all = [], [], [], [], [], [], []
-
-        for i in range(len(exp_unique)):
-            # Load every exposure
-            data = pf.open(paths['y1base'] + 'cats/y1a1-v13/psf_cats/%s_exppsf.fits' % exp_unique[i])[1].data
-            ra = data['ra']
-            dec = data['dec']
-            e1 = data['e1']
-            e2 = data['e2']
-            psf1 = data['psf_e1']
-            psf2 = data['psf_e2']
-            # Resiual psf is the difference between the measurement of the psf (e1) and the model of the psf(psfex)
-            # at the position of the stars, that is the only place you can measure the psf
-            res1 = e1 - psf1
-            res2 = e2 - psf2
-            flag = data['flag']
-            mag = data['mag']
-            # Use only reserved stars and spt
-            mask = ((dec > min_dec) & (dec < max_dec) & (flag == 64))
-            ra_all.extend(ra[mask])
-            dec_all.extend(dec[mask])
-            psf1_all.extend(psf1[mask])
-            psf2_all.extend(psf2[mask])
-            res1_all.extend(res1[mask])
-            res2_all.extend(res2[mask])
-            mag_all.extend(mag[mask])
-        # Convert to numpy array and simplify name
-        # plt.hist(mag_all, bins=25)
-        ra = np.array(ra_all)
-        dec = np.array(dec_all)
-        psf1 = np.array(psf1_all)
-        psf2 = np.array(psf2_all)
-        res1 = np.array(res1_all)
-        res2 = np.array(res2_all)
-        # w = np.ones(len(ra))
-        print 'Number of exposures:', len(ra)
-
-        c1 = pf.Column(name='RA', format='E', array=ra)
-        c2 = pf.Column(name='DEC', format='E', array=dec)
-        c3 = pf.Column(name='E1', format='E', array=res1)
-        c4 = pf.Column(name='E2', format='E', array=res2)
-
-        CC = [c1, c2, c3, c4]
-        hdu = pf.new_table(CC, nrows=len(ra))
-        hdu.writeto(self.paths['y1'] + 'psfresiduals.fits', clobber=True)
+    def get_path_test_Tres(self, band):
+        return os.path.join(self.paths['runs_config'], 'Tresiduals_band_', band) + '/'
 
     def save_psf_residuals_y3(self, ra_lims, dec_lims):
         """
         Computes the psf residuals for the r band and saves them to a file.
         """
 
-        # info = pf.open(paths['y1base'] + 'cats/y1a1-v13/exposure_info_y1a1-v13.fits')[1].data
-        # exp = info['exp']
-        # print 'Original info:', len(exp)
-        # fil = info['filter']
-        # flag_info = info['flag']
-        #
         min_ra, max_ra = ra_lims
         min_dec, max_dec = dec_lims
-        #
-        # # Use only r-band
-        # mask_info = (fil == 'r')
-        # exp = exp[mask_info]
-        # print 'Only r band:', len(exp)
-        #
-        # # To not have repeated exposure names due to different ccds (in info file every ccd has a line)
-        # exp_unique = np.unique(exp)
-        # print 'All ccds:', len(exp_unique)
-        # print exp_unique
+        ra_all_bandr, dec_all_bandr, psf1_all_bandr, psf2_all_bandr, res1_all_bandr, res2_all_bandr, mag_all_bandr, exp_all_bandr, band_all_bandr, T_model_bandr, dT_model_bandr = [], [], [], [], [], [], [], [], [], [], []
 
-        ra_all_bandr, dec_all_bandr, psf1_all_bandr, psf2_all_bandr, res1_all_bandr, res2_all_bandr, mag_all_bandr, exp_all_bandr, band_all_bandr = [], [], [], [], [], [], [], [], []
+        ra_all_bandi, dec_all_bandi, psf1_all_bandi, psf2_all_bandi, res1_all_bandi, res2_all_bandi, mag_all_bandi, exp_all_bandi, band_all_bandi, T_model_bandi, dT_model_bandi = [], [], [], [], [], [], [], [], [], [], []
 
-        ra_all_bandi, dec_all_bandi, psf1_all_bandi, psf2_all_bandi, res1_all_bandi, res2_all_bandi, mag_all_bandi, exp_all_bandi, band_all_bandi = [], [], [], [], [], [], [], [], []
-
-        ra_all_bandz, dec_all_bandz, psf1_all_bandz, psf2_all_bandz, res1_all_bandz, res2_all_bandz, mag_all_bandz, exp_all_bandz, band_all_bandz = [], [], [], [], [], [], [], [], []
+        ra_all_bandz, dec_all_bandz, psf1_all_bandz, psf2_all_bandz, res1_all_bandz, res2_all_bandz, mag_all_bandz, exp_all_bandz, band_all_bandz, T_model_bandz, dT_model_bandz = [], [], [], [], [], [], [], [], [], [], []
 
         exposures = []
 
@@ -1900,29 +1869,37 @@ class TestPSF(GGL):
 
         for i in range(len(exp_unique)):
 
-            if np.mod(i,100) == 0:
+            if np.mod(i, 1000) == 0:
                 print i
 
-            # Load every exposure
-            data = pf.open(y3_exp_dir + str(exp_unique[i]) + '/exp_psf_cat_%s.fits' % exp_unique[i])[1].data
-            info = pf.open(y3_exp_dir + str(exp_unique[i]) + '/exp_psf_cat_%s.fits' % exp_unique[i])[2].data
-
-            flag = np.array(info['flag'])
+            filename_h = y3_exp_dir + str(exp_unique[i]) + '/exp_psf_cat_%s.fits' % exp_unique[i]
+            read_file = fio.FITS(filename_h)
+            data = read_file[1]
+            info = read_file[2]
+            flag = info['flag'].read()
 
             if np.sum(flag) == 0:
-                band = info['band'][0][0]
-                ra = data['ra']
-                dec = data['dec']
-                obs_e1 = data['obs_e1']
-                obs_e2 = data['obs_e2']
-                piff_e1 = data['piff_e1']
-                piff_e2 = data['piff_e2']
+                band = (info['band'].read())[0][0]
+                ra = data['ra'].read()
+                dec = data['dec'].read()
+                obs_e1 = data['obs_e1'].read()
+                obs_e2 = data['obs_e2'].read()
+                piff_e1 = data['piff_e1'].read()
+                piff_e2 = data['piff_e2'].read()
+                obs_flag = data['obs_flag'].read()
+
+                piff_T = data['piff_T'].read()
+                obs_T = data['obs_T'].read()
+
+                res_T = piff_T - obs_T
+
+                mag = data['mag'].read()
+
                 # Resiual psf is the difference between the measurement of the psf (e1) and the model of the psf(psfex)
                 # at the position of the stars, that is the only place you can measure the psf
                 res1 = obs_e1 - piff_e1
                 res2 = obs_e2 - piff_e2
-                obs_flag = data['obs_flag']
-                mag = data['mag']
+
                 # Use only reserved stars and spt
                 mask = ((dec > min_dec) & (dec < max_dec) & (obs_flag == 64))
 
@@ -1935,6 +1912,8 @@ class TestPSF(GGL):
                     res1_all_bandr.extend(res1[mask])
                     res2_all_bandr.extend(res2[mask])
                     mag_all_bandr.extend(mag[mask])
+                    T_model_bandr.extend(piff_T[mask])
+                    dT_model_bandr.extend(res_T[mask])
 
                 elif band == 'i':
                     ra_all_bandi.extend(ra[mask])
@@ -1944,6 +1923,9 @@ class TestPSF(GGL):
                     res1_all_bandi.extend(res1[mask])
                     res2_all_bandi.extend(res2[mask])
                     mag_all_bandi.extend(mag[mask])
+                    T_model_bandi.extend(piff_T[mask])
+                    dT_model_bandi.extend(res_T[mask])
+
 
                 elif band == 'z':
                     ra_all_bandz.extend(ra[mask])
@@ -1953,6 +1935,8 @@ class TestPSF(GGL):
                     res1_all_bandz.extend(res1[mask])
                     res2_all_bandz.extend(res2[mask])
                     mag_all_bandz.extend(mag[mask])
+                    T_model_bandz.extend(piff_T[mask])
+                    dT_model_bandz.extend(res_T[mask])
 
                 else:
                     print 'no correct band alloted'
@@ -1974,8 +1958,19 @@ class TestPSF(GGL):
         c4 = pf.Column(name='E2', format='E', array=res2_bandr)
 
         CC = [c1, c2, c3, c4]
-        hdu = pf.new_table(CC, nrows=len(ra_bandr))
+        hdu = pf.BinTableHDU.from_columns(CC, nrows=len(ra_bandr))
         hdu.writeto(self.paths['y3'] + 'psfresiduals_bandr.fits', clobber=True)
+
+        c1 = pf.Column(name='RA', format='E', array=ra_bandr)
+        c2 = pf.Column(name='DEC', format='E', array=dec_bandr)
+        c3 = pf.Column(name='E1', format='E',
+                       array=np.array(psf1_all_bandr) * np.array(dT_model_bandr) / np.array(T_model_bandr))
+        c4 = pf.Column(name='E2', format='E',
+                       array=np.array(psf2_all_bandr) * np.array(dT_model_bandr) / np.array(T_model_bandr))
+
+        CC = [c1, c2, c3, c4]
+        hdu = pf.BinTableHDU.from_columns(CC, nrows=len(ra_bandr))
+        hdu.writeto(self.paths['y3'] + 'Tresiduals_bandr.fits', clobber=True)
 
         ra_bandi = np.array(ra_all_bandi)
         dec_bandi = np.array(dec_all_bandi)
@@ -1992,8 +1987,19 @@ class TestPSF(GGL):
         c4 = pf.Column(name='E2', format='E', array=res2_bandi)
 
         CC = [c1, c2, c3, c4]
-        hdu = pf.new_table(CC, nrows=len(ra_bandi))
+        hdu = pf.BinTableHDU.from_columns(CC, nrows=len(ra_bandi))
         hdu.writeto(self.paths['y3'] + 'psfresiduals_bandi.fits', clobber=True)
+
+        c1 = pf.Column(name='RA', format='E', array=ra_bandi)
+        c2 = pf.Column(name='DEC', format='E', array=dec_bandi)
+        c3 = pf.Column(name='E1', format='E',
+                       array=np.array(psf1_all_bandi) * np.array(dT_model_bandi) / np.array(T_model_bandi))
+        c4 = pf.Column(name='E2', format='E',
+                       array=np.array(psf2_all_bandi) * np.array(dT_model_bandi) / np.array(T_model_bandi))
+
+        CC = [c1, c2, c3, c4]
+        hdu = pf.BinTableHDU.from_columns(CC, nrows=len(ra_bandi))
+        hdu.writeto(self.paths['y3'] + 'Tresiduals_bandi.fits', clobber=True)
 
         ra_bandz = np.array(ra_all_bandz)
         dec_bandz = np.array(dec_all_bandz)
@@ -2011,94 +2017,123 @@ class TestPSF(GGL):
         c4 = pf.Column(name='E2', format='E', array=res2_bandz)
 
         CC = [c1, c2, c3, c4]
-        hdu = pf.new_table(CC, nrows=len(ra_bandz))
+        hdu = pf.BinTableHDU.from_columns(CC, nrows=len(ra_bandz))
         hdu.writeto(self.paths['y3'] + 'psfresiduals_bandz.fits', clobber=True)
 
-    def run(self):
+        c1 = pf.Column(name='RA', format='E', array=ra_bandz)
+        c2 = pf.Column(name='DEC', format='E', array=dec_bandz)
+        c3 = pf.Column(name='E1', format='E',
+                       array=np.array(psf1_all_bandz) * np.array(dT_model_bandz) / np.array(T_model_bandz))
+        c4 = pf.Column(name='E2', format='E',
+                       array=np.array(psf2_all_bandz) * np.array(dT_model_bandz) / np.array(T_model_bandz))
+
+        CC = [c1, c2, c3, c4]
+        hdu = pf.BinTableHDU.from_columns(CC, nrows=len(ra_bandz))
+        hdu.writeto(self.paths['y3'] + 'Tresiduals_bandz.fits', clobber=True)
+
+    def run_y3(self, bands):
         """
         Obtains the tangential component of the psf residuals around lenses, with random point subtraction.
         Obtains the corresponding jackknife covariance.
         """
 
-        lens = pf.getdata(self.paths['y1'] + 'lens.fits')
-        masklens = ((lens['z'] > self.zbins['l1'][0]) & (lens['z'] < self.zbins['l5'][1]))
+        lens = self.ggl.lens
+        masklens = ((lens['z'] > zbins['l1'][0]) & (lens['z'] < zbins['l5'][1]))
         lens = lens[masklens]
 
-        random = pf.getdata(self.paths['y1'] + 'random.fits')
-        maskrandom = ((random['z'] > self.zbins['l1'][0]) & (random['z'] < self.zbins['l5'][1]))
-        print self.zbins['l1'][0]
-        print self.zbins['l5'][1]
-        random = random[maskrandom]
-
-        psfres = pf.getdata(self.paths['y1'] + 'psfresiduals.fits')
-
-        path_test = self.get_path_test()
-        make_directory(path_test)
-
-        print 'PSF residuals around lenses...'
-        theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, psfres, 'NG')
-        gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
-
-        print 'PSF residuals around randoms...'
-        theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, psfres, 'NG')
-        gtnum_r, gxnum_r, wnum_r = self.numerators_jackknife(gts, gxs, weights)
-
-        gt_all = gtnum / wnum - gtnum_r / wnum_r
-
-        self.process_run(gt_all, theta, path_test, 'gt')
-
-    def run_y3(self,bands):
-        """
-        Obtains the tangential component of the psf residuals around lenses, with random point subtraction.
-        Obtains the corresponding jackknife covariance.
-        """
-
-        lens = pf.getdata(self.paths['y3'] + 'lens.fits')
-        masklens = ((lens['z'] > self.zbins['l1'][0]) & (lens['z'] < self.zbins['l5'][1]))
-        lens = lens[masklens]
-
-        random = pf.getdata(self.paths['y3'] + 'random.fits')
-        maskrandom = ((random['z'] > self.zbins['l1'][0]) & (random['z'] < self.zbins['l5'][1]))
-        print self.zbins['l1'][0]
-        print self.zbins['l5'][1]
+        random = self.ggl.random
+        maskrandom = ((random['z'] > zbins['l1'][0]) & (random['z'] < zbins['l5'][1]))
+        print zbins['l1'][0]
+        print zbins['l5'][1]
         random = random[maskrandom]
 
         for band in bands:
+            print band
 
-            psfres = pf.getdata(self.paths['y3'] + 'psfresiduals_band' + band + '.fits')
+            psfres = pf.open(self.paths['y3'] + 'psfresiduals_band' + band + '.fits')[1].data
 
-            path_test = self.get_path_test()
+            path_test = self.get_path_test(band)
             make_directory(path_test)
 
             print 'PSF residuals around lenses...'
-            theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, psfres, 'NG')
-            gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
+            # ipdb.set_trace()
+            theta, gts, gxs, errs, weights, npairs = self.ggl.run_treecorr_jackknife(lens, psfres, 'NG')
+            gtnum, gxnum, wnum = self.ggl.numerators_jackknife(gts, gxs, weights)
 
             print 'PSF residuals around randoms...'
-            theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, psfres, 'NG')
-            gtnum_r, gxnum_r, wnum_r = self.numerators_jackknife(gts, gxs, weights)
+            theta, gts, gxs, errs, weights, npairs = self.ggl.run_treecorr_jackknife(random, psfres, 'NG')
+            gtnum_r, gxnum_r, wnum_r = self.ggl.numerators_jackknife(gts, gxs, weights)
 
             gt_all = gtnum / wnum - gtnum_r / wnum_r
 
-            self.process_run(gt_all, theta, path_test, 'gt')
+            self.ggl.process_run(gt_all, theta, path_test, 'gt')
 
-    def plot(self):
+    def run_y3_Tres(self, bands):
+        """
+        Obtains the tangential component of the psf residuals around lenses, with random point subtraction.
+        Obtains the corresponding jackknife covariance.
+        """
+
+        lens = self.ggl.lens
+        masklens = ((lens['z'] > zbins['l1'][0]) & (lens['z'] < zbins['l5'][1]))
+        lens = lens[masklens]
+
+        random = self.ggl.random
+        maskrandom = ((random['z'] > zbins['l1'][0]) & (random['z'] < zbins['l5'][1]))
+        print zbins['l1'][0]
+        print zbins['l5'][1]
+        random = random[maskrandom]
+
+        for band in bands:
+            print band
+
+            psfres = pf.open(self.paths['y3'] + 'Tresiduals_band' + band + '.fits')[1].data
+
+            path_test = self.get_path_test_Tres(band)
+            make_directory(path_test)
+
+            print 'T residuals around lenses...'
+            # ipdb.set_trace()
+            theta, gts, gxs, errs, weights, npairs = self.ggl.run_treecorr_jackknife(lens, psfres, 'NG')
+            gtnum, gxnum, wnum = self.ggl.numerators_jackknife(gts, gxs, weights)
+
+            print 'T residuals around randoms...'
+            theta, gts, gxs, errs, weights, npairs = self.ggl.run_treecorr_jackknife(random, psfres, 'NG')
+            gtnum_r, gxnum_r, wnum_r = self.ggl.numerators_jackknife(gts, gxs, weights)
+
+            gt_all = gtnum / wnum - gtnum_r / wnum_r
+
+            self.ggl.process_run(gt_all, theta, path_test, 'gt')
+
+    def plot(self, bands):
         """
         Makes plot of the psf resdiuals.
         """
-        plt.rc('text', usetex=self.plotting['latex'])
-        plt.rc('font', family='serif')
 
-        cmap = self.plotting['cmap']
-        c1 = plt.get_cmap(cmap)(0)
-        titles_l = r'$0.15 < z < 0.90 $'
-        title_redmagic = 'redMaGiC'
-        fig, ax = plt.subplots(1, 1, figsize=(4, 4))
+        fig, ax = plt.subplots(1, 1, figsize=(8, 6))
         fig.subplots_adjust(hspace=0.0, wspace=0.00)
 
-        path_test = self.get_path_test()
-        th, gt, err = np.loadtxt(path_test + 'mean_gt', unpack=True)
-        ax.errorbar(th, gt, err, fmt='.', color=c1, mec=c1, markersize=5.7, capsize=1.4)
+        colors = ['red', 'blue', 'black']
+        k = 0
+
+        ax.text(0.7, 0.19, r'Null $\chi^2$/ndf ',
+                horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=10)
+
+        for band in bands:
+            cmap = plotting['cmap']
+            c1 = plt.get_cmap(cmap)(0)
+            titles_l = r'$0.15 < z < 0.90 $'
+            title_redmagic = 'redMaGiC'
+
+            path_test = self.get_path_test(band)
+            th, gt, err = np.loadtxt(path_test + 'mean_gt', unpack=True)
+            ax.errorbar((1.025 ** k) * th, gt, err, fmt='.', color=colors[k], mec=c1, markersize=5.7, capsize=1.4,
+                        label='Band ' + band)
+            chi2, ndf = self.ggl.get_chi2(path_test, 'gt')
+            ax.text(0.7, 0.14 - 0.055 * k, r'Band ' + band + ': ' '$%0.1f/%d$' % (chi2, ndf),
+                    horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=9,
+                    color=c1)
+            k += 1
         ax.set_xlim(2.5, 250)
         ax.set_ylim(-1.8 * 10 ** (-5), 1.8 * 10 ** (-5))
         ax.set_xscale('log')
@@ -2110,18 +2145,61 @@ class TestPSF(GGL):
 
         ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('$%d$'))
 
-        ax.set_xlabel(r'$\theta$ [arcmin]', size='large')
-        ax.set_ylabel(r'$\gamma_{t,\mathrm{PSF\, residuals}}$', size='large')
+        ax.set_xlabel(r'$\theta$ [arcmin]', fontsize=16)
+        ax.set_ylabel(r'$\gamma_{t,\mathrm{PSF\, residuals}}$', fontsize=16)
 
-        chi2, ndf = self.get_chi2(path_test, 'gt')
-
-        ax.text(0.7, 0.18, r'Null $\chi^2$/ndf ',
-                horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=10)
-        ax.text(0.7, 0.11, r'$%0.1f/%d$' % (chi2, ndf),
-                horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=12, color=c1)
+        ax.legend(loc='upper right', fontsize=14, frameon=False)
 
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
-        self.save_plot('plot_psfresiduals')
+        self.ggl.save_plot('plot_psfresiduals_bandall')
+
+    def plot_Tres(self, bands):
+        """
+        Makes plot of the psf resdiuals.
+        """
+
+        fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+        fig.subplots_adjust(hspace=0.0, wspace=0.00)
+
+        colors = ['red', 'blue', 'black']
+        k = 0
+
+        ax.text(0.7, 0.19, r'Null $\chi^2$/ndf ',
+                horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=10)
+
+        for band in bands:
+            cmap = plotting['cmap']
+            c1 = plt.get_cmap(cmap)(0)
+            titles_l = r'$0.15 < z < 0.90 $'
+            title_redmagic = 'redMaGiC'
+
+            path_test = self.get_path_test_Tres(band)
+            th, gt, err = np.loadtxt(path_test + 'mean_gt', unpack=True)
+            ax.errorbar((1.025 ** k) * th, gt, err, fmt='.', color=colors[k], mec=c1, markersize=5.7, capsize=1.4,
+                        label='Band ' + band)
+            chi2, ndf = self.ggl.get_chi2(path_test, 'gt')
+            ax.text(0.7, 0.14 - 0.055 * k, r'Band ' + band + ': ' '$%0.1f/%d$' % (chi2, ndf),
+                    horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize=9,
+                    color=c1)
+            k += 1
+        ax.set_xlim(2.5, 250)
+        ax.set_ylim(-1.8 * 10 ** (-5), 1.8 * 10 ** (-5))
+        ax.set_xscale('log')
+        ax.axhline(y=0, ls=':', color='k')
+        ax.text(0.5, 0.85, titles_l, horizontalalignment='center',
+                verticalalignment='center', transform=ax.transAxes, fontsize=12)
+        ax.text(0.5, 0.92, title_redmagic, horizontalalignment='center',
+                verticalalignment='center', transform=ax.transAxes, fontsize=12)
+
+        ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('$%d$'))
+
+        ax.set_xlabel(r'$\theta$ [arcmin]', fontsize=16)
+        ax.set_ylabel(r'$\gamma_{t,\mathrm{T\, residuals}}$', fontsize=16)
+
+        ax.legend(loc='upper right', fontsize=14, frameon=False)
+
+        ax.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+        self.ggl.save_plot('plot_Tresiduals_bandall')
 
 
 class TestSizeSNR(GGL):
@@ -2447,7 +2525,49 @@ class TestSizeSNR(GGL):
         self.save_plot('snr_size')
 
 
-class TestSysMaps(GGL):
+class init_ggl_class(GGL):
+
+    def __init__(self, basic, config, paths, zbins, downsample=1):
+        GGL.__init__(self, basic, config, paths)
+        self.zbins = zbins
+
+        if self.basic['mode'] == 'data':
+            lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
+
+        for sbin in self.zbins['sbins']:
+            print 'Running measurement for source %s.' % sbin
+
+        if self.basic['mode'] == 'data':
+            self.source_all = self.load_metacal_bin(source_all, source_all_5sels, calibrator,
+                                                    zlim_low=self.zbins['sys'][0], zlim_high=self.zbins['sys'][1])
+            self.R = self.source_all['Rmean']
+            print (np.min(self.source_all['bpz_mean'])), (np.max(self.source_all['bpz_mean']))
+
+        if downsample > 1:
+            ind_ds = np.random.randint(0, len(lens_all['z']), int(len(lens_all['z']) / downsample))
+            lens_all = lens_all[ind_ds]
+
+        self.lens = lens_all
+
+        if downsample > 1:
+            ind_ds = np.random.randint(0, len(random_all['z']), int(len(random_all['z']) / downsample))
+            random_all = random_all[ind_ds]
+
+        self.random = random_all
+
+        keys_new_dict = ['ra', 'dec', 'e1', 'e2', 'bpz_zmc']
+        self.source = {}
+
+        for keys in keys_new_dict:
+            if downsample > 1:
+                ind_ds = np.random.randint(0, len(self.source_all[keys]), int(len(self.source_all[keys]) / downsample))
+                self.source[keys] = self.source_all[keys][ind_ds]
+            else:
+                self.source[keys] = self.source_all[keys]
+        del source_all, random_all, lens_all
+
+
+class TestSysMaps():
     """
     SubClass to test if the tangential shear signal has no dependence on observational conditions such as seeing, airmass etc, in each band griz.
     Using the first lens bin and all sources, as in Y1.
@@ -2455,24 +2575,97 @@ class TestSysMaps(GGL):
     The variable band can be: 'g', 'r', 'i', 'z'. We iterate over them. In Y1 we only used r band in the end, because it was used by im3shape.
     """
 
-    def __init__(self, basic, config, paths, zbins, plotting, source_nofz_pars, sysmaps):
-        GGL.__init__(self, basic, config, paths)
+    def __init__(self, ggl_class, config, paths, zbins, plotting, source_nofz_pars, sysmaps):
         self.zbins = zbins
         self.plotting = plotting
         self.source_nofz_pars = source_nofz_pars
         self.sysmaps = sysmaps
+        self.ggl = ggl_class
+        self.paths = paths
 
     def get_path_test(self, map, band):
         return os.path.join(self.paths['runs_config'], 'systematics_maps', map, band) + '/'
 
     def save_systematics_maps_ratios(self, path_test, result_data, result_theory):
-        np.savetxt(path_test + 'data', result_data, header='ratio err_ratio')
-        np.savetxt(path_test + 'theory', result_theory, header='ratio err_ratio')
+        save_suffix = ''
+        if self.sysmaps['separate_jk']:
+            njk = self.sysmaps['separate_jk_njk']
+            save_suffix = save_suffix + '_separate_jk_njk_' + str(njk)
+
+        np.savetxt(path_test + 'data' + save_suffix, result_data, header='ratio err_ratio')
+        np.savetxt(path_test + 'theory' + save_suffix, result_theory, header='ratio err_ratio')
 
     def load_systematics_maps_ratios(self, path_test):
-        data, data_err = np.loadtxt(path_test + 'data', unpack=True)
-        theory, theory_err = np.loadtxt(path_test + 'theory', unpack=True)
+        save_suffix = ''
+        if self.sysmaps['separate_jk']:
+            njk = self.sysmaps['separate_jk_njk']
+            save_suffix = save_suffix + '_separate_jk_njk_' + str(njk)
+
+        data, data_err = np.loadtxt(path_test + 'data' + save_suffix, unpack=True)
+        theory, theory_err = np.loadtxt(path_test + 'theory' + save_suffix, unpack=True)
         return data, data_err, theory, theory_err
+
+
+    def load_theory(self):
+        dataf = pf.open(
+            '/global/project/projectdirs/des/shivamp/ggl_results/data_cov_sys/gammat_theory_FLASKcosmology_covmatG_upsample10_halfarea.fits')
+        data = dataf[2].data['VALUE']
+        cov = dataf[1].data
+        return data, cov
+
+    def ratio_from_theory(self, theta, gtl_all, gth_all, sims, cov_sims):
+
+        ratioA_all = np.zeros(len(gth_all))
+        chi2fit_h = np.zeros(len(gth_all))
+        chi2fit_l = np.zeros(len(gth_all))
+
+        mask = (theta >= source_nofz_pars['thetamin'])
+        for i in range(len(gth_all)):
+            Ah, chi2fit_h[i], _ = functions.minimize_chi2_fit_amplitude((cov_sims[mask].T)[mask].T, gth_all[i][mask],
+                                                                        sims[mask])
+            Al, chi2fit_l[i], _ = functions.minimize_chi2_fit_amplitude((cov_sims[mask].T)[mask].T, gtl_all[i][mask],
+                                                                        sims[mask])
+            ratioA_all[i] = Ah / Al
+
+        ratioA_mean = np.mean(ratioA_all, axis=0)
+        COV_A = (len(ratioA_all) - 1) * np.cov(ratioA_all, bias=True)
+        err_A = np.sqrt(COV_A)
+        return ratioA_mean, err_A
+
+
+    def save_gammat(self, all, theta, path_test, end):
+        """
+        From the jackknife measurements in all jackknife regions but all, constructs covariance, mean and stats.
+        Saves them into file.
+        all: gt_all or gx_all.
+        theta: in arcmin.
+        path_test: where to save the files.
+        end: string to save the files: gt, gx, randoms, etc.
+        """
+        mean = np.mean(all, axis=0)
+        cov = functions.covariance(all, mean)
+        err = np.sqrt(np.diag(cov))
+        chi2 = np.dot(mean.T, np.dot(np.linalg.inv(cov), mean))
+        ndf = len(mean)
+
+        std = np.sqrt((len(all) - 1.)) * np.std(all, axis=0)
+
+        # Hartlap factor
+        N = len(all)  # number of jackknife regions
+        p = len(mean)  # number of angular bins
+        factor = (N - p - 2) / float(N - 1)
+        chi2_hartlap = chi2 * factor
+
+        stats = np.array([chi2_hartlap, ndf])
+
+        np.savetxt(path_test + 'mean_%s' % end, zip(theta, mean, err), header='th, %s, err_%s' % (end, end))
+        np.savetxt(path_test + 'cov_%s' % end, cov)
+        np.savetxt(path_test + 'all_%s' % end, all,
+                   header='%s (sum of %s from all patches except for one, different each time)' % (end, end))
+        np.savetxt(path_test + 'null_chi2_%s' % end, stats.reshape(1, stats.shape[0]),
+                   fmt='%0.1f  %d', header='chi2_hartlap  ndf')
+
+        return theta, mean, err
 
     def visualize_map(self, pix, signal, map, band, nside, nested_bool, name):
         """
@@ -2488,16 +2681,14 @@ class TestSysMaps(GGL):
         make_directory(path)
         plt.savefig(path + '%s_%s%s.pdf' % (map, band, name))
 
-    def load_systematics_map(self, map, band, nside, nested_bool):
+    def load_systematics_map_y3(self, map, band, nside, nested_bool):
         '''
         Loads the systematics map, splits into high and low parts, and plots all maps.
         nested_bool: True if nest, False if ring.
         Returns: pixels corresponding the low half and the high half, for each map.
         '''
-        path = os.path.join(self.paths['y1base'], 'cats', 'systematics_maps') + '/'
-        sys_map = pf.getdata(
-            path + 'Y1A1NEW_COADD_SPT_band_%s/' % band + 'Y1A1NEW_COADD_SPT_band_%s_nside%s_oversamp4_' % (
-                band, nside) + self.sysmaps[map] + '.fits')
+        path = (self.paths['y3_sysmap'])
+        sys_map = pf.open(path + 'y3a2_%s' % band + '_o.%s' % nside + '_t.32768_' + self.sysmaps[map] + '.fits')[1].data
         pix = sys_map['PIXEL']
         sig = sys_map['SIGNAL']
         self.visualize_map(pix, sig, map, band, nside, nested_bool, '')
@@ -2516,14 +2707,43 @@ class TestSysMaps(GGL):
 
         return pix_low, pix_hi
 
-    def load_nzs(self, map, band):
-        """
-	Loads redshift distributions for lenses, sources and source splits, low(l) and high(h).
-	"""
-        zl, nzl = np.loadtxt(self.paths['nz_lens'] + 'lens', unpack=True, usecols=(0, 1))
-        zs, nzsl, nzsh = np.loadtxt(
-            self.paths['y1base'] + 'runs/test_mcal_bpzmof_unblind/nofzs/source_%s_%s_notomo' % (map, band), unpack=True)
-        return zl, nzl, zs, nzsl, nzsh
+    def load_normedsystematics_map_y3(self, map, band, nside, nested_bool):
+        '''
+        Loads the systematics map, splits into high and low parts, and plots all maps.
+        nested_bool: True if nest, False if ring.
+        Returns: pixels corresponding the low half and the high half, for each map.
+        '''
+        path = (self.paths['y3_sysmap'])
+        sys_map = pf.open(path + 'y3a2_%s' % band + '_o.%s' % nside + '_t.32768_' + self.sysmaps[map] + '.fits')[1].data
+        pix = sys_map['PIXEL']
+        sig = sys_map['SIGNAL']
+        self.visualize_map(pix, sig, map, band, nside, nested_bool, '')
+
+        sig_normed = sig / np.mean(sig)
+
+        return pix, sig_normed
+
+    def load_nzs_y3(self, bpz_zmc, zmin, zmax, mask_low, mask_high):
+
+        nzlf = np.loadtxt('/global/u1/s/spandey/xcorr/notebooks/nz_lens_y3_bin1.txt')
+        zl, nzl = nzlf[:, 0], nzlf[:, 1]
+
+        nzbins_total = 150
+
+        delta_z = (zmax - zmin) / nzbins_total
+        zarray_all = np.linspace(zmin, zmax, nzbins_total)
+        zarray_edges = (zarray_all[1:] + zarray_all[:-1]) / 2.
+        zarray = zarray_all[1:-1]
+
+        hist_zmc_low, bin_edges = np.histogram(bpz_zmc[mask_low], bins=zarray_edges)
+
+        hist_zmc_high, bin_edges = np.histogram(bpz_zmc[mask_high], bins=zarray_edges)
+
+        nzsl = hist_zmc_low / (np.sum(hist_zmc_low) * delta_z)
+
+        nzsh = hist_zmc_high / (np.sum(hist_zmc_high) * delta_z)
+
+        return zl, nzl, zarray, nzsl, nzsh
 
     def radec_to_thetaphi(self, ra, dec):
         """
@@ -2534,17 +2754,31 @@ class TestSysMaps(GGL):
         phi = ra * np.pi / 180.
         return theta, phi
 
-    def run(self, maps, bands):
-        """
-        Runs gglensing measurment for all maps and bands.
-        """
+    def plot_uw_ww(self, uw_array, w_array, save_dir, save_suffix):
+        fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+        theta_uw, mean_uw, err_uw = uw_array[0], uw_array[1], uw_array[2]
+        theta_w, mean_w, err_w = w_array[0], w_array[1], w_array[2]
 
-        lens_all = pf.getdata(self.paths['y1'] + 'lens.fits')
-        lens = lens_all[(lens_all['z'] > self.zbins['l1'][0]) & (lens_all['z'] < self.zbins['l1'][1])]
-        random_all = pf.getdata(self.paths['y1'] + 'random.fits')
-        random = random_all[(random_all['z'] > self.zbins['l1'][0]) & (random_all['z'] < self.zbins['l1'][1])]
-        sources = pf.getdata(self.paths['y1'] + 'metacal_sel_allbins.fits')
-        R = self.run_responses_mean_notomo(sources['Rgamma'])
+        ax.errorbar(theta_uw, theta_uw * mean_uw, theta_uw * err_uw, label='Unweighted')
+        ax.errorbar(theta_w * 1.02, theta_w * mean_w, theta_w * err_w, label='Weighted')
+
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+
+        ax.set_xlabel(r'$\theta$', size=20)
+        ax.set_ylabel(r'$\theta \times \gamma_t$', size=20)
+
+        plt.tick_params(axis='both', which='major', labelsize=15)
+        plt.tick_params(axis='both', which='minor', labelsize=15)
+
+        ax.legend(fontsize=20, frameon=False)
+
+        plt.savefig(save_dir + 'uw_ww_gammat_' + save_suffix + 'png')
+
+    def run_wwdd(self, maps, bands):
+        """
+            Runs weighted gglensing measurment for all maps and bands.
+        """
 
         for map in maps:
             print 'Running map %s...' % map
@@ -2555,60 +2789,190 @@ class TestSysMaps(GGL):
                 make_directory(path_test)
 
                 # Load and split the systematics map
-                pix_low, pix_hi = self.load_systematics_map(map, band, self.sysmaps['nside'],
-                                                            self.sysmaps['nested_bool'])
+                pix_all_sys, sys_map_normed = self.load_normedsystematics_map_y3(map, band, self.sysmaps['nside'],
+                                                                                 self.sysmaps['nested_bool'])
 
                 # Building lenses masks, low and high
-                theta_l, phi_l = self.radec_to_thetaphi(lens['ra'], lens['dec'])
+                theta_l, phi_l = self.radec_to_thetaphi(self.ggl.lens['ra'], self.ggl.lens['dec'])
+                pix_all_l = hp.pixelfunc.ang2pix(self.sysmaps['nside'], theta_l, phi_l, self.sysmaps['nested_bool'])
+                mask_sys = np.in1d(pix_all_l, pix_all_sys)
+                self.lens_masked = self.lens[mask_sys]
+                theta_l, phi_l = self.radec_to_thetaphi(self.lens_masked['ra'], self.lens_masked['dec'])
+                pix_all_l = hp.pixelfunc.ang2pix(self.sysmaps['nside'], theta_l, phi_l, self.sysmaps['nested_bool'])
+                ind_weight = np.searchsorted(pix_all_sys, pix_all_l)
+                weight_l = sys_map_normed[ind_weight]
+                self.lens_weighted = copy.deepcopy(self.lens_masked)
+                self.lens_weighted['w'] = weight_l
+
+                # Building randoms masks, low and high
+                theta_r, phi_r = self.radec_to_thetaphi(self.ggl.random['ra'], self.ggl.random['dec'])
+                pix_all_r = hp.pixelfunc.ang2pix(self.sysmaps['nside'], theta_r, phi_r, self.sysmaps['nested_bool'])
+                mask_sys = np.in1d(pix_all_r, pix_all_sys)
+                self.random_masked = self.random[mask_sys]
+
+                # Building sources masks, low and high
+                theta_s, phi_s = self.radec_to_thetaphi(self.ggl.source['ra'], self.ggl.source['dec'])
+                pix_all_s = hp.pixelfunc.ang2pix(self.sysmaps['nside'], theta_s, phi_s, self.sysmaps['nested_bool'])
+                mask_sys = np.in1d(pix_all_s, pix_all_sys)
+
+                keys_new_dict = ['ra', 'dec', 'e1', 'e2']
+                self.source_masked = {}
+
+                for keys in keys_new_dict:
+                    self.source_masked[keys] = self.source[keys][mask_sys]
+
+                ipdb.set_trace()
+                # Computing the measurements for the split halves, both around lenses and randoms
+                print 'Lenses, unweighted'
+                self.theta, self.gtsl, self.gxsl, self.errsl, self.weightsl, self.npairsl = self.ggl.run_treecorr_jackknife(
+                    self.lens_masked, self.source_masked, 'NG')
+                self.gtlnum, self.gxlnum, self.wlnum = self.ggl.numerators_jackknife(self.gtsl, self.gxsl,
+                                                                                     self.weightsl)
+
+                print 'Randoms, low.'
+                self.theta, self.gtsl_r, self.gxsl_r, self.errsl_r, self.weightsl_r, self.npairsl_r = self.ggl.run_treecorr_jackknife(
+                    self.random_masked,
+                    self.source_masked, 'NG')
+                self.gtlnum_r, self.gxlnum_r, self.wlnum_r = self.ggl.numerators_jackknife(self.gtsl_r, self.gxsl_r,
+                                                                                           self.weightsl_r)
+
+                print 'Lenses, weighted'
+                self.theta, self.gtsh, self.gxsh, self.errsh, self.weightsh, self.npairsh = self.ggl.run_treecorr_jackknife(
+                    self.lens_weighted, self.source_masked, 'NG')
+                self.gthnum, self.gxhnum, self.whnum = self.ggl.numerators_jackknife(self.gtsh, self.gxsh,
+                                                                                     self.weightsh)
+
+                # Combining measurements and responses to get gammat
+                gtl_all = (self.gtlnum / self.wlnum) / self.R - (self.gtlnum_r / self.wlnum_r) / self.R
+                gth_all = (self.gthnum / self.whnum) / self.R - (self.gtlnum_r / self.wlnum_r) / self.R
+
+                save_suffix = ''
+                if self.sysmaps['separate_jk']:
+                    njk = self.sysmaps['separate_jk_njk']
+                    save_suffix = save_suffix + '_separate_jk_njk_' + str(njk)
+
+                np.savez(
+                    '/global/u1/s/spandey/ggl_results/gt_weighted_unweighted_npairs_zl_0.15_0.35_zs_0.2_1.2_band_' + band + '_' + str(
+                        map) + save_suffix + '.npz',
+                    gt_weighted=gth_all, gt_unweighted=gtl_all, theta=theta,
+                    npairsl_unweighted=npairsl, npairs_rand=npairsl_r, npairs_weighted=npairsh)
+
+                theta_uw, mean_uw, err_uw = self.save_gammat(gtl_all, theta, '/global/u1/s/spandey/ggl_results/',
+                                                             'unweighted_band_' + band + '_' + str(map))
+                theta_w, mean_w, err_w = self.save_gammat(gth_all, theta, '/global/u1/s/spandey/ggl_results/',
+                                                          'weighted_band_' + band + '_' + str(map))
+
+                self.plot_uw_ww([theta_uw, mean_uw, err_uw], [theta_w, mean_w, err_w],
+                                '/global/u1/s/spandey/xcorr/plots/weighted_unweighted/',
+                                'band_' + band + '_' + str(map))
+
+    def run_y3(self, maps, bands):
+
+        R = self.ggl.R
+        for map in maps:
+            print 'Running map %s...' % map
+            for band in bands:
+                print 'Band %s' % band
+
+                path_test = self.get_path_test(map, band)
+                make_directory(path_test)
+
+                # Load and split the systematics map
+                pix_low, pix_hi = self.load_systematics_map_y3(map, band, self.sysmaps['nside'],
+                                                               self.sysmaps['nested_bool'])
+
+                # Building lenses masks, low and high
+                theta_l, phi_l = self.radec_to_thetaphi(self.ggl.lens['ra'], self.ggl.lens['dec'])
                 pix_all_l = hp.pixelfunc.ang2pix(self.sysmaps['nside'], theta_l, phi_l, self.sysmaps['nested_bool'])
                 maskl_low = np.in1d(pix_all_l, pix_low)
                 maskl_hi = np.in1d(pix_all_l, pix_hi)
 
                 # Building randoms masks, low and high
-                theta_r, phi_r = self.radec_to_thetaphi(random['ra'], random['dec'])
+                theta_r, phi_r = self.radec_to_thetaphi(self.ggl.random['ra'], self.ggl.random['dec'])
                 pix_all_r = hp.pixelfunc.ang2pix(self.sysmaps['nside'], theta_r, phi_r, self.sysmaps['nested_bool'])
                 maskr_low = np.in1d(pix_all_r, pix_low)
                 maskr_hi = np.in1d(pix_all_r, pix_hi)
 
                 # Building sources masks, low and high
-                theta_s, phi_s = self.radec_to_thetaphi(sources['ra'], sources['dec'])
+                theta_s, phi_s = self.radec_to_thetaphi(self.ggl.source['ra'], self.ggl.source['dec'])
                 pix_all_s = hp.pixelfunc.ang2pix(self.sysmaps['nside'], theta_s, phi_s, self.sysmaps['nested_bool'])
                 masks_low = np.in1d(pix_all_s, pix_low)
                 masks_hi = np.in1d(pix_all_s, pix_hi)
 
+                # ipdb.set_trace()
+
+                if self.sysmaps['separate_jk']:
+                    njk = self.sysmaps['separate_jk_njk']
+                    lens_ra_l, lens_dec_l = self.ggl.lens['ra'][maskl_low], self.ggl.lens['dec'][maskl_low]
+                    jkobj_map_l = kmeans_radec.kmeans_sample(np.transpose([lens_ra_l, lens_dec_l]), njk, maxiter=200)
+                    lens_low_jk = jkobj_map_l.find_nearest(np.transpose([lens_ra_l, lens_dec_l]))
+                    lens_low = self.ggl.lens[maskl_low]
+                    lens_low['jk'] = lens_low_jk
+
+                    lens_ra_h, lens_dec_h = self.ggl.lens['ra'][maskl_hi], self.ggl.lens['dec'][maskl_hi]
+                    jkobj_map_h = kmeans_radec.kmeans_sample(np.transpose([lens_ra_h, lens_dec_h]), njk, maxiter=200)
+                    lens_hi_jk = jkobj_map_h.find_nearest(np.transpose([lens_ra_h, lens_dec_h]))
+                    lens_hi = self.ggl.lens[maskl_hi]
+                    lens_hi['jk'] = lens_hi_jk
+
+                    random_low = self.ggl.random[maskr_low]
+                    random_low_jk = jkobj_map_l.find_nearest(np.transpose([random_low['ra'], random_low['dec']]))
+                    random_low['jk'] = random_low_jk
+
+                    random_hi = self.ggl.random[maskr_hi]
+                    random_hi_jk = jkobj_map_h.find_nearest(np.transpose([random_hi['ra'], random_hi['dec']]))
+                    random_hi['jk'] = random_hi_jk
+
+
+
+                else:
+                    lens_low = self.ggl.lens[maskl_low]
+                    lens_hi = self.ggl.lens[maskl_hi]
+                    random_low = self.ggl.random[maskr_low]
+                    random_hi = self.ggl.random[maskr_hi]
+
                 # Computing the measurements for the split halves, both around lenses and randoms
                 print 'Lenses, low.'
-                theta, gtsl, gxsl, errsl, weightsl, npairsl = self.run_treecorr_jackknife(lens[maskl_low],
-                                                                                          sources[masks_low], 'NG')
-                gtlnum, gxlnum, wlnum = self.numerators_jackknife(gtsl, gxsl, weightsl)
+                theta, gtsl, gxsl, errsl, weightsl, npairsl = self.ggl.run_treecorr_jackknife(lens_low,
+                                                                                              self.ggl.source, 'NG')
+                gtlnum, gxlnum, wlnum = self.ggl.numerators_jackknife(gtsl, gxsl, weightsl)
 
                 print 'Randoms, low.'
-                theta, gtsl_r, gxsl_r, errsl_r, weightsl_r, npairsl_r = self.run_treecorr_jackknife(random[maskr_low],
-                                                                                                    sources[masks_low],
-                                                                                                    'NG')
-                gtlnum_r, gxlnum_r, wlnum_r = self.numerators_jackknife(gtsl_r, gxsl_r, weightsl_r)
+                theta, gtsl_r, gxsl_r, errsl_r, weightsl_r, npairsl_r = self.ggl.run_treecorr_jackknife(random_low,
+                                                                                                        self.ggl.source,
+                                                                                                        'NG')
+                gtlnum_r, gxlnum_r, wlnum_r = self.ggl.numerators_jackknife(gtsl_r, gxsl_r, weightsl_r)
 
                 print 'Lenses, high.'
-                theta, gtsh, gxsh, errsh, weightsh, npairsh = self.run_treecorr_jackknife(lens[maskl_hi],
-                                                                                          sources[masks_hi], 'NG')
-                gthnum, gxhnum, whnum = self.numerators_jackknife(gtsh, gxsh, weightsh)
+                theta, gtsh, gxsh, errsh, weightsh, npairsh = self.ggl.run_treecorr_jackknife(lens_hi,
+                                                                                              self.ggl.source, 'NG')
+                gthnum, gxhnum, whnum = self.ggl.numerators_jackknife(gtsh, gxsh, weightsh)
 
                 print 'Randoms, high.'
-                theta, gtsh_r, gxsh_r, errsh_r, weightsh_r, npairsh_r = self.run_treecorr_jackknife(random[maskr_hi],
-                                                                                                    sources[masks_hi],
-                                                                                                    'NG')
-                gthnum_r, gxhnum_r, whnum_r = self.numerators_jackknife(gtsh_r, gxsh_r, weightsh_r)
+                theta, gtsh_r, gxsh_r, errsh_r, weightsh_r, npairsh_r = self.ggl.run_treecorr_jackknife(random_hi,
+                                                                                                        self.ggl.source,
+                                                                                                        'NG')
+                gthnum_r, gxhnum_r, whnum_r = self.ggl.numerators_jackknife(gtsh_r, gxsh_r, weightsh_r)
 
                 # Combining measurements and responses to get gammat
                 gtl_all = (gtlnum / wlnum) / R - (gtlnum_r / wlnum_r) / R
                 gth_all = (gthnum / whnum) / R - (gthnum_r / whnum_r) / R
 
-                # Getting the data ratio using the simulations
-                sims, cov_sims = self.load_sims()
-                ratio, err_ratio = self.ratio_from_sims(theta, gtl_all, gth_all, sims, cov_sims)
+                save_suffix = ''
+                if self.sysmaps['separate_jk']:
+                    njk = self.sysmaps['separate_jk_njk']
+                    save_suffix = save_suffix + '_separate_jk_njk_' + str(njk)
+
+                np.savez('/global/u1/s/spandey/ggl_results/gtl_gth_npairs_zl_0.15_0.35_zs_0.2_1.2_band_' + band + '_' + \
+                         str(map) + save_suffix + '.npz', gth=gth_all, gtl=gtl_all, theta=theta,
+                         npairsl=npairsl, npairsl_r=npairsl_r, npairsh=npairsh, npairsh_r=npairsh_r)
+
+                sims, cov_sims = self.load_theory()
+                ratio, err_ratio = self.ratio_from_theory(theta, gtl_all, gth_all, sims, cov_sims)
 
                 # Load N(z)'s
-                zl, nzl, zs, nzsl, nzsh = self.load_nzs(map, band)
+                zl, nzl, zs, nzsl, nzsh = self.load_nzs_y3(self.ggl.source['bpz_zmc'], zbins['sys'][0], zbins['sys'][1],
+                                                           masks_low, masks_hi)
 
                 # Computing inverse sigma_crit for the splits
                 isch = functions.inv_sigma_crit_eff(zl, zs, nzl, nzsh)
@@ -2646,19 +3010,14 @@ class TestSysMaps(GGL):
                 result_theory = [ratios[0], sigma_tot]
                 self.save_systematics_maps_ratios(path_test, result_data, result_theory)
 
-    def plot(self):
-        """
-        Plots measurments compared to expected theory.
-        Set up for four maps, and a single band.
-        """
-        plt.rc('text', usetex=self.plotting['latex'])
-        plt.rc('font', family='serif')
+    def plot_y3(self, bands):
 
-        #labels_cshort = r'\textsc{Metacal}'
         labels_cshort = 'Metacal'
         fontsize = 16
-        maps = ['airmass', 'fwhm', 'maglimit', 'skybrite']
-        band = 'r'
+        maps = ['maglimit', 'skybrite', 'airmass', 'fwhm']
+        #         maps = ['maglimit',  'skybrite']
+        # maps = ['airmass', 'fwhm']
+        # bands = 'r'
         cmap = self.plotting['cmap']
         cmap_step = 0.25
         c1 = plt.get_cmap(cmap)(cmap_step * 1.5)
@@ -2668,34 +3027,48 @@ class TestSysMaps(GGL):
         fig.subplots_adjust(hspace=0.0, wspace=0.00)
 
         for m, map in enumerate(maps):
-
-            path_test = self.get_path_test(map, band)
-            data, data_err, theory, theory_err = self.load_systematics_maps_ratios(path_test)
             if m % 2 == 0: c = 0
             if m % 2 == 1: c = 1
             if m == 0 or m == 1: f = 0
             if m == 2 or m == 3: f = 1
 
-            color, x = c1, 1
+            x = 1
+            j = 0
+            for band in bands:
+                color = plt.get_cmap(cmap)(cmap_step * 1 * (j + 1))
+                path_test = self.get_path_test(map, band)
+                data, data_err, theory, theory_err = self.load_systematics_maps_ratios(path_test)
 
-            ax[f][c].errorbar(x, data, data_err, fmt='o', color=color, mec=color,
-                              label='%s' % (self.plotting['catname']))
-            x_lin = [x - 0.2, x, x + 0.2]
-            ax[f][c].fill_between(x_lin, np.array([theory - theory_err for i in x_lin]),
-                                  np.array([theory + theory_err for i in x_lin]), alpha=0.4, edgecolor=color,
-                                  facecolor=color,
-                                  label=r'$\Sigma_{\mathrm{crit,eff}}^{-1,\,\mathrm{high}}/ \Sigma_{\mathrm{crit,eff}}^{-1,\,\mathrm{low}} %s$' % (
-                                      labels_cshort))
+                ax[f][c].errorbar(x - 0.1 + 0.1 * j + 1 * j, data, data_err, fmt='o', color=color, mec=color,
+                                  label='band ' + band)
 
-            ax[f][c].set_xlim(0.2, 2.8)
+                x_lin = [x - 0.2 + 1 * j, x + 1 * j, x + 0.2 + 1 * j]
+
+                if band == 'r':
+                    ax[f][c].fill_between(x_lin, np.array([theory - theory_err for i in x_lin]),
+                                          np.array([theory + theory_err for i in x_lin]), alpha=0.4, edgecolor=color,
+                                          facecolor=color,
+                                          label=r'$\Sigma_{\mathrm{crit,eff}}^{-1,\,\mathrm{high}}/ \Sigma_{\mathrm{crit,eff}}^{-1,\,\mathrm{low}}$')
+                else:
+                    ax[f][c].fill_between(x_lin, np.array([theory - theory_err for i in x_lin]),
+                                          np.array([theory + theory_err for i in x_lin]), alpha=0.4, edgecolor=color,
+                                          facecolor=color)
+                j += 1
+
+            ax[f][c].set_xlim(0.0, x + 1 * j + 1)
             ax[f][c].set_xticklabels([])
             ax[f][c].set_xticks([])
             ax[f][c].set_ylim(0.5, 1.5)
             ax[f][0].set_ylabel(r'$\gamma^{\mathrm{high}}_t /\ \gamma^{\mathrm{low}}_t $', fontsize=fontsize)
-            ax[f][c].text(0.5, 0.9, r'\textsc{%s}' % map,
+            ax[f][c].text(0.5, 0.9, map,
                           horizontalalignment='center', verticalalignment='center', transform=ax[f][c].transAxes,
                           fontsize=12, color='k')
 
         ax[1][0].legend(frameon=False, loc='best', numpoints=1, fontsize=9.8)
-        self.save_plot('systematics_maps')
 
+        save_suffix = ''
+        if self.sysmaps['separate_jk']:
+            njk = self.sysmaps['separate_jk_njk']
+            save_suffix = save_suffix + '_separate_jk_njk_' + str(njk)
+
+        self.ggl.save_plot('systematics_maps' + ''.join(bands) + save_suffix)

@@ -59,12 +59,12 @@ if run_stars:
     stars.plot()
 
 if run_psf:
-    psf = TestPSF(basic, config, paths, zbinning, plotting)
-    ra_lims = (-1, 361)
-    dec_lims = (-90, -35)
-    psf.save_psf_residuals_y3(ra_lims, dec_lims)
-    # psf.run()
-    # psf.plot()
+    ggl_int = init_ggl_class(basic,config, paths, zbins)
+    testpsf = TestPSF(ggl_int, config,paths, zbins, plotting)
+    bands = ['r', 'i', 'z']
+    testpsf.run_y3(bands)
+    testpsf.plot(bands)
+
 
 if run_size_snr:
     size_snr = TestSizeSNR(basic, config, paths, zbinning, plotting, source_nofz_pars)
@@ -73,6 +73,9 @@ if run_size_snr:
     size_snr.plot()
 
 if run_sysmaps:
-    sysmaps = TestSysMaps(basic, config, paths, zbinning, plotting, source_nofz_pars, sysmaps)
-    sysmaps.run(['airmass', 'fwhm', 'maglimit', 'skybrite'], ['r'])
-    sysmaps.plot()
+    ggl_int = init_ggl_class(basic, config, paths, zbins)
+    testsys = TestSysMaps(ggl_int, config, paths, zbins, plotting, source_nofz_pars, sysmaps)
+    bands = ['r', 'i', 'z']
+    testsys.run_y3(['airmass', 'fwhm', 'maglimit', 'skybrite'], bands)
+    testsys.plot_y3(bands)
+

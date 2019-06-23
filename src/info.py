@@ -56,9 +56,11 @@ config_data = {
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_6_15_19.h5',
+
     #'lens_v': 'combined_sample_fid_noLSSweights',
     #'lens_v': 'combined_sample_fid',
     'lens_v': 'maglim',
+
     'zslim_v': 'y1',
     'zs_v': 'bpz',
     'zllim_v': 'y3',
@@ -98,6 +100,8 @@ paths['runs'] =  '../runs/'
 paths['plots'] = '../plots/'
 paths['y3'] = '../../ggl_results/'
 paths['y3_exp'] = '../../ggl_data/'
+
+paths['y3_sysmap'] = '/global/project/projectdirs/des/ggl/systematic_maps/'
 paths['lens_cats'] = '/global/project/projectdirs/des/ggl/lens_cats/'
 paths['redmagic'] = paths['lens_cats'] + '%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk'])
 paths['maglim'] = paths['lens_cats'] + '%s/maglim/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk'])
@@ -115,6 +119,7 @@ if 'maglim' in config['lens_v']:
 	
 print '--------------------------\nUsing lens file in:\n', paths['lens'] 
 print '--------------------------\nUsing randoms file in:\n', paths['randoms'] 
+
 
 paths['lens_nz'] = 'y1_2pt_NG_mcal_1110.fits'
 paths['source_nz'] = 'y1_2pt_NG_mcal_1110.fits'
@@ -162,6 +167,7 @@ zbins = {}
 zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5']
 zbins['sbins'] = ['s1', 's2', 's3', 's4']
 zbins['lsbins'] = [l + '_' + s for l in zbins['lbins'] for s in zbins['sbins']]
+zbins['sys'] = [0.2, 1.20]
 # Updated bins for Y3 of the redmagic sample
 zbins['l1'] = [0.15, 0.35]
 zbins['l2'] = [0.35, 0.5] 
@@ -246,11 +252,19 @@ Currently names for y1.
 
 sysmaps = {}
 sysmaps['nside'] = 4096
-sysmaps['nested_bool'] = False # means that it is ring
-sysmaps['airmass'] = 'AIRMASS_coaddweights3_mean'
+sysmaps['nested_bool'] = True # means that it is ring
+# sysmaps['airmass'] = 'AIRMASS_coaddweights3_mean'
+
+sysmaps['airmass'] = 'AIRMASS.WMEAN_EQU'
+
 sysmaps['count'] = 'count__fracdet'
 sysmaps['exptime'] = 'EXPTIME__total'
-sysmaps['fwhm'] = 'FWHM_MEAN_coaddweights3_mean'
-sysmaps['maglimit'] = 'maglimit3__'
-sysmaps['skybrite'] = 'SKYBRITE_coaddweights3_mean'
+sysmaps['fwhm'] = 'FWHM.WMEAN_EQU'
+sysmaps['maglimit'] = 'maglim_EQU'
+sysmaps['skybrite'] = 'SKYBRITE.WMEAN_EQU'
 sysmaps['skysigma'] = 'SKYSIGMA_coaddweights3_mean'
+sysmaps['separate_jk'] = False
+sysmaps['separate_jk_njk'] = 75
+
+if sysmaps['separate_jk']:
+    config['njk'] = sysmaps['separate_jk_njk']
