@@ -41,6 +41,16 @@ class GGL(object):
         self.config = config
         self.paths = paths
 
+
+    def get_nz(self,z):
+	zbins = np.linspace(0,2.5,500)	
+	zbinsc = zbins[:-1] + (zbins[1]-zbins[0])/2.
+	nz, _ = np.histogram(z,zbins)
+        nz = nz/float(nz.sum())
+	print nz
+	return zbins, nz 
+
+
     def load_buzzard(self):
 
         # Here self.paths['yaml'] will be shearratio/src/buzzard.yaml
@@ -49,11 +59,16 @@ class GGL(object):
 
         # Dictionary with the unsheared version and selection only:
         source = {}
-        source['ra'] = data[params['source_group']]['ra'][:]
-        source['dec'] = data[params['source_group']]['dec'][:]
-        source['e1'] = data[params['source_group']]['e1'][:]
-        source['e2'] = data[params['source_group']]['e1'][:]
-        source['z'] = data[params['sourcez_group']]['z'][:]
+
+	source['ra'] = data[params['source_group']]['ra'][:]
+	source['dec'] = data[params['source_group']]['dec'][:]
+	source['e1'] = data[params['source_group']]['e1'][:]
+	source['e2'] = data[params['source_group']]['e1'][:]
+	source['z'] = data[params['sourcez_group']]['zmean_sof'][:]
+	source['ztrue'] = data[params['sourcez_group']]['z'][:]
+
+	return source
+
 
         return source
 
@@ -222,11 +237,17 @@ class GGL(object):
         jk_l = lens['jk']
         try:
             w_l = lens['w']
-            print 'Weights found in lens catalog.'
+            print 'Weights found in foreground catalog.'
         except:
-            print 'There are no identified weights for the lenses.'
+            print 'There are no identified weights for the foreground sample.'
             w_l = np.ones(len(ra_l))
 
+
+        if 'noLSSweights' in self.config['lens_v']:
+            print 'Running in mode with no LSS weights. They are set to one.'
+            w_l = np.ones(len(ra_l)) 
+
+	print 'Lens weigths:', w_l
         return ra_l, dec_l, jk_l, w_l
 
     def get_source(self, source):
@@ -291,19 +312,20 @@ class GGL(object):
                 if jk == 0: print 'Doing NG correlation.'
                 corr = treecorr.NGCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
                                               max_sep=self.config['thlims'][1], sep_units='arcmin',
-                                              bin_slop=self.config['bslop'])
+                                              bin_slop=self.config['bslop'], num_threads=self.config['num_threads'])
 
             if type_corr == 'NN':
                 if jk == 0: print 'Doing NN correlation.'
                 corr = treecorr.NNCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
                                               max_sep=self.config['thlims'][1], sep_units='arcmin',
-                                              bin_slop=self.config['bslop'])
+                                              bin_slop=self.config['bslop'], num_threads=self.config['num_threads'])
+                
 
             if 'NK' in type_corr:
                 if jk == 0: print 'Doing NK correlation with variable %s.' % type_corr[3:]
                 corr = treecorr.NKCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
                                               max_sep=self.config['thlims'][1], sep_units='arcmin',
-                                              bin_slop=self.config['bslop'])
+                                              bin_slop=self.config['bslop'], num_threads=self.config['num_threads'])
 
             if len(ra_l_jk) > 1:
 
@@ -359,6 +381,8 @@ class GGL(object):
                 npairs[jk].append(zeros)
 
         ra_l, dec_l, jk_l, w_l = self.get_lens(lens)
+        if 'noLSSweights' in self.config['lens_v']:
+            print 'Checking weights of lens sample are one:', w_l
         ra_s, dec_s, w = self.get_source(source)
         if type_corr == 'NG' or type_corr == 'NN':
             e1 = source['e1']
@@ -386,10 +410,14 @@ class GGL(object):
         gxs = [manager.list() for x in range(self.config['njk'])]
         errs = [manager.list() for x in range(self.config['njk'])]
         xi_nks = [manager.list() for x in range(self.config['njk'])]
+        if pool: 
+            p = mp.Pool(10, worker_init)
+            p.map(run_jki, range(self.config['njk']))
+            p.close()
 
-        p = mp.Pool(10, worker_init)
-        p.map(run_jki, range(self.config['njk']))
-        p.close()
+        if not pool:
+            for jk in range(self.config['njk']):
+		run_jki(jk)
 
         def reshape_manager(obj):
             return (np.array(list(obj))).reshape(self.config['njk'], self.config['nthbins'])
@@ -430,7 +458,7 @@ class GGL(object):
         ra_s, dec_s, w = self.get_source(source)
 
         nk = treecorr.NKCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
-                                    max_sep=self.config['thlims'][1], sep_units='arcmin', bin_slop=self.config['bslop'])
+                                    max_sep=self.config['thlims'][1], sep_units='arcmin', bin_slop=self.config['bslop'], num_threads=self.config['num_threads'])
 
         cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, w=w_l, ra_units='deg', dec_units='deg')
         cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, k=scalar, w=w, ra_units='deg', dec_units='deg')
@@ -562,7 +590,7 @@ class GGL(object):
         chi2fit_h = np.zeros(len(gth_all))
         chi2fit_l = np.zeros(len(gth_all))
 
-        mask = (theta >= source_nofz_pars['thetamin'])
+        mask = (theta >= self.source_nofz_pars['thetamin'])
         for i in range(len(gth_all)):
             Ah, chi2fit_h[i], _ = functions.minimize_chi2_fit_amplitude((cov_sims[mask].T)[mask].T, gth_all[i][mask],
                                                                         sims[mask])
@@ -631,6 +659,8 @@ class Measurement(GGL):
 
     def run(self):
 
+	make_directory(self.get_path_test_allzbins()+'/nzs/')
+
         if self.basic['mode'] == 'data':
             lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
 
@@ -638,67 +668,81 @@ class Measurement(GGL):
             lens_all, random_all, source_all = self.load_data_or_sims()
 
         for sbin in self.zbins['sbins']:
-            print 'Running measurement for source %s.' % sbin
 
-            if self.basic['mode'] == 'data':
-                source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins[sbin][0],
-                                               zlim_high=self.zbins[sbin][1])
-                R = source['Rmean']
+    		print 'Running measurement for source %s.' % sbin
 
-            if self.basic['mode'] == 'data_y1sources':
-                source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits' % sbin[1])
+		if self.basic['mode'] == 'data':
+		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
+		    R = source['Rmean']
+                    print 'Length source', sbin, len(source['ra'])
 
-            if self.basic['mode'] == 'mice':
-                """
-                In this case there are no responses, so we set it to one.
-                """
-                R = 1.
-                source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
+		if self.basic['mode'] == 'data_y1sources':
+		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
 
-            if self.basic['mode'] == 'buzzard':
-                """
-                In this case there are no responses, so we set it to one.
-                """
-                R = 1.
-                source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
+    		if self.basic['mode'] == 'mice':
+    		    """
+    		    In this case there are no responses, so we set it to one.
+    		    """
+    		    R = 1.
+                    source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
 
-            for l, lbin in enumerate(self.zbins['lbins']):
-                print 'Running measurement for lens %s.' % lbin
-                path_test = self.get_path_test(lbin, sbin)
-                make_directory(path_test)
+		if self.basic['mode'] == 'buzzard':
+    		    """
+    		    In this case there are no responses, so we set it to one.
+    		    """
+    		    R = 1.
+		    source = {}
+		    for k in source_all.keys():
+			source[k] = source_all[k][(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
+                    print 'Length source', sbin, len(source['ra'])
 
-                lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
+                    zbins, nz_s = self.get_nz(source['ztrue'])		    
+                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'zbins',zbins,header='zbin limits')
+                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
 
-                theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
-                self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
-                gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
+    		for l, lbin in enumerate(self.zbins['lbins']):
+    		    print 'Running measurement for lens %s.' % lbin
+    		    path_test = self.get_path_test(lbin, sbin)
+    		    make_directory(path_test)
 
-                if self.basic['mode'] == 'data':
-                    random = random_all[
-                        (random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-                if self.basic['mode'] == 'buzzard':
-                    random = random_all[
-                        (random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-                if self.basic['mode'] == 'mice':
-                    random = random_all[l * len(random_all) / len(self.zbins['lbins']):(l + 1) * len(random_all) / len(
-                        self.zbins['lbins'])]
+    		    lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
+                    print 'Length lens', lbin, len(lens['ra'])
 
-                theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
-                self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, True)
-                gtnum_r, gxnum_r, wnum_r = self.numerators_jackknife(gts, gxs, weights)
+                    if self.basic['mode'] == 'buzzard':
+                        zbins, nz_l = self.get_nz(lens['ztrue'])		    
+                        np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
+                    
 
-                gt_all = (gtnum / wnum) / R - (gtnum_r / wnum_r) / R
-                gx_all = (gxnum / wnum) / R - (gxnum_r / wnum_r) / R
 
-                bf_all = self.compute_boost_factor(lens['jk'], random['jk'], wnum, wnum_r)
-                gt_all_boosted = bf_all * (gtnum / wnum) / R - (gtnum_r / wnum_r) / R
+    		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
+    		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
+    		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
 
-                self.process_run(gt_all, theta, path_test, 'gt')
-                self.process_run(gx_all, theta, path_test, 'gx')
-                self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
-                self.process_run(bf_all, theta, path_test, 'boost_factor')
-                self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
+    		    if self.basic['mode']  == 'data':
+    			random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+    		    if self.basic['mode']  == 'buzzard':
+    			random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+    		    if self.basic['mode']  == 'mice':
+    			random = random_all[l*len(random_all)/len(self.zbins['lbins']):(l+1)*len(random_all)/len(self.zbins['lbins'])]
 
+    		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
+    		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, True)
+    		    gtnum_r, gxnum_r, wnum_r = self.numerators_jackknife(gts, gxs, weights)
+
+    		    gt_all = (gtnum / wnum) / R - (gtnum_r / wnum_r) / R
+    		    gx_all = (gxnum / wnum) / R - (gxnum_r / wnum_r) / R
+
+    		    bf_all = self.compute_boost_factor(lens['jk'], random['jk'], wnum, wnum_r)
+                    gt_all_boosted = bf_all*(gtnum / wnum)/R - (gtnum_r / wnum_r) / R 
+
+    		    self.process_run(gt_all, theta, path_test, 'gt')
+    		    self.process_run(gx_all, theta, path_test, 'gx')
+    		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
+    		    self.process_run(bf_all, theta, path_test, 'boost_factor')
+    		    self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
+
+
+                    
     def save_2pointfile(self, string):
         """
         Save the correlation function measurements (i.e. gammat, boost factors, etc),
@@ -738,18 +782,44 @@ class Measurement(GGL):
                 cov[bin_pair_inds[0]:bin_pair_inds[-1] + 1, bin_pair_inds] = cov_ls
 
         # Preparing N(z) for the blinding script
-        if 'y1_2pt_NG_mcal_1110' in self.paths['lens_nz']:
-            file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
-            lens_nz = file_lens_nz.get_kernel('nz_lens')
+        if self.basic['mode'] == 'data':
+            if 'y1_2pt_NG_mcal_1110' in self.paths['lens_nz']:
+                file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
+                lens_nz = file_lens_nz.get_kernel('nz_lens')
 
-        if 'stellar_mass' in self.paths['lens_nz']:
-            import astropy
-            ext = astropy.io.fits.open(self.paths['lens_nz'])['nz_lens']
-            lens_nz = twopoint.NumberDensity.from_fits(ext)
+            if 'stellar_mass' in self.paths['lens_nz']:
+                import astropy
+                ext = astropy.io.fits.open(self.paths['lens_nz'])['nz_lens']
+                lens_nz = twopoint.NumberDensity.from_fits(ext)
 
-        if 'y1_2pt_NG_mcal_1110' in self.paths['source_nz']:
-            file_source_nz = twopoint.TwoPointFile.from_fits(self.paths['source_nz'])
-            source_nz = file_source_nz.get_kernel('nz_source')
+            if 'y1_2pt_NG_mcal_1110' in self.paths['source_nz']:
+                file_source_nz = twopoint.TwoPointFile.from_fits(self.paths['source_nz'])
+                source_nz = file_source_nz.get_kernel('nz_source')
+
+            print 'Saving TwoPointFile with lens N(z) from %s'%(self.paths['lens_nz'])
+            print 'Saving TwoPointFile with source N(z) from %s'%(self.paths['source_nz'])
+
+        if self.basic['mode'] == 'buzzard':
+            # zbins
+            zbins = np.loadtxt(self.get_path_test_allzbins() +'nzs/'+ 'zbins')
+            zlow = zbins[:-1]
+            z = zlow + (zbins[1]-zbins[0])/2.
+            zhigh = zbins[1:]
+
+            # Lenses
+            nzs = []
+            for lbin in self.zbins['lbins']:
+                nz = np.loadtxt(self.get_path_test_allzbins() +'nzs/'+ 'nz_%s'%lbin)
+                nzs.append(nz)
+            lens_nz = twopoint.NumberDensity('nz_lens', zlow, z, zhigh, nzs)
+
+            # Sources
+            nzs = []
+            for sbin in self.zbins['sbins']:
+                nz = np.loadtxt(self.get_path_test_allzbins() +'nzs/'+ 'nz_%s'%sbin)
+                nzs.append(nz)
+            source_nz = twopoint.NumberDensity('nz_source', zlow, z, zhigh, nzs)
+
 
         if 'gt' in string:
             gammat = twopoint.SpectrumMeasurement('gammat', (bin1, bin2),
@@ -759,10 +829,9 @@ class Measurement(GGL):
                                                   angle=angle, angle_unit='arcmin')
 
             cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['gammat'], [length], cov)
-            print 'Saving TwoPointFile with lens N(z) from %s' % (self.paths['lens_nz'])
-            print 'Saving TwoPointFile with source N(z) from %s' % (self.paths['source_nz'])
-            gammat_twopoint = twopoint.TwoPointFile([gammat], [lens_nz, source_nz], windows=None,
-                                                    covmat_info=cov_mat_info)
+
+            gammat_twopoint = twopoint.TwoPointFile([gammat], [lens_nz, source_nz], windows=None, covmat_info=cov_mat_info)
+
             twopointfile_unblind = self.get_twopointfile_name(string)
 
             # Remove file if it exists already because to_fits function doesn't overwrite
@@ -779,10 +848,11 @@ class Measurement(GGL):
                                                         angle=angle, angle_unit='arcmin')
 
             cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['boost_factor'], [length], cov)
-            print 'Saving TwoPointFile with Y1 N(z)s'
-            boost_factor_twopoint = twopoint.TwoPointFile([boost_factor], [lens_nz, source_nz], windows=None,
-                                                          covmat_info=cov_mat_info)
-            save_path = os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits' % string)
+
+            print 'Saving TwoPointFile'
+            boost_factor_twopoint = twopoint.TwoPointFile([boost_factor], [lens_nz, source_nz], windows=None, covmat_info=cov_mat_info)
+            save_path = os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits'%string)
+
             boost_factor_twopoint.to_fits(save_path)
 
     def save_spectrum_measurement_file(self):
@@ -871,10 +941,12 @@ class Measurement(GGL):
                     # ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
                     #                  verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
 
-                    # if l % 3 > 0:  # In case we want to keep labels on the left y-axis
-                    ax[j][l % 3].yaxis.set_ticklabels([])  # to remove the ticks labels
-                    if l < 2:
-                        ax[0][l].xaxis.set_ticklabels([])  # to remove the ticks labels
+
+                    #if l % 3 > 0:  # In case we want to keep labels on the left y-axis
+                    #ax[j][l % 3].yaxis.set_ticklabels([])  # to remove the ticks labels
+                    #if l < 2:
+                        #ax[0][l].xaxis.set_ticklabels([])  # to remove the ticks labels
+
 
                     ax[j][l % 3].set_xlabel(r'$\theta$ [arcmin]', size='large')
                     ax[j][0].set_ylabel(r'$\gamma_t (\theta)$', size='large')
@@ -888,8 +960,10 @@ class Measurement(GGL):
                              horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 12, color = plt.get_cmap(cmap)(cmap_step*s))
                     """
 
-        # ax[1][0].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
-        # ax[1][1].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
+
+        ax[1][0].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
+        ax[1][1].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
+
         # handles, labels = ax[0][0].get_legend_handles_labels()
         fig.delaxes(ax[1, 2])
         # ax[1][1].legend(handles[::-1], labels[::-1], frameon=True, fancybox = True,prop={'size':12}, numpoints = 1, loc='center left', bbox_to_anchor=(1, 0.5))
@@ -975,46 +1049,47 @@ class Measurement(GGL):
 
             for s in range(len(self.zbins['sbins'])):
 
-                path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
-                th, gt = gammat.get_pair(l + 1, s + 1)
-                err = gammat.get_error(l + 1, s + 1)
 
-                mask_neg = gt < 0
-                mask_pos = gt > 0
+                    path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
+                    th, gt = gammat.get_pair(l+1, s+1)
+                    err = gammat.get_error(l+1, s+1)
 
-                ax[j][l % 3].errorbar(th[mask_neg] * (1 + 0.05 * s), -gt[mask_neg], err[mask_neg], fmt='.', mfc='None',
-                                      mec=plt.get_cmap(cmap)(cmap_step * s), ecolor=plt.get_cmap(cmap)(cmap_step * s),
-                                      capsize=2)
-                ax[j][l % 3].errorbar(th[mask_pos] * (1 + 0.05 * s), gt[mask_pos], err[mask_pos], fmt='.',
-                                      color=plt.get_cmap(cmap)(cmap_step * s),
-                                      mec=plt.get_cmap(cmap)(cmap_step * s), label=self.plotting['redshift_s'][s],
-                                      capsize=2)
+                    mask_neg = gt < 0
+                    mask_pos = gt > 0
 
-                ax[j][l % 3].set_xlim(self.config['thlims'][0] * 0.8, self.config['thlims'][1] * 1.2)
-                ax[j][l % 3].set_xscale('log')
-                ax[j][l % 3].set_yscale('log')
+                    ax[j][l % 3].errorbar(th[mask_neg] * (1 + 0.05 * s), -gt[mask_neg], err[mask_neg], fmt='.', mfc='None',
+                                          mec=plt.get_cmap(cmap)(cmap_step * s), ecolor=plt.get_cmap(cmap)(cmap_step * s), capsize=2)
+                    ax[j][l % 3].errorbar(th[mask_pos] * (1 + 0.05 * s), gt[mask_pos], err[mask_pos], fmt='.',
+                                          color=plt.get_cmap(cmap)(cmap_step * s),
+                                          mec=plt.get_cmap(cmap)(cmap_step * s), label=self.plotting['redshift_s'][s], capsize=2)
 
-                ax[j][l % 3].text(0.5, 0.9, self.plotting['redshift_l'][l], horizontalalignment='center',
-                                  verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
-                # ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
-                #                  verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
+                    ax[j][l % 3].set_xlim(self.config['thlims'][0]*0.8, self.config['thlims'][1]*1.2)
+                    ax[j][l % 3].set_xscale('log')
+                    ax[j][l % 3].set_yscale('log')
 
-                # if l % 3 > 0:  # In case we want to keep labels on the left y-axis
-                ax[j][l % 3].yaxis.set_ticklabels([])  # to remove the ticks labels
-                if l < 2:
-                    ax[0][l].xaxis.set_ticklabels([])  # to remove the ticks labels
+                    ax[j][l % 3].set_ylim(10**(-6), 0.999*10**(-2))
+                    ax[j][l % 3].text(0.5, 0.9, self.plotting['redshift_l'][l], horizontalalignment='center',
+                                      verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
+                    #ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
+                    #                  verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
 
-                ax[j][l % 3].set_xlabel(r'$\theta$ [arcmin]', size='large')
-                ax[j][0].set_ylabel(r'$\gamma_t (\theta)$', size='large')
-                ax[j][l % 3].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%d$'))
+                    #if l % 3 > 0:  # In case we want to keep labels on the left y-axis
+                    ax[j][l % 3].yaxis.set_ticklabels([])  # to remove the ticks labels
+                    if l < 2:
+                        ax[0][l].xaxis.set_ticklabels([])  # to remove the ticks labels
 
-                """
-                # Chi2
-                ax[j][l%3].text(0.25,0.3,r'Null $\chi^2$/ndf',
-                                horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 10)
-                ax[j][l%3].text(0.25,0.23 -0.06*s,r'$%0.1f/%d$'%(chi2, ndf),
-                         horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 12, color = plt.get_cmap(cmap)(cmap_step*s))
-                """
+                    ax[j][l % 3].set_xlabel(r'$\theta$ [arcmin]', size='large')
+                    ax[j][0].set_ylabel(r'$\gamma_t (\theta)$', size='large')
+                    ax[j][l % 3].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%d$'))
+
+                    """
+                    # Chi2
+                    ax[j][l%3].text(0.25,0.3,r'Null $\chi^2$/ndf',
+                                    horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 10)
+                    ax[j][l%3].text(0.25,0.23 -0.06*s,r'$%0.1f/%d$'%(chi2, ndf),
+                             horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 12, color = plt.get_cmap(cmap)(cmap_step*s))
+                    """
+
 
         fig.delaxes(ax[1, 2])
         # ax[1][1].legend(handles[::-1], labels[::-1], frameon=True, fancybox = True,prop={'size':12}, numpoints = 1, loc='center left', bbox_to_anchor=(1, 0.5))
@@ -1034,7 +1109,7 @@ class Measurement(GGL):
         plt.rc('font', family='serif')
 
         cmap = self.plotting['cmap']
-        fig, ax = plt.subplots(4, 5, figsize=(12.5, 9.375), sharey=True, sharex=True)
+        fig, ax = plt.subplots(len(self.zbins['sbins']), len(self.zbins['lbins']), figsize=(12.5, 9.375), sharey=True, sharex=True)
         fig.subplots_adjust(hspace=0.1, wspace=0.1)
         c1 = plt.get_cmap(cmap)(0.)
 
@@ -1062,7 +1137,7 @@ class Measurement(GGL):
 
                 ax[s][l].axvspan(2.5, self.plotting['th_limit'][l], color='gray', alpha=0.2)
 
-        ax[0][4].legend(frameon=False, fontsize=16, loc='lower right')
+        ax[0][len(self.zbins['sbins'])].legend(frameon=False, fontsize=16, loc='lower right')
         self.save_plot('boost_factors')
 
     def plot_randoms(self):
@@ -1079,7 +1154,7 @@ class Measurement(GGL):
         fs = 18  # fontsize
         cmap = self.plotting['cmap']
         cmap_step = 0.25
-        fig, ax = plt.subplots(4, 5, figsize=(17.25, 13.8), sharey=True, sharex=True)
+        fig, ax = plt.subplots(len(self.zbins['sbins']), len(self.zbins['lbins']), figsize=(17.25, 13.8), sharey=True, sharex=True)
         fig.subplots_adjust(hspace=0.0, wspace=0.0)
 
         for l in range(0, len(self.zbins['lbins'])):
@@ -1112,7 +1187,7 @@ class Measurement(GGL):
                 if s == 0:
                     ax[s][l].set_title(self.plotting['redshift_l'][l], fontsize=fs)
 
-        ax[0][4].legend(frameon=False, fancybox=True, prop={'size': 13}, numpoints=1, loc='upper right')
+        ax[0][len(self.zbins['sbins'])].legend(frameon=False, fancybox=True, prop={'size': 13}, numpoints=1, loc='upper right')
         self.save_plot('plot_randoms')
 
     def plot_gammax(self):
@@ -2151,6 +2226,42 @@ class TestSizeSNR(GGL):
         ratio_theory, err_ratio_theory = np.loadtxt(path_test + '%s_theory' % size_snr, unpack=True)
         return ratio_data, err_ratio_data, ratio_theory, err_ratio_theory
 
+    def load_metacal_bin_size_snr(self, source, source_5sels, calibrator, size_snr, high_low, zlim_low, zlim_high):
+        """
+        source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
+        source_5sels: dictionary containing relevant columns for the sources, with the baseline selection applied already,
+                     for each of the 5 selections 1p, 1m, 2p, 2m. 
+        calibrator: class to compute the response. Taken from baseline selection.
+        zlim_low, zlim_high: limits to select the tomographic bin.
+        Obtains 5 masks (unsheared, sheared 1p, 1m, 2p, 2m) to obtain the new selection response.
+        Returns: Source dictionary masked with the unsheared mask and with the mean response updated.
+        """
+        if high_low == 'low':
+                masks = [(source_5sels['sheared']['bpz_mean'][i] > zlim_low) & (source_5sels['sheared']['bpz_mean'][i] < zlim_high) & (source_5sels['sheared'][size_snr][i] <= np.median(source_5sels['sheared'][size_snr][i])) for i in range(5)]
+        else:
+                masks = [(source_5sels['sheared']['bpz_mean'][i] > zlim_low) & (source_5sels['sheared']['bpz_mean'][i] < zlim_high) & (source_5sels['sheared'][size_snr][i] > np.median(source_5sels['sheared'][size_snr][i])) for i in range(5)]
+	
+        source_bin = {}
+        source_bin['ra'] = source['ra'][masks[0]]
+        source_bin['dec'] = source['dec'][masks[0]]
+        source_bin['e1'] = source['e1'][masks[0]]
+        source_bin['e2'] = source['e2'][masks[0]]
+        source_bin['psf_e1'] = source['psf_e1'][masks[0]]
+        source_bin['psf_e2'] = source['psf_e2'][masks[0]]
+        source_bin['snr'] = source['snr'][masks[0]]
+        source_bin['size'] = source['size'][masks[0]]
+        source_bin['bpz_mean'] = source['bpz_mean'][masks[0]]
+        source_bin['bpz_zmc'] = source['bpz_zmc'][masks[0]]
+        source_bin['Rgamma'] = source['Rgamma'][masks[0]]
+	
+        R11, _, _ = calibrator.calibrate('e_1', mask=masks)
+        R22, _, _ = calibrator.calibrate('e_2', mask=masks)
+        source_bin['Rmean'] = np.mean([R11, R22])
+	source_bin['R11'] = calibrator.calibrate('e_1', return_full=True, mask=masks)[0]
+	source_bin['R22'] = calibrator.calibrate('e_2', return_full=True, mask=masks)[0]
+        print 'Mean response redshift bin (%0.2f, %0.2f):'%(zlim_low, zlim_high), source_bin['Rmean'], np.mean(source_bin['Rgamma']), np.mean(source_bin['R11']), np.mean(source_bin['R22'])
+        return source_bin
+
     def run_responses_mean_notomo_size_snr(self, Rgamma, size_snr, cut, high_low, delta_gamma):
         """
         Computes responses when there is an extra selection on size or snr.
@@ -2205,59 +2316,102 @@ class TestSizeSNR(GGL):
         return zl, nzl, zs, nzsl, nzsh
 
     def run(self, size_snr):
-        lens_all = pf.getdata(self.paths['y1'] + 'lens.fits')
-        lens = lens_all[(lens_all['z'] > self.zbins['l1'][0]) & (lens_all['z'] < self.zbins['l1'][1])]
-        random_all = pf.getdata(self.paths['y1'] + 'random.fits')
-        random = random_all[(random_all['z'] > self.zbins['l1'][0]) & (random_all['z'] < self.zbins['l1'][1])]
+	lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
+	source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins['s1'][0], zlim_high=self.zbins['s4'][1])
+	sourcel = self.load_metacal_bin_size_snr(source_all, source_all_5sels, calibrator, size_snr, 'low', zlim_low=self.zbins['s1'][0], zlim_high=self.zbins['s4'][1])
+	Rl = sourcel['Rmean']
 
-        sources = pf.getdata(self.paths['y1'] + 'metacal_sel_allbins.fits')
+        sourceh = self.load_metacal_bin_size_snr(source_all, source_all_5sels, calibrator, size_snr, 'high', zlim_low=self.zbins['s1'][0], zlim_high=self.zbins['s4'][1])
+	Rh = sourceh['Rmean']
 
-        # Source size or snr split, selecting the two halves of the split
-        par = sources[size_snr]
-        cut = np.median(par)
-        print 'len(sources)', len(sources)
-        maskl = par <= cut
-        maskh = par > cut
+	lens = lens_all[(lens_all['z'] > self.zbins['l1'][0]) & (lens_all['z'] < self.zbins['l1'][1])]
+	random = random_all[(random_all['z'] > self.zbins['l1'][0]) & (random_all['z'] < self.zbins['l1'][1])]
 
         path_test = self.get_path_test(size_snr)
         make_directory(path_test)
-        print size_snr
-        print 'NEW len(sources[maskl])', len(sources[maskl])
-        print 'NEW len(sources[maskh])', len(sources[maskh])
 
         # Computing the measurements for the split halves, both around lenses and randoms
-        theta, gtsl, gxsl, errsl, weightsl, npairsl = self.run_treecorr_jackknife(lens, sources[maskl], 'NG')
-        self.save_runs(path_test, theta, gtsl, gxsl, errsl, weightsl, npairsl, False)
+        theta, gtsl, gxsl, errsl, weightsl, npairsl = self.run_treecorr_jackknife(lens, sourcel, 'NG')
+	self.save_runs(path_test, theta, gtsl, gxsl, errsl, weightsl, npairsl, False)
         gtlnum, gxlnum, wlnum = self.numerators_jackknife(gtsl, gxsl, weightsl)
 
-        theta, gtsl_r, gxsl_r, errsl_r, weightsl_r, npairsl_r = self.run_treecorr_jackknife(random, sources[maskl],
-                                                                                            'NG')
-        self.save_runs(path_test, theta, gtsl_r, gxsl_r, errsl_r, weightsl_r, npairsl_r, True)
+        theta, gtsl_r, gxsl_r, errsl_r, weightsl_r, npairsl_r = self.run_treecorr_jackknife(random, sourcel, 'NG')
+	self.save_runs(path_test, theta, gtsl_r, gxsl_r, errsl_r, weightsl_r, npairsl_r, True)
         gtlnum_r, gxlnum_r, wlnum_r = self.numerators_jackknife(gtsl_r, gxsl_r, weightsl_r)
 
-        theta, gtsh, gxsh, errsh, weightsh, npairsh = self.run_treecorr_jackknife(lens, sources[maskh], 'NG')
-        gthnum, gxhnum, whnum = self.numerators_jackknife(gtsh, gxsh, weightsh)
+        theta, gtsh, gxsh, errsh, weightsh, npairsh = self.run_treecorr_jackknife(lens, sourceh, 'NG')
+	gthnum, gxhnum, whnum = self.numerators_jackknife(gtsh, gxsh, weightsh)
 
-        theta, gtsh_r, gxsh_r, errsh_r, weightsh_r, npairsh_r = self.run_treecorr_jackknife(random, sources[maskh],
-                                                                                            'NG')
-        gthnum_r, gxhnum_r, whnum_r = self.numerators_jackknife(gtsh_r, gxsh_r, weightsh_r)
-
-        # Computing the responses for the split halves
-        Rl = self.run_responses_mean_notomo_size_snr(sources['Rgamma'][maskl], size_snr, cut, 'low')
-        Rh = self.run_responses_mean_notomo_size_snr(sources['Rgamma'][maskh], size_snr, cut, 'high')
+        theta, gtsh_r, gxsh_r, errsh_r, weightsh_r, npairsh_r = self.run_treecorr_jackknife(random, sourceh, 'NG')
+	gthnum_r, gxhnum_r, whnum_r = self.numerators_jackknife(gtsh_r, gxsh_r, weightsh_r)
 
         # Combining measurements and responses to get gammat
         gtl_all = (gtlnum / wlnum) / Rl - (gtlnum_r / wlnum_r) / Rl
         gth_all = (gthnum / whnum) / Rh - (gthnum_r / whnum_r) / Rh
-        np.savetxt(path_test + 'gtl_all', gtl_all)
+
+	bfl_all = self.compute_boost_factor(lens['jk'], random['jk'], wlnum, wlnum_r)
+	gtl_all_boosted = bfl_all*(gtlnum / wlnum)/Rl -(gtlnum_r / wlnum_r)/Rl
+	
+	bfh_all = self.compute_boost_factor(lens['jk'], random['jk'], whnum, whnum_r)
+	gth_all_boosted = bfh_all*(gthnum / whnum)/Rh -(gthnum_r / whnum_r)/Rh
+
+	print('Measurements done. Saving n(z)s')
+	
+	np.savetxt(path_test + 'gtl_all', gtl_all)
         np.savetxt(path_test + 'gth_all', gth_all)
+	
+	self.process_run(gtl_all, theta, path_test, 'gtl')
+        self.process_run(gth_all, theta, path_test, 'gth')
+        self.process_run((gtlnum_r / wlnum_r) / Rl, theta, path_test, 'randomsl')
+        self.process_run((gthnum_r / whnum_r) / Rh, theta, path_test, 'randomsh')
+	
+	self.process_run(bfl_all, theta, path_test, 'boost_factorl')
+	self.process_run(bfh_all, theta, path_test, 'boost_factorh')
+	self.process_run(gtl_all_boosted, theta, path_test, 'gtl_boosted')
+	self.process_run(gth_all_boosted, theta, path_test, 'gth_boosted')
+	
+	
+        # Saving the n(z)'s
+
+	np.savetxt(path_test + 'n_of_z_lenses', lens['z'])
+        np.savetxt(path_test + 'n_of_z_lenses_err', lens['zerr'])
+	if size_snr == 'size':
+                np.savetxt(path_test + 'n_of_z_low_size', sourcel['bpz_zmc'])
+                np.savetxt(path_test + 'n_of_z_high_size', sourceh['bpz_zmc'])
+                np.savetxt(path_test + 'n_of_z_all_size', source['bpz_zmc'])
+        else:
+                np.savetxt(path_test + 'n_of_z_low_snr', sourcel['bpz_zmc'])
+                np.savetxt(path_test + 'n_of_z_high_snr', sourceh['bpz_zmc'])
+                np.savetxt(path_test + 'n_of_z_all_snr', source['bpz_zmc'])
+	
+	print('All done')
+	stop
+	
 
         # Getting the data ratio using the simulations
-        sims, cov_sims = self.load_sims()
-        ratio, err_ratio = self.ratio_from_sims(theta, gtl_all, gth_all, sims, cov_sims)
+        #sims, cov_sims = self.load_sims()
+        
+	import astropy.io.fits
+	cov_theory=astropy.io.fits.open(self.paths['theory_size_all_covmat'])
+
+	theory=[]
+	for i in range(len(cov_theory[2].data)):
+		theory.append(cov_theory[2].data[i][-2])
+
+	theory=np.array(theory)
+
+	ratio, err_ratio = self.ratio_from_sims(theta, gtl_all, gth_all, theory, cov_theory[1].data)
 
         # Load N(z)'s and corrects the mean using Cosmos calibration.
-        zl, nzl, zs, nzsl, nzsh = self.load_nzs(size_snr)
+        #zl, nzl, zs, nzsl, nzsh = self.load_nzs(size_snr)
+	zl, nzl = np.loadtxt(self.paths['hist_n_of_z_lenses_witherr_size'], unpack=True, usecols=(0, 1))
+	zs, nzsl = np.loadtxt(self.paths['hist_n_of_z_low_size'], unpack=True, usecols=(0,1))
+	zs, nzsh = np.loadtxt(self.paths['hist_n_of_z_high_size'], unpack=True, usecols=(0,1))
+
+	nzsl = interpolate.interp1d(zs + self.source_nofz_pars['dzs', size_snr][0], nzsl, bounds_error=False,
+                                    fill_value=0)(zs)
+        nzsh = interpolate.interp1d(zs + self.source_nofz_pars['dzs', size_snr][1], nzsh, bounds_error=False,
+                                    fill_value=0)(zs)
 
         # Computing inverse sigma_crit for the splits
         isch = functions.inv_sigma_crit_eff(zl, zs, nzl, nzsh)

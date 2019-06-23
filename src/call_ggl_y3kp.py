@@ -1,8 +1,9 @@
-from info import basic, paths, config, zbins, plotting, source_nofz_pars, sysmaps
+from info import basic, paths, config, zbins, alt_zbins, plotting, source_nofz_pars, sysmaps
 from ggl import GGL, Measurement, ResponsesScale, ResponsesProjection, TestStars, TestPSF, TestSizeSNR, TestSysMaps
 
 T = True
 F = False
+
 
 run_measurement = T
 run_responses_nk = F
@@ -13,13 +14,17 @@ run_size_snr = F
 run_sysmaps = F
 
 
+if 'combined_sample_fid' in config['lens_v']:
+    zbinning = zbins
+if 'maglim' in config['lens_v']:
+    zbinning = alt_zbins
+
 if run_measurement:
     print 'Starting measurement class...'
-    #gglensing = GGL(basic, config, paths)
-    measurement = Measurement(basic, config, paths, zbins, plotting)
+    measurement = Measurement(basic, config, paths, zbinning, plotting)
+
     if not basic['plot_blinded']:
-        measurement.run()
-        #measurement.save_boostfactors_2pointfile() #deprecated
+        #measurement.run()
         measurement.save_2pointfile('gt')
         measurement.save_2pointfile('gt_boosted')
         measurement.save_2pointfile('boost_factor')
@@ -28,7 +33,7 @@ if run_measurement:
         measurement.plot_boostfactors()
         measurement.plot_randoms()
         measurement.plot_gammax()
-
+	
     if basic['blind'] and basic['plot_blinded']:
         measurement.compute_sn_ratio('gt')
         measurement.compute_sn_ratio('gt_boosted')
@@ -36,7 +41,7 @@ if run_measurement:
         measurement.plot_from_twopointfile('gt_boosted')
 
 if run_responses_nk:
-    responses = ResponsesScale(basic, config, paths, zbins, plotting)
+    responses = ResponsesScale(basic, config, paths, zbinning, plotting)
     #responses.run()
     responses.plot('lens', mask_scales =False)
     responses.plot('lens', mask_scales =True)
@@ -44,11 +49,11 @@ if run_responses_nk:
     #responses.plot('random')
 
 if run_responses_ng:
-    responses = ResponsesProjection(basic, config, paths, zbins, plotting)
+    responses = ResponsesProjection(basic, config, paths, zbinning, plotting)
     responses.run()
 
 if run_stars:
-    stars = TestStars(basic, config, paths, zbins, plotting)
+    stars = TestStars(basic, config, paths, zbinning, plotting)
     stars.run('bright')
     stars.run('faint')
     stars.plot()
@@ -60,9 +65,10 @@ if run_psf:
     testpsf.run_y3(bands)
     testpsf.plot(bands)
 
+
 if run_size_snr:
-    size_snr = TestSizeSNR(basic, config, paths, zbins, plotting, source_nofz_pars)
-    size_snr.run('size')
+    size_snr = TestSizeSNR(basic, config, paths, zbinning, plotting, source_nofz_pars)
+    #size_snr.run('size')
     size_snr.run('snr')
     size_snr.plot()
 
@@ -72,3 +78,4 @@ if run_sysmaps:
     bands = ['r', 'i', 'z']
     testsys.run_y3(['airmass', 'fwhm', 'maglimit', 'skybrite'], bands)
     testsys.plot_y3(bands)
+

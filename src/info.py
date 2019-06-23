@@ -35,9 +35,11 @@ measurements, not the systematics tests.
 basic = {
     'mode':'data',
     'blind': True,
-    'plot_blinded': False
+    'plot_blinded': True,
+    'pool': True
 }
-
+if basic['pool']: basic['num_threads'] = 1
+if not basic['pool']: basic['num_threads'] = 10
 
 """
 CONFIGURATION
@@ -54,10 +56,14 @@ config_data = {
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_6_15_19.h5',
-    'redmagic_v': 'combined_sample_fid',
+
+    #'lens_v': 'combined_sample_fid_noLSSweights',
+    #'lens_v': 'combined_sample_fid',
+    'lens_v': 'maglim',
+
     'zslim_v': 'y1',
     'zs_v': 'bpz',
-    'zllim_v': 'y3'
+    'zllim_v': 'y3',
     }
 
 config_data['mastercat_v'] = config_data['filename_mastercat'][37:-3]
@@ -69,7 +75,7 @@ config_mice = {
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'version': '2',
-    'redmagic_v': 'y1',
+    'lens_v': 'y1',
     'zslim_v': 'y1',
     'zs_v': 'bpz',
     'zllim_v': 'y1'
@@ -90,17 +96,31 @@ in the other scripts. Add more paths as necessary.
 """
 
 paths = {}
-
-paths['y1'] = '/Volumes/Data/y1_shear_tests/cats/jk/test_mcal_bpzmof_unblind/'
 paths['runs'] =  '../runs/' 
 paths['plots'] = '../plots/'
 paths['y3'] = '../../ggl_results/'
 paths['y3_exp'] = '../../ggl_data/'
+
 paths['y3_sysmap'] = '/global/project/projectdirs/des/ggl/systematic_maps/'
-paths['redmagic', config['redmagic_v']] = '../lens_cats/%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], config['redmagic_v'],config['njk'])
-paths['redmagic', 'y1'] = '../lens_cats/redmagic/y1/'
-paths['lens'] = paths['redmagic', '%s'%config['redmagic_v']] + 'lens.fits'
-paths['randoms'] = paths['redmagic', '%s'%config['redmagic_v']] + 'random.fits'
+paths['lens_cats'] = '/global/project/projectdirs/des/ggl/lens_cats/'
+paths['redmagic'] = paths['lens_cats'] + '%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk'])
+paths['maglim'] = paths['lens_cats'] + '%s/maglim/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk'])
+if 'noLSSweights' in config['lens_v']: 
+    paths['redmagic'] = paths['lens_cats'] + '%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], 'combined_sample_fid',config['njk'])
+    paths['maglim'] = paths['lens_cats'] + '%s/maglim/%s/njk_%d/'%(config['mastercat_v'], 'maglim',config['njk'])
+	
+if 'combined_sample_fid' in config['lens_v']:
+    paths['lens'] = paths['redmagic'] + 'lens.fits'
+    paths['randoms'] = paths['redmagic'] + 'random.fits'
+	
+if 'maglim' in config['lens_v']:
+    paths['lens'] = paths['maglim'] + 'lens.fits'
+    paths['randoms'] = paths['maglim'] + 'random.fits'
+	
+print '--------------------------\nUsing lens file in:\n', paths['lens'] 
+print '--------------------------\nUsing randoms file in:\n', paths['randoms'] 
+
+
 paths['lens_nz'] = 'y1_2pt_NG_mcal_1110.fits'
 paths['source_nz'] = 'y1_2pt_NG_mcal_1110.fits'
 paths['mice'] = '/global/project/projectdirs/des/y3-bias/mice2/' 
@@ -108,15 +128,26 @@ paths['lens_mice'] = paths['mice'] + 'lens.fits'
 paths['source_mice'] = paths['mice'] + 'source.fits'
 paths['randoms_mice'] = paths['mice'] + 'random.fits'
 paths['yaml'] = 'cats.yaml' 
-paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
-                        'redmagic_%s'%config_data['redmagic_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
-                        'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
-                        'bslop_%0.1g'%config_data['bslop']) 
+if 'combined_sample_fid' in config['lens_v']:
+    paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
+	                            'redmagic_%s'%config_data['lens_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
+	                            'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
+	                            'bslop_%0.1g'%config_data['bslop']) 
+	
+if 'maglim' in config['lens_v']:
+    paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
+	                            'maglim_%s'%config_data['lens_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
+	                            'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
+	                            'bslop_%0.1g'%config_data['bslop']) 
 
 
+paths['theory_size_all_covmat'] = paths['runs']+paths['config_data'] + '/size/theory_size_all_covmat.fits'
+paths['hist_n_of_z_lenses_witherr_size'] = paths['runs']+paths['config_data'] +'/size/hist_n_of_z_lenses_witherr_size'
+paths['hist_n_of_z_low_size'] = paths['runs']+paths['config_data']+'/size/hist_n_of_z_low_size'
+paths['hist_n_of_z_high_size'] = paths['runs']+paths['config_data']+'/size/hist_n_of_z_high_size'
 
 paths['config_mice'] = os.path.join('mice', 'v_%s'%config_mice['version'], 'zslim_%s'%config_mice['zslim_v'], 'zs_%s'%config_mice['zs_v'],
-                        'redmagic_%s'%config_mice['redmagic_v'], 'zllim_%s'%config_mice['zllim_v'], 'njk_%d'%config_mice['njk'],
+                        'redmagic_%s'%config_mice['lens_v'], 'zllim_%s'%config_mice['zllim_v'], 'njk_%d'%config_mice['njk'],
                         'thbin_%0.1f_%d_%d'%(config_mice['thlims'][0], config_mice['thlims'][1], config_mice['nthbins']),
                         'bslop_%0.1g'%config_mice['bslop']) 
 
@@ -131,7 +162,7 @@ Define the zbins dictionary. This dictionary is imported
 in the other scripts and it defines the number of lens and source
 redshift bins and their limits. 
 """
-
+# Redmagic bins:
 zbins = {}
 zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5']
 zbins['sbins'] = ['s1', 's2', 's3', 's4']
@@ -150,6 +181,27 @@ zbins['s3'] = [0.63, 0.90]
 zbins['s4'] = [0.90, 1.30] 
 zbins['source_lims'] = [zbins['s1'][0], zbins['s2'][0], zbins['s3'][0], zbins['s4'][0], zbins['s4'][1]]
 
+
+# Maglimit sample zbins:
+alt_zbins = {}
+alt_zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6']
+alt_zbins['sbins'] = ['s1', 's2', 's3', 's4']
+alt_zbins['lsbins'] = [l + '_' + s for l in alt_zbins['lbins'] for s in alt_zbins['sbins']]
+# Updated bins for Y3 of the redmagic sample
+alt_zbins['l1'] = [0.20, 0.35]
+alt_zbins['l2'] = [0.35, 0.50] 
+alt_zbins['l3'] = [0.50, 0.65] 
+alt_zbins['l4'] = [0.65, 0.80] 
+alt_zbins['l5'] = [0.80, 0.95] 
+alt_zbins['l6'] = [0.95, 1.05] 
+alt_zbins['lims'] = [alt_zbins['l1'][0], alt_zbins['l2'][0], alt_zbins['l3'][0], alt_zbins['l4'][0], alt_zbins['l5'][0], alt_zbins['l6'][0], alt_zbins['l6'][1]]
+alt_zbins['s1'] = [0.20, 0.43]
+alt_zbins['s2'] = [0.43, 0.63] 
+alt_zbins['s3'] = [0.63, 0.90] 
+alt_zbins['s4'] = [0.90, 1.30] 
+alt_zbins['source_lims'] = [alt_zbins['s1'][0], alt_zbins['s2'][0], alt_zbins['s3'][0], alt_zbins['s4'][0], alt_zbins['s4'][1]]
+	
+
 """
 PLOTTING
 ---------------------------------
@@ -160,16 +212,22 @@ accross several plots, to ensure consistency.
 
 plotting = {}
 if basic['mode'] == 'data':
-    plotting['catname'] = r'Metacalibration ' + config['mastercat_v'][0:2]
+    plotting['catname'] = r'Metacalibration ' + config['mastercat_v'][0:2] + ' ' + config['lens_v']
 if basic['mode'] == 'mice':
     plotting['catname'] = r'\textsc{MICE}'
 
 plotting['latex'] = False
 plotting['cmap'] = viridis
-plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(zbins['lims'][i], zbins['lims'][i+1]) for i in range(len(zbins['lims'])-1)]
+if 'combined_sample_fid' in config['lens_v']:
+    plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(zbins['lims'][i], zbins['lims'][i+1]) for i in range(len(zbins['lims'])-1)]
+    #plotting['th_limit'] = [64.,40.,30., 24., 21.] # 12 Mpc/h 
+    #plotting['th_limit'] = [42.67, 26.67 ,20., 16., 14.] # 8 Mpc/h (double check)
+    plotting['th_limit'] = [21.33, 13.33 , 10., 8., 7.] # 4 Mpc/h (double check)
+if 'maglim' in config['lens_v']:
+    plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(alt_zbins['lims'][i], alt_zbins['lims'][i+1]) for i in range(len(alt_zbins['lims'])-1)]
+    plotting['th_limit'] = [21.33, 13.33 , 10., 8., 7., 6.] # 4 Mpc/h (double check)
 plotting['redshift_s'] = [r'$%0.2f < z_s < %0.2f $'%(zbins['source_lims'][i], zbins['source_lims'][i+1]) for i in range(len(zbins['source_lims'])-1)]
 plotting['titles_redmagic'] = ['redMaGiC HiDens', 'redMaGiC HiDens', 'redMaGiC HiDens', 'redMaGiC HiLum', 'redMaGiC HiLum']
-plotting['th_limit'] = [64.,40.,30., 24., 21.] 
 
 
 """
