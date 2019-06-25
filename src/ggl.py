@@ -47,7 +47,6 @@ class GGL(object):
 	zbinsc = zbins[:-1] + (zbins[1]-zbins[0])/2.
 	nz, _ = np.histogram(z,zbins)
         nz = nz/float(nz.sum())
-	print nz
 	return zbins, nz 
 
 
@@ -62,13 +61,14 @@ class GGL(object):
 
 	source['ra'] = data[params['source_group']]['ra'][:]
 	source['dec'] = data[params['source_group']]['dec'][:]
-	source['e1'] = data[params['source_group']]['e1'][:]
-	source['e2'] = data[params['source_group']]['e1'][:]
+        if self.config['shape_noise']:
+            source['e1'] = data[params['source_group']]['e1'][:]
+            source['e2'] = data[params['source_group']]['e2'][:]
+        else:
+            source['e1'] = data[params['source_group']]['g1'][:]
+            source['e2'] = data[params['source_group']]['g2'][:]
 	source['z'] = data[params['sourcez_group']]['zmean_sof'][:]
 	source['ztrue'] = data[params['sourcez_group']]['z'][:]
-
-	return source
-
 
         return source
 
@@ -247,7 +247,6 @@ class GGL(object):
             print 'Running in mode with no LSS weights. They are set to one.'
             w_l = np.ones(len(ra_l)) 
 
-	print 'Lens weigths:', w_l
         return ra_l, dec_l, jk_l, w_l
 
     def get_source(self, source):
@@ -312,20 +311,20 @@ class GGL(object):
                 if jk == 0: print 'Doing NG correlation.'
                 corr = treecorr.NGCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
                                               max_sep=self.config['thlims'][1], sep_units='arcmin',
-                                              bin_slop=self.config['bslop'], num_threads=self.config['num_threads'])
+                                              bin_slop=self.config['bslop'], num_threads=self.basic['num_threads'])
 
             if type_corr == 'NN':
                 if jk == 0: print 'Doing NN correlation.'
                 corr = treecorr.NNCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
                                               max_sep=self.config['thlims'][1], sep_units='arcmin',
-                                              bin_slop=self.config['bslop'], num_threads=self.config['num_threads'])
+                                              bin_slop=self.config['bslop'], num_threads=self.basic['num_threads'])
                 
 
             if 'NK' in type_corr:
                 if jk == 0: print 'Doing NK correlation with variable %s.' % type_corr[3:]
                 corr = treecorr.NKCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
                                               max_sep=self.config['thlims'][1], sep_units='arcmin',
-                                              bin_slop=self.config['bslop'], num_threads=self.config['num_threads'])
+                                              bin_slop=self.config['bslop'], num_threads=self.basic['num_threads'])
 
             if len(ra_l_jk) > 1:
 
@@ -410,12 +409,12 @@ class GGL(object):
         gxs = [manager.list() for x in range(self.config['njk'])]
         errs = [manager.list() for x in range(self.config['njk'])]
         xi_nks = [manager.list() for x in range(self.config['njk'])]
-        if pool: 
+        if self.basic['pool']: 
             p = mp.Pool(10, worker_init)
             p.map(run_jki, range(self.config['njk']))
             p.close()
 
-        if not pool:
+        if not self.basic['pool']:
             for jk in range(self.config['njk']):
 		run_jki(jk)
 
