@@ -63,7 +63,7 @@ class GGL(object):
 	source['dec'] = data[params['source_group']]['dec'][:]
         if self.config['shape_noise']:
             source['e1'] = data[params['source_group']]['e1'][:]
-            source['e2'] = data[params['source_group']]['e2'][:]
+            source['e2'] = -data[params['source_group']]['e2'][:]
         else:
             source['e1'] = data[params['source_group']]['g1'][:]
             source['e2'] = data[params['source_group']]['g2'][:]

@@ -35,7 +35,7 @@ measurements, not the systematics tests.
 basic = {
     'mode':'data',
     'blind': True,
-    'plot_blinded': True,
+    'plot_blinded': False,
     'pool': True
 }
 if basic['pool']: basic['num_threads'] = 1

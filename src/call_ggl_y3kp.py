@@ -21,10 +21,11 @@ if 'maglim' in config['lens_v']:
 
 if run_measurement:
     print 'Starting measurement class...'
+    print 'zbinning used:', zbinning
     measurement = Measurement(basic, config, paths, zbinning, plotting)
 
     if not basic['plot_blinded']:
-        #measurement.run()
+        measurement.run()
         measurement.save_2pointfile('gt')
         measurement.save_2pointfile('gt_boosted')
         measurement.save_2pointfile('boost_factor')
