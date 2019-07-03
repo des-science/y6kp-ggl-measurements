@@ -66,7 +66,7 @@ class GGL(object):
             source['e2'] = -data[params['source_group']]['e2'][:]
         else:
             source['e1'] = data[params['source_group']]['g1'][:]
-            source['e2'] = data[params['source_group']]['g2'][:]
+            source['e2'] = -data[params['source_group']]['g2'][:]
 	source['z'] = data[params['sourcez_group']]['zmean_sof'][:]
 	source['ztrue'] = data[params['sourcez_group']]['z'][:]
 
