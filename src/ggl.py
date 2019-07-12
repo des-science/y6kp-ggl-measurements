@@ -704,7 +704,12 @@ class Measurement(GGL):
     		    path_test = self.get_path_test(lbin, sbin)
     		    make_directory(path_test)
 
-    		    lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
+                    if 'ztrue' in self.config['zllim_v']:
+                        print 'Using ztrue to bin the lenses.'
+                        lens = lens_all[(lens_all['ztrue'] > self.zbins[lbin][0]) & (lens_all['ztrue'] < self.zbins[lbin][1])]
+                    else:
+                        print 'Using z to bin the lenses.'
+                        lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
                     print 'Length lens', lbin, len(lens['ra'])
 
                     if self.basic['mode'] == 'buzzard':
