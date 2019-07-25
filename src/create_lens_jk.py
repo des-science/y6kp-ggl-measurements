@@ -57,9 +57,10 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
         ra_r = ran_selector.get_col('ra')[0] 
         dec_r = ran_selector.get_col('dec')[0] 
         z_r = ran_selector.get_col('z')[0] 
-        #w_r = ran_selector.get_col('weight')[0] 
+        w_r = ran_selector.get_col('weight')[0] 
+        print 'Original weights randoms:', w_r
         w_r = np.ones(len(ra_r))
-        print 'Weights randoms:', w_r
+        print 'Weights randoms, setting them to one:', w_r
 
         # Number of galaxies in each lens bin
         n_lens = np.array([len(ra_l[(z_l<zbins[i+1])&(z_l>zbins[i])]) for i in range(len(zbins)-1)])
