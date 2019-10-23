@@ -57,18 +57,19 @@ class GGL(object):
         data = h.File(params['datafile'])
 
         # Dictionary with the unsheared version and selection only:
+        index = data['index/select/']
         source = {}
 
-	source['ra'] = data[params['source_group']]['ra'][:]
-	source['dec'] = data[params['source_group']]['dec'][:]
+        source['ra'] = data[params['source_group']]['ra'][:][index]
+	source['dec'] = data[params['source_group']]['dec'][:][index]
         if self.config['shape_noise']:
-            source['e1'] = data[params['source_group']]['e1'][:]
-            source['e2'] = -data[params['source_group']]['e2'][:]
+            source['e1'] = data[params['source_group']]['e1'][:][index]
+            source['e2'] = -data[params['source_group']]['e2'][:][index]
         else:
-            source['e1'] = data[params['source_group']]['g1'][:]
-            source['e2'] = -data[params['source_group']]['g2'][:]
-	source['z'] = data[params['sourcez_group']]['zmean_sof'][:]
-	source['ztrue'] = data[params['sourcez_group']]['z'][:]
+            source['e1'] = data[params['source_group']]['g1'][:][index]
+            source['e2'] = -data[params['source_group']]['g2'][:][index]
+	source['z'] = data[params['sourcez_group']]['zmean_sof'][:][index]
+	source['ztrue'] = data[params['sourcez_group']]['z'][:][index]
 
         return source
 
@@ -410,7 +411,7 @@ class GGL(object):
         errs = [manager.list() for x in range(self.config['njk'])]
         xi_nks = [manager.list() for x in range(self.config['njk'])]
         if self.basic['pool']: 
-            p = mp.Pool(10, worker_init)
+            p = mp.Pool(3, worker_init)
             p.map(run_jki, range(self.config['njk']))
             p.close()
 
