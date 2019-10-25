@@ -2375,8 +2375,100 @@ class TestSizeSNR(GGL):
 	self.process_run(gth_all_boosted, theta, path_test, 'gth_boosted')
 	
 	
-        # Saving the n(z)'s
+        #Computing the histograms and saving them
+        if size_snr == 'size':
+            hist_nofz_all_size = np.histogram(source['bpz_zmc'], normed=True, bins=200)
+            hist_nofz_high_size = np.histogram(sourceh['bpz_zmc'], normed=True, bins=200)
+            hist_nofz_low_size = np.histogram(sourcel['bpz_zmc'], normed=True, bins=200)
+        else:
+            hist_nofz_all_snr = np.histogram(source['bpz_zmc'], normed=True, bins=200)
+            hist_nofz_high_snr = np.histogram(sourceh['bpz_zmc'], normed=True, bins=200)
+            hist_nofz_low_snr = np.histogram(sourcel['bpz_zmc'], normed=True, bins=200)
 
+        if 'combined_sample_fid' in self.config['lens_v']:
+            nofz_lenses_witherr = np.random.normal(lens['z'],lens['zerr'])
+        else:
+            nofz_lenses_witherr = lens['zerr']
+
+        hist_nofz_lenses_witherr = np.histogram(nofz_lenses_witherr, normed=True, bins=200)
+        if size_snr == 'size':
+            zstep_all_size=(hist_nofz_all_size[1][1]-hist_nofz_all_size[1][0])/2.
+            zstep_high_size=(hist_nofz_high_size[1][1]-hist_nofz_high_size[1][0])/2.
+            zstep_low_size=(hist_nofz_low_size[1][1]-hist_nofz_low_size[1][0])/2.
+        else:
+            zstep_all_snr=(hist_nofz_all_snr[1][1]-hist_nofz_all_snr[1][0])/2.
+            zstep_high_snr=(hist_nofz_high_snr[1][1]-hist_nofz_high_snr[1][0])/2.
+            zstep_low_snr=(hist_nofz_low_snr[1][1]-hist_nofz_low_snr[1][0])/2.
+
+        zstep_lenses_witherr=(hist_nofz_lenses_witherr[1][1]-hist_nofz_lenses_witherr[1][0])/2.
+
+        if size_snr == 'size':
+            a=open(path_test + 'hist_n_of_z_all_size','w')
+            for i in range(0,len(hist_nofz_all_size[1][0:-1])):
+                a.write(str(hist_nofz_all_size[1][i]+zstep_all_size))
+                a.write('\t')
+                a.write(str(hist_nofz_all_size[0][i]))
+                a.write('\n')
+    
+            a.close() 
+
+            a=open(path_test + 'hist_n_of_z_high_size','w')
+            for i in range(0,len(hist_nofz_high_size[1][0:-1])):
+                a.write(str(hist_nofz_high_size[1][i]+zstep_high_size))
+                a.write('\t')
+                a.write(str(hist_nofz_high_size[0][i]))
+                a.write('\n')
+
+            a.close()
+
+            a=open(path_test + 'hist_n_of_z_low_size','w')
+            for i in range(0,len(hist_nofz_low_size[1][0:-1])):
+                a.write(str(hist_nofz_low_size[1][i]+zstep_low_size))
+                a.write('\t')
+                a.write(str(hist_nofz_low_size[0][i]))
+                a.write('\n')
+    
+            a.close()            
+
+        else:
+            a=open(path_test + 'hist_n_of_z_all_snr','w')
+            for i in range(0,len(hist_nofz_all_snr[1][0:-1])):
+                a.write(str(hist_nofz_all_snr[1][i]+zstep_all_snr))
+                a.write('\t')
+                a.write(str(hist_nofz_all_snr[0][i]))
+                a.write('\n')
+    
+            a.close()
+
+            a=open(path_test + 'hist_n_of_z_high_snr','w')
+            for i in range(0,len(hist_nofz_high_snr[1][0:-1])):
+                a.write(str(hist_nofz_high_snr[1][i]+zstep_high_snr))
+                a.write('\t')
+                a.write(str(hist_nofz_high_snr[0][i]))
+                a.write('\n')
+
+            a.close()
+
+            a=open(path_test + 'hist_n_of_z_low_snr','w')
+            for i in range(0,len(hist_nofz_low_snr[1][0:-1])):
+                a.write(str(hist_nofz_low_snr[1][i]+zstep_low_snr))
+                a.write('\t')
+                a.write(str(hist_nofz_low_snr[0][i]))
+                a.write('\n')
+
+            a.close()
+
+        a=open(path_test + 'hist_n_of_z_lenses_witherr','w')
+
+        for i in range(0,len(hist_nofz_lenses_witherr[1][0:-1])):
+            a.write(str(hist_nofz_lenses_witherr[1][i]+zstep_lenses_witherr))
+            a.write('\t')
+            a.write(str(hist_nofz_lenses_witherr[0][i]))
+            a.write('\n')
+
+        a.close()
+
+        """
 	np.savetxt(path_test + 'n_of_z_lenses', lens['z'])
         np.savetxt(path_test + 'n_of_z_lenses_err', lens['zerr'])
 	if size_snr == 'size':
@@ -2387,8 +2479,8 @@ class TestSizeSNR(GGL):
                 np.savetxt(path_test + 'n_of_z_low_snr', sourcel['bpz_zmc'])
                 np.savetxt(path_test + 'n_of_z_high_snr', sourceh['bpz_zmc'])
                 np.savetxt(path_test + 'n_of_z_all_snr', source['bpz_zmc'])
-	
-	print('All done')
+        """
+        print('All done')
 	stop
 	
 

@@ -36,7 +36,7 @@ basic = {
     'mode':'data',
     'blind': True,
     'plot_blinded': True,
-    'pool': True
+    'pool': False
 }
 if basic['pool']: basic['num_threads'] = 1
 if not basic['pool']: basic['num_threads'] = 10
@@ -57,8 +57,8 @@ config_data = {
     'thlims': np.array([2.5,250.]),
     'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_7_24_19.h5',
     #'lens_v': 'combined_sample_fid_noLSSweights',
-    'lens_v': 'combined_sample_fid',
-    #'lens_v': 'maglim',
+    #'lens_v': 'combined_sample_fid',
+    'lens_v': 'maglim',
     'zslim_v': 'y1',
     'zs_v': 'bpz',
     'zllim_v': 'y3',
