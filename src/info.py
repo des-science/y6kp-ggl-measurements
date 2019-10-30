@@ -35,8 +35,8 @@ measurements, not the systematics tests.
 basic = {
     'mode':'data',
     'blind': True,
-    'plot_blinded': False,
-    'pool': True
+    'plot_blinded': True,
+    'pool': False
 }
 
 if basic['pool']:

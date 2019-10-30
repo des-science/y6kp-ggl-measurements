@@ -5,12 +5,12 @@ T = True
 F = False
 
 
-run_measurement = T
+run_measurement = F
 run_responses_nk = F
 run_responses_ng = F
 run_stars = F
 run_psf = F
-run_size_snr = F
+run_size_snr = T
 run_sysmaps = F
 
 
