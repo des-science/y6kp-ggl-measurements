@@ -117,6 +117,10 @@ class GGL(object):
         pz_selector = destest_functions.load_catalog(
             params, 'pz', 'mcal', params['pz_group'], params['pz_table'], params['pz_path'], inherit=source_selector)
 
+        # SOM PZ to split in bins:
+        som_selector = destest_functions.load_catalog(
+            params, 'som', 'mcal', params['som_group'], params['som_table'], params['som_path'], inherit=source_selector) 
+        
         # Dictionary with the unsheared version of each quantity with the selections from: unsheared, 1p, 1m, 2p, 2m. 
         source_5sels = {}
         source_5sels['unsheared'] = {}
@@ -137,6 +141,7 @@ class GGL(object):
         source_5sels['sheared']['size'] = source_selector.get_col('T')
         source_5sels['sheared']['bpz_mean'] = pz_selector.get_col('zmean_sof')
         source_5sels['sheared']['bpz_zmc'] = pz_selector.get_col('zmc_sof')
+        source_5sels['sheared']['som_bin'] = som_selector.get_col('tomo_bin_wide')
 
         # Dictionary with the unsheared version and selection only:
         source = {}
@@ -150,6 +155,7 @@ class GGL(object):
         source['size'] = source_5sels['sheared']['size'][0]
         source['bpz_mean'] = source_5sels['sheared']['bpz_mean'][0]
         source['bpz_zmc'] = source_5sels['sheared']['bpz_zmc'][0]
+        source['som_bin'] = source_5sels['sheared']['som_bin'][0]
 
         # -------------------------------
         # Notes from Troxel on responses: 
@@ -174,8 +180,45 @@ class GGL(object):
         print 'Response full sample', source['Rmean']
         return source, source_5sels, source_calibrator
 
-    def load_metacal_bin(self, source, source_5sels, calibrator, zlim_low, zlim_high):
+    def load_metacal_bin(self, source, source_5sels, calibrator, bin_low, bin_high):
         """
+        source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
+        source_5sels: dictionary containing relevant columns for the sources, with the baseline selection applied already,
+                     for each of the 5 selections 1p, 1m, 2p, 2m. 
+        calibrator: class to compute the response. Taken from baseline selection.
+        bin_low, bin_high: limits to select the tomographic bin. Can be 0,1,2,3.
+        Obtains 5 masks (unsheared, sheared 1p, 1m, 2p, 2m) to obtain the new selection response.
+        Returns: Source dictionary masked with the unsheared mask and with the mean response updated.
+        """
+
+        photoz_masks = [
+            (source_5sels['sheared']['som_bin'][i] >= bin_low ) & (source_5sels['sheared']['som_bin'][i] <= bin_high)
+            for i in range(5)]
+        source_bin = {}
+        source_bin['ra'] = source['ra'][photoz_masks[0]]
+        source_bin['dec'] = source['dec'][photoz_masks[0]]
+        source_bin['e1'] = source['e1'][photoz_masks[0]]
+        source_bin['e2'] = source['e2'][photoz_masks[0]]
+        source_bin['psf_e1'] = source['psf_e1'][photoz_masks[0]]
+        source_bin['psf_e2'] = source['psf_e2'][photoz_masks[0]]
+        source_bin['snr'] = source['snr'][photoz_masks[0]]
+        source_bin['size'] = source['size'][photoz_masks[0]]
+        source_bin['bpz_mean'] = source['bpz_mean'][photoz_masks[0]]
+        source_bin['bpz_zmc'] = source['bpz_zmc'][photoz_masks[0]]
+        source_bin['Rgamma'] = source['Rgamma'][photoz_masks[0]]
+
+        R11, _, _ = calibrator.calibrate('e_1', mask=photoz_masks)
+        R22, _, _ = calibrator.calibrate('e_2', mask=photoz_masks)
+        source_bin['Rmean'] = np.mean([R11, R22])
+        source_bin['R11'] = calibrator.calibrate('e_1', return_full=True, mask=photoz_masks)[0]
+        source_bin['R22'] = calibrator.calibrate('e_2', return_full=True, mask=photoz_masks)[0]
+        print 'Mean response redshift bin (%d, %d):' % (bin_low, bin_high), source_bin['Rmean'], np.mean(
+            source_bin['Rgamma']), np.mean(source_bin['R11']), np.mean(source_bin['R22'])
+        return source_bin
+
+    def load_metacal_bin_bpz(self, source, source_5sels, calibrator, zlim_low, zlim_high):
+        """
+        OUTDATED
         source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
         source_5sels: dictionary containing relevant columns for the sources, with the baseline selection applied already,
                      for each of the 5 selections 1p, 1m, 2p, 2m. 
@@ -411,7 +454,7 @@ class GGL(object):
         errs = [manager.list() for x in range(self.config['njk'])]
         xi_nks = [manager.list() for x in range(self.config['njk'])]
         if self.basic['pool']: 
-            p = mp.Pool(3, worker_init)
+            p = mp.Pool(self.basic['Ncores'], worker_init)
             p.map(run_jki, range(self.config['njk']))
             p.close()
 
@@ -672,7 +715,8 @@ class Measurement(GGL):
     		print 'Running measurement for source %s.' % sbin
 
 		if self.basic['mode'] == 'data':
-		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins[sbin][0], zlim_high=self.zbins[sbin][1])
+                    print 'Source bin:', self.zbins[sbin][0], self.zbins[sbin][1]
+		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, bin_low=self.zbins[sbin][0], bin_high=self.zbins[sbin][1])
 		    R = source['Rmean']
                     print 'Length source', sbin, len(source['ra'])
 

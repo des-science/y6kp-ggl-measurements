@@ -146,7 +146,7 @@ gold_selector = destest_functions.load_catalog(
 
 
 # First create the redmagic lens.fits and random.fits
-#create_lens(red_lens_selector, red_ran_selector, None, None, zbins, paths['redmagic'], 'redmagic')
+create_lens(red_lens_selector, red_ran_selector, None, None, zbins, paths['redmagic'], 'redmagic')
 
 # Create lens.fits and random.fits for maglimit sample
-create_lens(alt_lens_selector, alt_ran_selector, pz_selector, gold_selector, alt_zbins, paths['maglim'], 'maglim')
+#create_lens(alt_lens_selector, alt_ran_selector, pz_selector, gold_selector, alt_zbins, paths['maglim'], 'maglim')

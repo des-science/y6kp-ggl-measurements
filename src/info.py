@@ -35,11 +35,16 @@ measurements, not the systematics tests.
 basic = {
     'mode':'data',
     'blind': True,
-    'plot_blinded': True,
+    'plot_blinded': False,
     'pool': True
 }
-if basic['pool']: basic['num_threads'] = 1
+
+if basic['pool']:
+    basic['num_threads'] = 1
+    basic['Ncores'] = 10
+    
 if not basic['pool']: basic['num_threads'] = 10
+
 
 """
 CONFIGURATION
@@ -55,17 +60,16 @@ config_data = {
     'bslop': 0.1,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
-    'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_7_24_19.h5',
+    'filename_mastercat': '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_10_18_19.h5',
     #'lens_v': 'combined_sample_fid_noLSSweights',
     'lens_v': 'combined_sample_fid',
     #'lens_v': 'maglim',
-    'zslim_v': 'y1',
+    'zslim_v': 'som',
     'zs_v': 'bpz',
     'zllim_v': 'y3',
     }
 
-config_data['mastercat_v'] = config_data['filename_mastercat'][37:-3]
-
+config_data['mastercat_v'] = config_data['filename_mastercat'][-24:-3]
 
 config_mice = {
     'njk': 300,
@@ -173,12 +177,19 @@ zbins['l3'] = [0.5, 0.65]
 zbins['l4'] = [0.65, 0.85] 
 zbins['l5'] = [0.85, 0.95] 
 zbins['lims'] = [zbins['l1'][0], zbins['l2'][0], zbins['l3'][0], zbins['l4'][0], zbins['l5'][0], zbins['l5'][1]]
-zbins['s1'] = [0.20, 0.43]
-zbins['s2'] = [0.43, 0.63] 
-zbins['s3'] = [0.63, 0.90] 
-zbins['s4'] = [0.90, 1.30] 
-zbins['source_lims'] = [zbins['s1'][0], zbins['s2'][0], zbins['s3'][0], zbins['s4'][0], zbins['s4'][1]]
-
+if config['zslim_v'] == 'som':
+    # SOM bins don't have explicit limits
+    zbins['s1'] = [0, 0]
+    zbins['s2'] = [1, 1] 
+    zbins['s3'] = [2, 2] 
+    zbins['s4'] = [3, 3]
+    
+if config['zslim_v'] == 'y1':
+    zbins['s1'] = [0.20, 0.43]
+    zbins['s2'] = [0.43, 0.63] 
+    zbins['s3'] = [0.63, 0.90] 
+    zbins['s4'] = [0.90, 1.30]
+    zbins['source_lims'] = [zbins['s1'][0], zbins['s2'][0], zbins['s3'][0], zbins['s4'][0], zbins['s4'][1]]
 
 # Maglimit sample zbins:
 alt_zbins = {}
@@ -193,12 +204,14 @@ alt_zbins['l4'] = [0.65, 0.80]
 alt_zbins['l5'] = [0.80, 0.95] 
 alt_zbins['l6'] = [0.95, 1.05] 
 alt_zbins['lims'] = [alt_zbins['l1'][0], alt_zbins['l2'][0], alt_zbins['l3'][0], alt_zbins['l4'][0], alt_zbins['l5'][0], alt_zbins['l6'][0], alt_zbins['l6'][1]]
-alt_zbins['s1'] = [0.20, 0.43]
-alt_zbins['s2'] = [0.43, 0.63] 
-alt_zbins['s3'] = [0.63, 0.90] 
-alt_zbins['s4'] = [0.90, 1.30] 
-alt_zbins['source_lims'] = [alt_zbins['s1'][0], alt_zbins['s2'][0], alt_zbins['s3'][0], alt_zbins['s4'][0], alt_zbins['s4'][1]]
-	
+
+alt_zbins['s1'] = zbins['s1']
+alt_zbins['s2'] = zbins['s2']
+alt_zbins['s3'] = zbins['s3']
+alt_zbins['s4'] = zbins['s4']
+if config['zslim_v'] == 'y1':
+    alt_zbins['source_lims'] = zbins['source_lims']
+
 
 """
 PLOTTING
@@ -224,7 +237,12 @@ if 'combined_sample_fid' in config['lens_v']:
 if 'maglim' in config['lens_v']:
     plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(alt_zbins['lims'][i], alt_zbins['lims'][i+1]) for i in range(len(alt_zbins['lims'])-1)]
     plotting['th_limit'] = [21.33, 13.33 , 10., 8., 7., 6.] # 4 Mpc/h (double check)
-plotting['redshift_s'] = [r'$%0.2f < z_s < %0.2f $'%(zbins['source_lims'][i], zbins['source_lims'][i+1]) for i in range(len(zbins['source_lims'])-1)]
+
+if config['zslim_v'] == 'y1':
+    plotting['redshift_s'] = [r'$%0.2f < z_s < %0.2f $'%(zbins['source_lims'][i], zbins['source_lims'][i+1]) for i in range(len(zbins['source_lims'])-1)]
+if config['zslim_v'] == 'som':
+    plotting['redshift_s'] = ['Bin 1', 'Bin 2', 'Bin 3', 'Bin 4']
+    
 plotting['titles_redmagic'] = ['redMaGiC HiDens', 'redMaGiC HiDens', 'redMaGiC HiDens', 'redMaGiC HiLum', 'redMaGiC HiLum']
 
 
