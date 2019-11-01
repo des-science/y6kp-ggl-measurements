@@ -216,6 +216,26 @@ class GGL(object):
             source_bin['Rgamma']), np.mean(source_bin['R11']), np.mean(source_bin['R22'])
         return source_bin
 
+    def load_metacal_bin_sels_responses(self, source_5sels, bin_low, bin_high):
+        """
+        source_5sels: Nested dictionary containing relevant columns for the sources, with the baseline selection applied already,
+                   for each of the unsheared and sheared versions and for each selection.
+        bin_low, bin_high: limits to select the tomographic bin.
+        Returns: Source dictionary masked each time with one of the photo-z masks, to compute the selection response manually and
+                 test its scale dependence. 
+        """
+        photoz_masks = [
+            (source_5sels['sheared']['som_bin'][i] >= bin_low ) & (source_5sels['sheared']['som_bin'][i] <= bin_high)
+            for i in range(5)]
+        source_bin_sels = {}
+        source_bin_sels['ra'] = [source_5sels['unsheared']['ra'][i][photoz_masks[i]] for i in range(1, 5)]
+        source_bin_sels['dec'] = [source_5sels['unsheared']['dec'][i][photoz_masks[i]] for i in range(1, 5)]
+        source_bin_sels['e1'] = [source_5sels['unsheared']['e1'][i][photoz_masks[i]] for i in range(1, 5)]
+        source_bin_sels['e2'] = [source_5sels['unsheared']['e2'][i][photoz_masks[i]] for i in range(1, 5)]
+
+        return source_bin_sels
+
+
     def load_metacal_bin_bpz(self, source, source_5sels, calibrator, zlim_low, zlim_high):
         """
         OUTDATED
@@ -252,8 +272,9 @@ class GGL(object):
             source_bin['Rgamma']), np.mean(source_bin['R11']), np.mean(source_bin['R22'])
         return source_bin
 
-    def load_metacal_bin_sels_responses(self, source_5sels, zlim_low, zlim_high):
+    def load_metacal_bin_sels_responses_bpz(self, source_5sels, zlim_low, zlim_high):
         """
+        DEPRECATED
         source_5sels: Nested dictionary containing relevant columns for the sources, with the baseline selection applied already,
                    for each of the unsheared and sheared versions and for each selection.
         zlim_low, zlim_high: limits to select the tomographic bin.
@@ -1500,12 +1521,12 @@ class ResponsesScale(GGL):
         for sbin in self.zbins['sbins']:
 
             print 'Running responses test for source %s.' % sbin
-            source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins[sbin][0],
-                                           zlim_high=self.zbins[sbin][1])
+            source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, bin_low=self.zbins[sbin][0],
+                                           bin_high=self.zbins[sbin][1])
             resp[sbin] = source['Rmean']
             print 'R = source[Rmean]', resp
-            source_sels = self.load_metacal_bin_sels_responses(source_all_5sels, zlim_low=self.zbins[sbin][0],
-                                                               zlim_high=self.zbins[sbin][1])
+            source_sels = self.load_metacal_bin_sels_responses(source_all_5sels, bin_low=self.zbins[sbin][0],
+                                                               bin_high=self.zbins[sbin][1])
             delta_gamma = 2 * 0.01
 
             for lbin in self.zbins['lbins']:
