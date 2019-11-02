@@ -1098,6 +1098,9 @@ class Measurement(GGL):
         bins_s = np.transpose(pairs)[1]
         nbins_l = np.max(bins_l)
         nbins_s = np.max(bins_s)
+        print nbins_s
+        print len(self.zbins['sbins'])
+        print self.zbins['sbins']
         assert len(self.zbins[
                        'lbins']) == nbins_l, 'Number of lens bins in info does not match with the one in the two-point file.'
         assert len(self.zbins[
@@ -1108,7 +1111,7 @@ class Measurement(GGL):
         title_source = self.plotting['catname']
 
         # Figure
-        fig, ax = plt.subplots(2, 3, figsize=(10, 6), sharey=False, sharex=False, gridspec_kw={'height_ratios': [1, 1]})
+        fig, ax = plt.subplots(2, 3, figsize=(10, 6), sharey=True, sharex=False, gridspec_kw={'height_ratios': [1, 1]})
         fig.subplots_adjust(hspace=0.0, wspace=0.00)
 
         for l in range(0, len(self.zbins['lbins'])):
@@ -1137,7 +1140,7 @@ class Measurement(GGL):
                     ax[j][l % 3].set_xscale('log')
                     ax[j][l % 3].set_yscale('log')
 
-                    ax[j][l % 3].set_ylim(10**(-6), 0.999*10**(-2))
+                    #ax[j][l % 3].set_ylim(10**(-6), 0.999*10**(-2))
                     ax[j][l % 3].text(0.5, 0.9, self.plotting['redshift_l'][l], horizontalalignment='center',
                                       verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
                     #ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
@@ -1205,7 +1208,7 @@ class Measurement(GGL):
                 if s == 0:
                     ax[s][l].set_title(self.plotting['redshift_l'][l], size='larger')
 
-                ax[s][l].axvspan(2.5, self.plotting['th_limit'][l], color='gray', alpha=0.2)
+                ax[s][l].axvspan(self.config['thlims'][0], self.plotting['th_limit'][l], color='gray', alpha=0.2)
 
         ax[0][len(self.zbins['sbins'])].legend(frameon=False, fontsize=16, loc='lower right')
         self.save_plot('boost_factors')
