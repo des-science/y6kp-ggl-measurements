@@ -1140,7 +1140,7 @@ class Measurement(GGL):
                     ax[j][l % 3].set_xscale('log')
                     ax[j][l % 3].set_yscale('log')
 
-                    #ax[j][l % 3].set_ylim(10**(-6), 0.999*10**(-2))
+                    ax[j][l % 3].set_ylim(ymin =10**(-6))#, 0.999*10**(-2))
                     ax[j][l % 3].text(0.5, 0.9, self.plotting['redshift_l'][l], horizontalalignment='center',
                                       verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
                     #ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
@@ -1209,6 +1209,7 @@ class Measurement(GGL):
                     ax[s][l].set_title(self.plotting['redshift_l'][l], size='larger')
 
                 ax[s][l].axvspan(self.config['thlims'][0], self.plotting['th_limit'][l], color='gray', alpha=0.2)
+                print self.config['thlims'][0]
 
         ax[0][len(self.zbins['sbins'])].legend(frameon=False, fontsize=16, loc='lower right')
         self.save_plot('boost_factors')
