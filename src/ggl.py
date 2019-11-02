@@ -1139,8 +1139,10 @@ class Measurement(GGL):
                     ax[j][l % 3].set_xlim(self.config['thlims'][0]*0.8, self.config['thlims'][1]*1.2)
                     ax[j][l % 3].set_xscale('log')
                     ax[j][l % 3].set_yscale('log')
-
-                    ax[j][l % 3].set_ylim(ymin =10**(-6))#, 0.999*10**(-2))
+                    if self.config['thlims'][0] ==2.5:
+                        ax[j][l % 3].set_ylim(10**(-6), 0.999*10**(-2))
+                    if self.config['thlims'][0] ==0.1:
+                        ax[j][l % 3].set_ylim(10**(-6), 10**(-1))
                     ax[j][l % 3].text(0.5, 0.9, self.plotting['redshift_l'][l], horizontalalignment='center',
                                       verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
                     #ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
