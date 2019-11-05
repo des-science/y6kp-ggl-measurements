@@ -69,8 +69,8 @@ if run_psf:
 
 if run_size_snr:
     size_snr = TestSizeSNR(basic, config, paths, zbinning, plotting, source_nofz_pars)
-    #size_snr.run('size')
-    size_snr.run('snr')
+    size_snr.run('size')
+    #size_snr.run('snr')
     size_snr.plot()
 
 if run_sysmaps:

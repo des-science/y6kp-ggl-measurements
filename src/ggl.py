@@ -2302,7 +2302,7 @@ class TestSizeSNR(GGL):
         ratio_theory, err_ratio_theory = np.loadtxt(path_test + '%s_theory' % size_snr, unpack=True)
         return ratio_data, err_ratio_data, ratio_theory, err_ratio_theory
 
-    def load_metacal_bin_size_snr(self, source, source_5sels, calibrator, size_snr, high_low, zlim_low, zlim_high):
+    def load_metacal_bin_size_snr(self, source, source_5sels, calibrator, size_snr, high_low, bin_low, bin_high):
         """
         source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
         source_5sels: dictionary containing relevant columns for the sources, with the baseline selection applied already,
@@ -2313,9 +2313,9 @@ class TestSizeSNR(GGL):
         Returns: Source dictionary masked with the unsheared mask and with the mean response updated.
         """
         if high_low == 'low':
-                masks = [(source_5sels['sheared']['bpz_mean'][i] > zlim_low) & (source_5sels['sheared']['bpz_mean'][i] < zlim_high) & (source_5sels['sheared'][size_snr][i] <= np.median(source_5sels['sheared'][size_snr][i])) for i in range(5)]
+                masks = [(source_5sels['sheared']['som_bin'][i] >= bin_low) & (source_5sels['sheared']['som_bin'][i] <= bin_high) & (source_5sels['sheared'][size_snr][i] <= np.median(source_5sels['sheared'][size_snr][i])) for i in range(5)]
         else:
-                masks = [(source_5sels['sheared']['bpz_mean'][i] > zlim_low) & (source_5sels['sheared']['bpz_mean'][i] < zlim_high) & (source_5sels['sheared'][size_snr][i] > np.median(source_5sels['sheared'][size_snr][i])) for i in range(5)]
+                masks = [(source_5sels['sheared']['som_bin'][i] >= bin_low) & (source_5sels['sheared']['som_bin'][i] <= bin_high) & (source_5sels['sheared'][size_snr][i] > np.median(source_5sels['sheared'][size_snr][i])) for i in range(5)]
 	
         source_bin = {}
         source_bin['ra'] = source['ra'][masks[0]]
@@ -2335,7 +2335,7 @@ class TestSizeSNR(GGL):
         source_bin['Rmean'] = np.mean([R11, R22])
 	source_bin['R11'] = calibrator.calibrate('e_1', return_full=True, mask=masks)[0]
 	source_bin['R22'] = calibrator.calibrate('e_2', return_full=True, mask=masks)[0]
-        print 'Mean response redshift bin (%0.2f, %0.2f):'%(zlim_low, zlim_high), source_bin['Rmean'], np.mean(source_bin['Rgamma']), np.mean(source_bin['R11']), np.mean(source_bin['R22'])
+        print 'Mean response redshift bin (%0.2f, %0.2f):'%(bin_low, bin_high), source_bin['Rmean'], np.mean(source_bin['Rgamma']), np.mean(source_bin['R11']), np.mean(source_bin['R22'])
         return source_bin
 
     def run_responses_mean_notomo_size_snr(self, Rgamma, size_snr, cut, high_low, delta_gamma):
@@ -2393,11 +2393,11 @@ class TestSizeSNR(GGL):
 
     def run(self, size_snr):
 	lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
-	source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, zlim_low=self.zbins['s1'][0], zlim_high=self.zbins['s4'][1])
-	sourcel = self.load_metacal_bin_size_snr(source_all, source_all_5sels, calibrator, size_snr, 'low', zlim_low=self.zbins['s1'][0], zlim_high=self.zbins['s4'][1])
+	source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, bin_low=self.zbins['s1'][0], bin_high=self.zbins['s4'][1])
+	sourcel = self.load_metacal_bin_size_snr(source_all, source_all_5sels, calibrator, size_snr, 'low', bin_low=self.zbins['s1'][0], bin_high=self.zbins['s4'][1])
 	Rl = sourcel['Rmean']
 
-        sourceh = self.load_metacal_bin_size_snr(source_all, source_all_5sels, calibrator, size_snr, 'high', zlim_low=self.zbins['s1'][0], zlim_high=self.zbins['s4'][1])
+        sourceh = self.load_metacal_bin_size_snr(source_all, source_all_5sels, calibrator, size_snr, 'high', bin_low=self.zbins['s1'][0], bin_high=self.zbins['s4'][1])
 	Rh = sourceh['Rmean']
 
 	lens = lens_all[(lens_all['z'] > self.zbins['l1'][0]) & (lens_all['z'] < self.zbins['l1'][1])]
@@ -2552,10 +2552,9 @@ class TestSizeSNR(GGL):
                 np.savetxt(path_test + 'n_of_z_high_snr', sourceh['bpz_zmc'])
                 np.savetxt(path_test + 'n_of_z_all_snr', source['bpz_zmc'])
         """
-        print('All done')
-	stop
+        print('All measurements done. Please, use the separate notebook to produce the plot. It still needs to be merged into the code.')
 	
-
+        """
         # Getting the data ratio using the simulations
         #sims, cov_sims = self.load_sims()
         
@@ -2617,7 +2616,10 @@ class TestSizeSNR(GGL):
         result_theory = [ratios[0], sigma_tot]
         self.save_size_snr(path_test, size_snr, result_data, result_theory)
 
+        """
+    
     def plot(self):
+        """
         plt.rc('text', usetex=self.plotting['latex'])
         plt.rc('font', family='serif')
 
@@ -2691,7 +2693,7 @@ class TestSizeSNR(GGL):
         ax[1][0].set_ylabel(r'$\gamma^{\mathrm{high}}_t /\ \gamma^{\mathrm{low}}_t $', fontsize=14)
 
         self.save_plot('snr_size')
-
+        """
 
 class init_ggl_class(GGL):
 
