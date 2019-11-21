@@ -1171,16 +1171,21 @@ class Measurement(GGL):
 
         fig.delaxes(ax[1, 2])
         # ax[1][1].legend(handles[::-1], labels[::-1], frameon=True, fancybox = True,prop={'size':12}, numpoints = 1, loc='center left', bbox_to_anchor=(1, 0.5))
-        ax[0][0].legend(frameon=False, fancybox=True, prop={'size': 12}, numpoints=1, loc='center',
-                        bbox_to_anchor=(2.45, -0.52))
+        #ax[0][0].legend(frameon=False, fancybox=True, prop={'size': 12}, numpoints=1, loc='center')
+        #                bbox_to_anchor=(2.45, -0.52))
         fig.suptitle(title_source, fontsize=16)
         fig.subplots_adjust(top=0.93)
-        self.save_plot('plot_measurement_BLINDED_%s' % string)
+        if self.basic['blind']:
+            blind = '_BLINDED'
+        else:
+            blind = ''
 
-        # Use twopoint library to make the rest of the plots
-        gammat_file.plots(self.paths['plots_config'] + '%s_twopointfile_BLINDED' % string,
+        self.save_plot('plot_measurement%s_%s'%(blind, string))
+
+        gammat_file.plots(self.paths['plots_config'] + '%s_twopointfile%s'%(string, blind),
                           blind_yaxis=self.basic['blind'], latex=self.plotting['latex'])
 
+        # Use twopoint library to make the rest of the plots
     def plot_boostfactors(self):
 
         plt.rc('text', usetex=self.plotting['latex'])
