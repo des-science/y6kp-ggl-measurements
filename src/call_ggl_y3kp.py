@@ -5,12 +5,12 @@ T = True
 F = False
 
 
-run_measurement = F
+run_measurement = T
 run_responses_nk = F
 run_responses_ng = F
 run_stars = F
 run_psf = F
-run_size_snr = T
+run_size_snr = F
 run_sysmaps = F
 
 
@@ -43,7 +43,7 @@ if run_measurement:
 
 if run_responses_nk:
     responses = ResponsesScale(basic, config, paths, zbinning, plotting)
-    #responses.run()
+    responses.run()
     responses.plot('lens', mask_scales =False)
     responses.plot('lens', mask_scales =True)
     #responses.plot_sigmas('lens', mask_scales =False)
