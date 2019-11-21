@@ -20,10 +20,10 @@ import sys
 import yaml
 
 sys.path.append('../../destest/')
-import destest
-import destest_functions
-import ipdb
-import h5py as h
+#import destest
+#import destest_functions
+#import ipdb
+#import h5py as h
 
 
 def make_directory(directory):
@@ -855,7 +855,7 @@ class Measurement(GGL):
                 cov[bin_pair_inds[0]:bin_pair_inds[-1] + 1, bin_pair_inds] = cov_ls
 
         # Preparing N(z) for the blinding script
-        if self.basic['mode'] == 'data':
+        if self.basic['mode'] == 'data' or self.basic['mode'] == 'mice':
             if 'y1_2pt_NG_mcal_1110' in self.paths['lens_nz']:
                 file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
                 lens_nz = file_lens_nz.get_kernel('nz_lens')
