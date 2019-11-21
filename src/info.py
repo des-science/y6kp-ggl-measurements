@@ -35,8 +35,8 @@ measurements, not the systematics tests.
 basic = {
     'mode':'data',
     'blind': True,
-    'plot_blinded': True,
-    'pool': False
+    'plot_blinded': False,
+    'pool': True
 }
 
 if basic['pool']:
@@ -58,12 +58,14 @@ config_mice.
 config_data = {
     'njk': 150,
     'bslop': 0.1,
-    'nthbins': 20,
-    'thlims': np.array([2.5,250.]),
+    'nthbins': 30,
+    #'nthbins': 20,
+    #'thlims': np.array([2.5,250.]),
+    'thlims': np.array([0.1,250.]),
     'filename_mastercat': '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_10_18_19.h5',
     #'lens_v': 'combined_sample_fid_noLSSweights',
-    'lens_v': 'combined_sample_fid',
-    #'lens_v': 'maglim',
+    #'lens_v': 'combined_sample_fid',
+    'lens_v': 'maglim',
     'zslim_v': 'som',
     'zs_v': 'bpz',
     'zllim_v': 'y3',
@@ -167,6 +169,7 @@ redshift bins and their limits.
 # Redmagic bins:
 zbins = {}
 zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5']
+#zbins['sbins'] = ['s2', 's3', 's4']
 zbins['sbins'] = ['s1', 's2', 's3', 's4']
 zbins['lsbins'] = [l + '_' + s for l in zbins['lbins'] for s in zbins['sbins']]
 zbins['sys'] = [0.2, 1.20]
@@ -193,8 +196,10 @@ if config['zslim_v'] == 'y1':
 
 # Maglimit sample zbins:
 alt_zbins = {}
-alt_zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6']
+#alt_zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6']
+alt_zbins['lbins'] = ['l5', 'l6']
 alt_zbins['sbins'] = ['s1', 's2', 's3', 's4']
+#alt_zbins['sbins'] = ['s4']
 alt_zbins['lsbins'] = [l + '_' + s for l in alt_zbins['lbins'] for s in alt_zbins['sbins']]
 # Updated bins for Y3 of the redmagic sample
 alt_zbins['l1'] = [0.20, 0.35]
