@@ -76,8 +76,8 @@ config_data['mastercat_v'] = config_data['filename_mastercat'][-24:-3]
 config_mice = {
     'njk': 300,
     'bslop': 0.1,
-    'nthbins': 20,
-    'thlims': np.array([2.5,250.]),
+    'nthbins': 30,
+    'thlims': np.array([0.25,250.]),
     'version': '2',
     'lens_v': 'y1',
     'zslim_v': 'y1',
@@ -129,7 +129,6 @@ paths['lens_nz'] = 'y1_2pt_NG_mcal_1110.fits'
 paths['source_nz'] = 'y1_2pt_NG_mcal_1110.fits'
 paths['mice'] = '/global/project/projectdirs/des/y3-bias/mice2/' 
 paths['lens_mice'] = paths['mice'] + 'lens.fits'
-paths['source_mice'] = paths['mice'] + 'source.fits'
 paths['randoms_mice'] = paths['mice'] + 'random.fits'
 paths['yaml'] = 'cats.yaml' 
 if 'combined_sample_fid' in config['lens_v']:

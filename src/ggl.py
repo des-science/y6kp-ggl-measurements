@@ -686,8 +686,7 @@ class GGL(object):
         if self.basic['mode'] == 'mice':
             lens_all = pf.getdata(self.paths['lens_mice'])
             random_all = pf.getdata(self.paths['randoms_mice'])
-            source_all = pf.getdata(self.paths['source_mice'])
-            return lens_all, random_all, source_all
+            return lens_all, random_all
 
         if self.basic['mode'] == 'buzzard':
             lens_all = pf.getdata(self.paths['lens_buzzard'])
@@ -728,8 +727,12 @@ class Measurement(GGL):
         if self.basic['mode'] == 'data':
             lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
 
-        if not self.basic['mode'] == 'data':
+        if self.basic['mode'] == 'mice':
+            lens_all, random_all = self.load_data_or_sims()
+
+        if self.basic['mode'] == 'buzzard':
             lens_all, random_all, source_all = self.load_data_or_sims()
+
 
         for sbin in self.zbins['sbins']:
 
@@ -749,7 +752,8 @@ class Measurement(GGL):
     		    In this case there are no responses, so we set it to one.
     		    """
     		    R = 1.
-                    source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
+                    #source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
+                    source = pf.getdata(self.paths['mice'] + 'mice2_shear_fullsample_bin%s.fits'%sbin[-1])
 
 		if self.basic['mode'] == 'buzzard':
     		    """
@@ -782,7 +786,6 @@ class Measurement(GGL):
                         zbins, nz_l = self.get_nz(lens['ztrue'])		    
                         np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
                     
-
 
     		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
     		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
