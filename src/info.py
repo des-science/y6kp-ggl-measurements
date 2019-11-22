@@ -45,10 +45,10 @@ Then you are done. All this process is only need for the gammat measurements, no
 
 basic = {
     'mode':'mice',
-    'blind': 0,
-    'run': 0,
-    'savetwopoint': 0,
-    'plot': 1,
+    'blind': 1,
+    'run': 1,
+    'savetwopoint': 1,
+    'plot': 0,
     'pool': 1
 }
 
