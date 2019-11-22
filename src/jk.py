@@ -1,7 +1,8 @@
 import numpy as np
 import os
 import kmeans_radec
-import pyfits as pf
+#import pyfits as pf
+import astropy.io.fits as pf
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 cmap = cm.Spectral

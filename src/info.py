@@ -49,11 +49,12 @@ basic = {
     'run': 1,
     'savetwopoint': 1,
     'plot': 0,
-    'pool': 1
+    'pool': 1,
+    'computer': 'midway'  #can be 'nersc', 'local', 'midway', etc
 }
 
 if basic['pool']:
-    basic['num_threads'] = 1
+    basic['num_threads'] = 5
     basic['Ncores'] = 10
     
 if not basic['pool']: basic['num_threads'] = 10
@@ -74,8 +75,8 @@ config_data = {
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'filename_mastercat': '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_10_18_19.h5',
-    'lens_v': 'redmagic',
-    #'lens_v': 'maglim',
+    #'lens_v': 'redmagic',
+    'lens_v': 'maglim',
     'lens_w': True, #use LSS weights for the lenses
     'zslim_v': 'som',
     'zs_v': 'bpz',
@@ -83,7 +84,10 @@ config_data = {
     }
 
 config_data['mastercat_v'] = config_data['filename_mastercat'][-24:-3]
+if basic['computer']=='midway':
+    config_data['filename_mastercat'] = '/project2/chihway/data/des_y3_catalogs/y3kp_sample/' + config_data['mastercat_v'] + '.h5'
 
+print config_data['filename_mastercat']
 config_mice = {
     'njk': 300,
     'bslop': 0.1,
@@ -116,8 +120,13 @@ paths['plots'] = '../plots/'
 paths['yaml'] = 'cats.yaml' 
 paths['y3'] = '../../ggl_results/'
 paths['y3_exp'] = '../../ggl_data/'
-paths['y3_sysmap'] = '/global/project/projectdirs/des/ggl/systematic_maps/'
-paths['lens_cats'] = '/global/project/projectdirs/des/ggl/lens_cats/'
+if basic['computer'] == 'nersc':
+    paths['y3_sysmap'] = '/global/project/projectdirs/des/ggl/systematic_maps/'
+    paths['lens_cats'] = '/global/project/projectdirs/des/ggl/lens_cats/'
+
+if basic['computer'] == 'midway':
+    paths['lens_cats'] = '../cats/'
+
 paths['lens_nz'] = 'y1_2pt_NG_mcal_1110.fits'
 paths['source_nz'] = 'y1_2pt_NG_mcal_1110.fits'
 

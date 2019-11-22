@@ -4,14 +4,16 @@ import yaml
 sys.path.append('../../destest/')
 sys.path.append('../../kmeans_radec/')
 import destest
-import pyfits as pf
-from info import zbins, alt_zbins, config, paths
+#import pyfits as pf
+import astropy.io.fits as pf
+from info import zbins, config, paths
 import destest_functions
 import kmeans_radec
 import os
 import jk
 import ipdb
 
+print config
 
 def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, path_save, sample):
 
@@ -69,19 +71,10 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
         n_rand = np.array([len(ra_r[(z_r<zbins[i+1])&(z_r>zbins[i])]) for i in range(len(zbins)-1)])
 
         # Downsample randoms by this quantity: we want 10 times as many randoms as lenses per z-bin
-        if sample == 'maglim':
         d = (n_lens*10.)/n_rand
         print 'd', d
         print 'n_lens', len(ra_l), n_lens
         print 'n_rand', len(ra_r), n_rand
-
-        if sample == 'maglim':
-        d = (n_lens*10.)/n_rand
-        print 'd', d
-        print 'n_lens', len(ra_l), n_lens
-        print 'n_rand', len(ra_r), n_rand
-
-
 
         # Downsample
         np.random.seed(0)
@@ -155,7 +148,9 @@ gold_selector = destest_functions.load_catalog(
 
 
 # First create the redmagic lens.fits and random.fits
-#create_lens(red_lens_selector, red_ran_selector, None, None, zbins, paths['redmagic'], 'redmagic')
+if 'redmagic' in self.config['lens_v']:
+        create_lens(red_lens_selector, red_ran_selector, None, None, zbins, paths['redmagic'], 'redmagic')
 
 # Create lens.fits and random.fits for maglimit sample
-create_lens(alt_lens_selector, alt_ran_selector, pz_selector, gold_selector, alt_zbins, paths['maglim'], 'maglim')
+if 'maglim' in self.config['lens_v']:
+        create_lens(alt_lens_selector, alt_ran_selector, pz_selector, gold_selector, zbins, paths['maglim'], 'maglim')
