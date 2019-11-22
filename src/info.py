@@ -44,7 +44,7 @@ Then you are done. All this process is only need for the gammat measurements, no
 """
 
 basic = {
-    'mode':'mice',
+    'mode':'data',
     'blind': 1,
     'run': 1,
     'savetwopoint': 1,
