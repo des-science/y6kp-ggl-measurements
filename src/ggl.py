@@ -5,7 +5,6 @@ import astropy.io.fits as pf
 import pathos.multiprocessing as mp
 from multiprocessing import Manager
 import matplotlib
-
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib import ticker
@@ -18,12 +17,11 @@ from scipy import interpolate
 import functions
 import sys
 import yaml
-
 sys.path.append('../../destest/')
-#import destest
-#import destest_functions
-#import ipdb
-#import h5py as h
+import destest
+import destest_functions
+import ipdb
+import h5py as h
 
 
 def make_directory(directory):
@@ -238,7 +236,7 @@ class GGL(object):
 
     def load_metacal_bin_bpz(self, source, source_5sels, calibrator, zlim_low, zlim_high):
         """
-        OUTDATED
+        DEPRECATED (BPZ binning is not default)
         source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
         source_5sels: dictionary containing relevant columns for the sources, with the baseline selection applied already,
                      for each of the 5 selections 1p, 1m, 2p, 2m. 
@@ -274,7 +272,7 @@ class GGL(object):
 
     def load_metacal_bin_sels_responses_bpz(self, source_5sels, zlim_low, zlim_high):
         """
-        DEPRECATED
+        DEPRECATED (BPZ binning is not default)
         source_5sels: Nested dictionary containing relevant columns for the sources, with the baseline selection applied already,
                    for each of the unsheared and sheared versions and for each selection.
         zlim_low, zlim_high: limits to select the tomographic bin.
@@ -308,7 +306,7 @@ class GGL(object):
             w_l = np.ones(len(ra_l))
 
 
-        if 'noLSSweights' in self.config['lens_v']:
+        if not self.config['lens_w']:
             print 'Running in mode with no LSS weights. They are set to one.'
             w_l = np.ones(len(ra_l)) 
 
@@ -445,7 +443,7 @@ class GGL(object):
                 npairs[jk].append(zeros)
 
         ra_l, dec_l, jk_l, w_l = self.get_lens(lens)
-        if 'noLSSweights' in self.config['lens_v']:
+        if not self.config['lens_w']:
             print 'Checking weights of lens sample are one:', w_l
         ra_s, dec_s, w = self.get_source(source)
         if type_corr == 'NG' or type_corr == 'NN':
@@ -1011,8 +1009,8 @@ class Measurement(GGL):
 
                     ax[j][l % 3].text(0.5, 0.9, self.plotting['redshift_l'][l], horizontalalignment='center',
                                       verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
-                    # ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
-                    #                  verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
+                    ax[j][l % 3].text(0.5, 0.93, self.plotting['titles_redmagic'][l], horizontalalignment='center',
+                                      verticalalignment='center', transform=ax[j][l % 3].transAxes, fontsize=12)
 
 
                     #if l % 3 > 0:  # In case we want to keep labels on the left y-axis
@@ -1037,11 +1035,11 @@ class Measurement(GGL):
         ax[1][0].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
         ax[1][1].set_ylim(10 ** (-6), 0.999 * 10 ** (-2))
 
-        # handles, labels = ax[0][0].get_legend_handles_labels()
+        #handles, labels = ax[0][0].get_legend_handles_labels()
         fig.delaxes(ax[1, 2])
-        # ax[1][1].legend(handles[::-1], labels[::-1], frameon=True, fancybox = True,prop={'size':12}, numpoints = 1, loc='center left', bbox_to_anchor=(1, 0.5))
-        ax[0][0].legend(frameon=False, fancybox=True, prop={'size': 12}, numpoints=1, loc='center',
-                        bbox_to_anchor=(2.45, -0.52))
+        #ax[1][1].legend(handles[::-1], labels[::-1], frameon=True, fancybox = True,prop={'size':12}, numpoints = 1, loc='center left', bbox_to_anchor=(1, 0.5))
+        #ax[0][0].legend(frameon=False, fancybox=True, prop={'size': 12}, numpoints=1, loc='center',
+        #                bbox_to_anchor=(2.45, -0.52))
         fig.suptitle(title_source, fontsize=16)
         fig.subplots_adjust(top=0.93)
         self.save_plot('plot_measurement')
@@ -1081,7 +1079,7 @@ class Measurement(GGL):
 
     def plot_from_twopointfile(self, string):
 
-        """"
+        """
         Makes plot of the fiducial measurement for all redshift bins, from a twopoint file, like Y1 style.
         It also uses the twopoint plotting functions to plot the measurements in a different style,
         the covariance and the N(z)'s.

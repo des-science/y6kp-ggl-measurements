@@ -74,9 +74,9 @@ config_data = {
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'filename_mastercat': '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_10_18_19.h5',
-    #'lens_v': 'combined_sample_fid_noLSSweights',
-    #'lens_v': 'combined_sample_fid',
-    'lens_v': 'maglim',
+    'lens_v': 'redmagic',
+    #'lens_v': 'maglim',
+    'lens_w': True, #use LSS weights for the lenses
     'zslim_v': 'som',
     'zs_v': 'bpz',
     'zllim_v': 'y3',
@@ -122,33 +122,14 @@ paths['lens_nz'] = 'y1_2pt_NG_mcal_1110.fits'
 paths['source_nz'] = 'y1_2pt_NG_mcal_1110.fits'
 
 if basic['mode'] == 'data':
-    paths['redmagic'] = paths['lens_cats'] + '%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk'])
-    paths['maglim'] = paths['lens_cats'] + '%s/maglim/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk'])
-    if 'noLSSweights' in config['lens_v']: 
-        paths['redmagic'] = paths['lens_cats'] + '%s/redmagic/%s/njk_%d/'%(config['mastercat_v'], 'combined_sample_fid',config['njk'])
-        paths['maglim'] = paths['lens_cats'] + '%s/maglim/%s/njk_%d/'%(config['mastercat_v'], 'maglim',config['njk'])
-
-    if 'combined_sample_fid' in config['lens_v']:
-        paths['lens'] = paths['redmagic'] + 'lens.fits'
-        paths['randoms'] = paths['redmagic'] + 'random.fits'
-
-    if 'maglim' in config['lens_v']:
-        paths['lens'] = paths['maglim'] + 'lens.fits'
-        paths['randoms'] = paths['maglim'] + 'random.fits'
-
+    paths['lenscats'] = paths['lens_cats'] + '%s/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk']) 
+    paths['lens'] = paths['lenscats'] + 'lens.fits'
+    paths['randoms'] = paths['lenscats'] + 'random.fits'
     print '--------------------------\nUsing lens file in:\n', paths['lens'] 
     print '--------------------------\nUsing randoms file in:\n', paths['randoms'] 
 
-
-    if 'combined_sample_fid' in config['lens_v']:
-        paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
-                                        'redmagic_%s'%config_data['lens_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
-                                        'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
-                                        'bslop_%0.1g'%config_data['bslop']) 
-
-    if 'maglim' in config['lens_v']:
-        paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
-                                        'maglim_%s'%config_data['lens_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
+    paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
+                                        config_data['lens_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
                                         'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
                                         'bslop_%0.1g'%config_data['bslop']) 
 
@@ -177,10 +158,12 @@ Define the zbins dictionary. This dictionary is imported
 in the other scripts and it defines the number of lens and source
 redshift bins and their limits. 
 """
-# Redmagic bins:
+
 zbins = {}
-#if 'combined_sample_fid' in config['lens_v']:
-zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5']
+if 'redmagic' in config['lens_v'] or basic['mode']=='mice':
+    zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5']
+if 'maglim' in config['lens_v']:
+    zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6']
 zbins['sbins'] = ['s1', 's2', 's3', 's4']
 zbins['lsbins'] = [l + '_' + s for l in zbins['lbins'] for s in zbins['sbins']]
 zbins['sys'] = [0.2, 1.20]
@@ -199,6 +182,14 @@ if config['zllim_v'] == 'y3':
     zbins['l4'] = [0.65, 0.85] 
     zbins['l5'] = [0.85, 0.95] 
 
+if 'maglim' in config['lens_v']:
+    zbins['l1'] = [0.20, 0.35]
+    zbins['l2'] = [0.35, 0.50] 
+    zbins['l3'] = [0.50, 0.65] 
+    zbins['l4'] = [0.65, 0.80] 
+    zbins['l5'] = [0.80, 0.95] 
+    zbins['l6'] = [0.95, 1.05] 
+
 zbins['lims'] = [zbins['l1'][0], zbins['l2'][0], zbins['l3'][0], zbins['l4'][0], zbins['l5'][0], zbins['l5'][1]]
 
 if config['zslim_v'] == 'som':
@@ -213,46 +204,6 @@ if config['zslim_v'] == 'y1':
     zbins['s3'] = [0.63, 0.90] 
     zbins['s4'] = [0.90, 1.30]
     zbins['source_lims'] = [zbins['s1'][0], zbins['s2'][0], zbins['s3'][0], zbins['s4'][0], zbins['s4'][1]]
-
-'''
-zbins_maglim = zbins
-#zbins_maglim['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6']
-zbins_maglim['lbins'] = ['l5', 'l6']
-zbins_maglim['sbins'] = ['s1', 's2', 's3', 's4']
-#zbins_maglim['sbins'] = ['s4']
-zbins_maglim['lsbins'] = [l + '_' + s for l in zbins_maglim['lbins'] for s in zbins_maglim['sbins']]
-# Updated bins for Y3 of the redmagic sample
-zbins_maglim['l1'] = [0.20, 0.35]
-zbins_maglim['l2'] = [0.35, 0.50] 
-zbins_maglim['l3'] = [0.50, 0.65] 
-zbins_maglim['l4'] = [0.65, 0.80] 
-zbins_maglim['l5'] = [0.80, 0.95] 
-zbins_maglim['l6'] = [0.95, 1.05] 
-zbins_maglim['lims'] = [zbins_maglim['l1'][0], zbins_maglim['l2'][0], zbins_maglim['l3'][0], zbins_maglim['l4'][0], zbins_maglim['l5'][0], zbins_maglim['l6'][0], zbins_maglim['l6'][1]]
-
-zbins_maglim['s1'] = zbins['s1']
-zbins_maglim['s2'] = zbins['s2']
-zbins_maglim['s3'] = zbins['s3']
-zbins_maglim['s4'] = zbins['s4']
-if config['zslim_v'] == 'y1':
-    zbins_maglim['source_lims'] = zbins['source_lims']
-'''
-
-mice_zbins = zbins
-mice_zbins['l1'] = [0.15, 0.3]
-mice_zbins['l2'] = [0.3, 0.45]
-mice_zbins['l3'] = [0.45, 0.6]
-mice_zbins['l4'] = [0.6, 0.75]
-mice_zbins['l5'] = [0.75, 0.9]
-
-
-if 'combined_sample_fid' in config['lens_v']:
-    zbinning = zbins
-if 'maglim' in config['lens_v']:
-    zbinning = zbins_maglim
-if basic['mode'] == 'mice':
-    zbinning = mice_zbins
-print zbinning
 
 """
 PLOTTING
@@ -270,24 +221,15 @@ if basic['mode'] == 'mice':
 
 plotting['latex'] = False
 plotting['cmap'] = viridis
-if 'combined_sample_fid' in config['lens_v']:
-    plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(zbins['lims'][i], zbins['lims'][i+1]) for i in range(len(zbins['lims'])-1)]
-    #plotting['th_limit'] = [64.,40.,30., 24., 21.] # 12 Mpc/h 
-    #plotting['th_limit'] = [42.67, 26.67 ,20., 16., 14.] # 8 Mpc/h (double check)
-    plotting['th_limit'] = [21.33, 13.33 , 10., 8., 7.] # 4 Mpc/h (double check)
-if basic['mode'] == 'mice':
-    plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(mice_zbins['lims'][i], mice_zbins['lims'][i+1]) for i in range(len(mice_zbins['lims'])-1)]
-    #plotting['th_limit'] = [64.,40.,30., 24., 21.] # 12 Mpc/h 
-    #plotting['th_limit'] = [42.67, 26.67 ,20., 16., 14.] # 8 Mpc/h (double check)
-    plotting['th_limit'] = [21.33, 13.33 , 10., 8., 7.] # 4 Mpc/h (double check)
-if 'maglim' in config['lens_v']:
-    plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(alt_zbins['lims'][i], alt_zbins['lims'][i+1]) for i in range(len(alt_zbins['lims'])-1)]
-
+plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(zbins['lims'][i], zbins['lims'][i+1]) for i in range(len(zbins['lims'])-1)]
+#plotting['th_limit'] = [64.,40.,30., 24., 21.] # 12 Mpc/h 
+#plotting['th_limit'] = [42.67, 26.67 ,20., 16., 14.] # 8 Mpc/h 
+plotting['th_limit'] = [21.33, 13.33 , 10., 8., 7.] # 4 Mpc/h 
 if config['zslim_v'] == 'y1':
     plotting['redshift_s'] = [r'$%0.2f < z_s < %0.2f $'%(zbins['source_lims'][i], zbins['source_lims'][i+1]) for i in range(len(zbins['source_lims'])-1)]
 if config['zslim_v'] == 'som':
     plotting['redshift_s'] = ['Bin 1', 'Bin 2', 'Bin 3', 'Bin 4']
-    
+
 plotting['titles_redmagic'] = ['redMaGiC HiDens', 'redMaGiC HiDens', 'redMaGiC HiDens', 'redMaGiC HiLum', 'redMaGiC HiLum']
 
 
