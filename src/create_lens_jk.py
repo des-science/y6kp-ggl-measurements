@@ -5,7 +5,7 @@ sys.path.append('../../destest/')
 sys.path.append('../../kmeans_radec/')
 import destest
 #import pyfits as pf
-import astropy.io.fits as pf
+import astropy.io.fits as fits
 from info import zbins, config, paths
 import destest_functions
 import kmeans_radec
@@ -29,6 +29,8 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
         path_save: where the files are saved.
         sample: string, can be 'redmagic' or 'maglim'.
         """
+        print 'Sample:', sample
+        print 'Saving lens sample here:', path_save
 
         ra_l  = lens_selector.get_col('ra')[0]
         dec_l = lens_selector.get_col('dec')[0]
@@ -97,25 +99,26 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
 
         print 'Number of lenses:', len(ra_l)
 
-        c1 = pf.Column(name='RA', format='E', array=ra_l)
-        c2 = pf.Column(name='DEC', format='E', array=dec_l)
-        c3 = pf.Column(name='Z', format='E', array=z_l)
-        c4 = pf.Column(name='ZERR', format='E', array=zerr_l)
-        c5 = pf.Column(name='JK', format='K', array=jk_l)
-        c6 = pf.Column(name='W', format='E', array=w_l)
-        c7 = pf.Column(name='ID', format='K', array=ids)
+        c1 = fits.Column(name='RA', format='E', array=ra_l)
+        c2 = fits.Column(name='DEC', format='E', array=dec_l)
+        c3 = fits.Column(name='Z', format='E', array=z_l)
+        c4 = fits.Column(name='ZERR', format='E', array=zerr_l)
+        c5 = fits.Column(name='JK', format='K', array=jk_l)
+        c6 = fits.Column(name='W', format='E', array=w_l)
+        c7 = fits.Column(name='ID', format='K', array=ids)
 
         CC = [c1,c2,c3,c4,c5,c6,c7]
-        hdu = pf.new_table(CC, nrows=len(ra_l))
-        hdu.writeto('%s/lens.fits'%path_save, clobber=True)
+        #hdu = pf.new_table(CC, nrows=len(ra_l))
+        t = fits.BinTableHDU.from_columns(CC)
+        t.writeto('%s/lens.fits'%path_save, overwrite=True)
 
-        c1 = pf.Column(name='RA', format='E', array=ra_r)
-        c2 = pf.Column(name='DEC', format='E', array=dec_r)
-        c3 = pf.Column(name='Z', format='E', array=z_r)
-        c4 = pf.Column(name='JK', format='K', array=jk_r)
+        c1 = fits.Column(name='RA', format='E', array=ra_r)
+        c2 = fits.Column(name='DEC', format='E', array=dec_r)
+        c3 = fits.Column(name='Z', format='E', array=z_r)
+        c4 = fits.Column(name='JK', format='K', array=jk_r)
         CC = [c1,c2,c3,c4]
-        hdu = pf.new_table(CC, nrows=len(ra_r))
-        hdu.writeto('%s/random.fits'%path_save, clobber=True)
+        t = fits.BinTableHDU.from_columns(CC)
+        t.writeto('%s/random.fits'%path_save, overwrite=True)
 
 
 # Read yaml file that defines all the catalog selections used
@@ -148,9 +151,9 @@ gold_selector = destest_functions.load_catalog(
 
 
 # First create the redmagic lens.fits and random.fits
-if 'redmagic' in self.config['lens_v']:
-        create_lens(red_lens_selector, red_ran_selector, None, None, zbins, paths['redmagic'], 'redmagic')
+if 'redmagic' in config['lens_v']:
+        create_lens(red_lens_selector, red_ran_selector, None, None, zbins, paths['lens'], 'redmagic')
 
 # Create lens.fits and random.fits for maglimit sample
-if 'maglim' in self.config['lens_v']:
-        create_lens(alt_lens_selector, alt_ran_selector, pz_selector, gold_selector, zbins, paths['maglim'], 'maglim')
+if 'maglim' in config['lens_v']:
+        create_lens(alt_lens_selector, alt_ran_selector, pz_selector, gold_selector, zbins, paths['lens'], 'maglim')
