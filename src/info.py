@@ -50,7 +50,7 @@ basic = {
     'savetwopoint': 1,
     'plot': 0,
     'pool': 1,
-    'computer': 'midway'  #can be 'nersc', 'local', 'midway', etc
+    'computer': 'nersc'  #can be 'nersc', 'local', 'midway', etc
 }
 
 if basic['pool']:
@@ -183,6 +183,7 @@ if config['zllim_v'] == 'y1':
     zbins['l3'] = [0.45, 0.60] 
     zbins['l4'] = [0.60, 0.75] 
     zbins['l5'] = [0.75, 0.90] 
+    zbins['lims'] = [zbins['l1'][0], zbins['l2'][0], zbins['l3'][0], zbins['l4'][0], zbins['l5'][0], zbins['l5'][1]]
 
 if config['zllim_v'] == 'y3':
     zbins['l1'] = [0.15, 0.35]
@@ -190,6 +191,7 @@ if config['zllim_v'] == 'y3':
     zbins['l3'] = [0.5, 0.65] 
     zbins['l4'] = [0.65, 0.85] 
     zbins['l5'] = [0.85, 0.95] 
+    zbins['lims'] = [zbins['l1'][0], zbins['l2'][0], zbins['l3'][0], zbins['l4'][0], zbins['l5'][0], zbins['l5'][1]]
 
 if 'maglim' in config['lens_v']:
     zbins['l1'] = [0.20, 0.35]
@@ -198,8 +200,8 @@ if 'maglim' in config['lens_v']:
     zbins['l4'] = [0.65, 0.80] 
     zbins['l5'] = [0.80, 0.95] 
     zbins['l6'] = [0.95, 1.05] 
+    zbins['lims'] = [zbins['l1'][0], zbins['l2'][0], zbins['l3'][0], zbins['l4'][0], zbins['l5'][0], zbins['l6'][0],zbins['l6'][1]]
 
-zbins['lims'] = [zbins['l1'][0], zbins['l2'][0], zbins['l3'][0], zbins['l4'][0], zbins['l5'][0], zbins['l5'][1]]
 
 if config['zslim_v'] == 'som':
     # SOM bins don't have explicit limits

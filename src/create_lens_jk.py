@@ -121,6 +121,7 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
         t.writeto('%s/random.fits'%path_save, overwrite=True)
 
 
+print zbins
 # Read yaml file that defines all the catalog selections used
 params = yaml.load(open(paths['yaml']))
 params['param_file'] = paths['yaml']
