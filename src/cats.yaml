@@ -1,7 +1,9 @@
 # Main data file
 datafile : 
+
 # Reuse cached masking and selections - speeds up repeated calculations
 load_cache : False
+
 # Where to put the cache dir
 output : '.'
 
@@ -32,6 +34,14 @@ gold_group : 'catalog'
 gold_table : ['gold']
 gold_path  : 'index/select'
 
+dnf_group : 'catalog/dnf'
+dnf_table : ['unsheared']
+dnf_path  : None
+
+pz_group : 'catalog/sompz'
+pz_table : ['unsheared', 'sheared_1p', 'sheared_1m', 'sheared_2p', 'sheared_2m']
+pz_path  : 'index/select'
+
 lens_group : 'catalog/redmagic'
 lens_table : ['combined_sample_fid']
 lens_path  : 'index/redmagic/combined_sample_fid/select'
@@ -39,18 +49,6 @@ lens_path  : 'index/redmagic/combined_sample_fid/select'
 alt_lens_group : 'catalog'
 alt_lens_table : ['maglim']
 alt_lens_path  : 'index/maglim/select'
-
-pz_group : 'catalog/bpz'
-pz_table : ['unsheared']
-pz_path  : 'index/select'
-
-dnf_group : 'catalog/dnf'
-dnf_table : ['unsheared']
-dnf_path  : None'
-
-som_group : 'som'
-som_table : ['unsheared', 'sheared_1p', 'sheared_1m', 'sheared_2p', 'sheared_2m']
-som_path : 'index/select'
 
 ran_group : 'randoms/redmagic'
 ran_table : ['combined_sample_fid']

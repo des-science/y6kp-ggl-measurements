@@ -5,7 +5,7 @@ T = True
 F = False
 
 run_measurement = T
-run_responses_nk = F
+run_responses_nk = T
 run_responses_ng = F
 run_stars = F
 run_psf = F

@@ -44,7 +44,8 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
                 ids = gold_selector.get_col('coadd_object_id')[0]
         w_l = lens_selector.get_col('weight')[0]
         print 'Weights lenses:', w_l
-        assert len(ra_l)==len(ids), 'Something is wrong.' 
+        assert len(ra_l)==len(ids), 'Something is wrong.'
+        print 'Range of lens weights:', np.min(w_l), np.max(w_l)
 
         # Select galaxies that belong to some lens z-bin
         zbins = zbins['lims']
@@ -153,8 +154,8 @@ gold_selector = destest_functions.load_catalog(
 
 # First create the redmagic lens.fits and random.fits
 if 'redmagic' in config['lens_v']:
-        create_lens(red_lens_selector, red_ran_selector, None, None, zbins, paths['lens'], 'redmagic')
+        create_lens(red_lens_selector, red_ran_selector, None, None, zbins, paths['lenscats'], 'redmagic')
 
 # Create lens.fits and random.fits for maglimit sample
 if 'maglim' in config['lens_v']:
-        create_lens(alt_lens_selector, alt_ran_selector, pz_selector, gold_selector, zbins, paths['lens'], 'maglim')
+        create_lens(alt_lens_selector, alt_ran_selector, pz_selector, gold_selector, zbins, paths['lenscats'], 'maglim')
