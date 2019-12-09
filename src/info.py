@@ -74,16 +74,16 @@ config_data = {
     'bslop': 0.1,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
-    'filename_mastercat': '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat_10_18_19.h5',
-    #'lens_v': 'redmagic',
-    'lens_v': 'maglim',
+    'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_12_3_19.h5',
+    'lens_v': 'redmagic',
+    #'lens_v': 'maglim',
     'lens_w': True, #use LSS weights for the lenses
     'zslim_v': 'som',
     'zs_v': 'bpz',
     'zllim_v': 'y3',
     }
 
-config_data['mastercat_v'] = config_data['filename_mastercat'][-24:-3]
+config_data['mastercat_v'] = config_data['filename_mastercat'][-23:-3]
 if basic['computer']=='midway':
     config_data['filename_mastercat'] = '/project2/chihway/data/des_y3_catalogs/y3kp_sample/' + config_data['mastercat_v'] + '.h5'
 
@@ -187,18 +187,18 @@ if config['zllim_v'] == 'y1':
 
 if config['zllim_v'] == 'y3':
     zbins['l1'] = [0.15, 0.35]
-    zbins['l2'] = [0.35, 0.5] 
-    zbins['l3'] = [0.5, 0.65] 
-    zbins['l4'] = [0.65, 0.85] 
-    zbins['l5'] = [0.85, 0.95] 
-    zbins['lims'] = [zbins['l1'][0], zbins['l2'][0], zbins['l3'][0], zbins['l4'][0], zbins['l5'][0], zbins['l5'][1]]
-
-if 'maglim' in config['lens_v']:
-    zbins['l1'] = [0.20, 0.35]
     zbins['l2'] = [0.35, 0.50] 
     zbins['l3'] = [0.50, 0.65] 
     zbins['l4'] = [0.65, 0.80] 
-    zbins['l5'] = [0.80, 0.95] 
+    zbins['l5'] = [0.80, 0.90] 
+    zbins['lims'] = [zbins['l1'][0], zbins['l2'][0], zbins['l3'][0], zbins['l4'][0], zbins['l5'][0], zbins['l5'][1]]
+
+if 'maglim' in config['lens_v']:
+    zbins['l1'] = [0.20, 0.40]
+    zbins['l2'] = [0.40, 0.55] 
+    zbins['l3'] = [0.55, 0.70] 
+    zbins['l4'] = [0.70, 0.85] 
+    zbins['l5'] = [0.85, 0.95] 
     zbins['l6'] = [0.95, 1.05] 
     zbins['lims'] = [zbins['l1'][0], zbins['l2'][0], zbins['l3'][0], zbins['l4'][0], zbins['l5'][0], zbins['l6'][0],zbins['l6'][1]]
 
