@@ -54,8 +54,8 @@ basic = {
 }
 
 if basic['pool']:
-    basic['num_threads'] = 5
-    basic['Ncores'] = 10
+    basic['num_threads'] = 1
+    basic['Ncores'] = 4
     
 if not basic['pool']: basic['num_threads'] = 10
 
@@ -75,8 +75,8 @@ config_data = {
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_12_3_19.h5',
-    'lens_v': 'redmagic',
-    #'lens_v': 'maglim',
+    #'lens_v': 'redmagic',
+    'lens_v': 'maglim',
     'lens_w': True, #use LSS weights for the lenses
     'zslim_v': 'som',
     'zs_v': 'bpz',

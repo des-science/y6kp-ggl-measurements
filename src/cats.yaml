@@ -38,6 +38,10 @@ dnf_group : 'catalog/dnf'
 dnf_table : ['unsheared']
 dnf_path  : None
 
+bpz_group : 'catalog/bpz'
+bpz_table : ['unsheared']
+bpz_path  : 'index/select'
+
 pz_group : 'catalog/sompz'
 pz_table : ['unsheared', 'sheared_1p', 'sheared_1m', 'sheared_2p', 'sheared_2m']
 pz_path  : 'index/select'

@@ -112,12 +112,12 @@ class GGL(object):
             inherit=source_selector)
 
         # BPZ (or DNF) catalog, depending on paths in cats.yaml file (exchange bpz and dnf)
-        pz_selector = destest_functions.load_catalog(
-            params, 'pz', 'mcal', params['pz_group'], params['pz_table'], params['pz_path'], inherit=source_selector)
+        bpz_selector = destest_functions.load_catalog(
+            params, 'bpz', 'mcal', params['bpz_group'], params['bpz_table'], params['bpz_path'], inherit=source_selector)
 
         # SOM PZ to split in bins:
         som_selector = destest_functions.load_catalog(
-            params, 'som', 'mcal', params['som_group'], params['som_table'], params['som_path'], inherit=source_selector) 
+            params, 'pz', 'mcal', params['pz_group'], params['pz_table'], params['pz_path'], inherit=source_selector) 
         
         # Dictionary with the unsheared version of each quantity with the selections from: unsheared, 1p, 1m, 2p, 2m. 
         source_5sels = {}
@@ -137,9 +137,9 @@ class GGL(object):
         source_5sels['sheared']['e2'] = source_selector.get_col('e_2')
         source_5sels['sheared']['snr'] = source_selector.get_col('snr')
         source_5sels['sheared']['size'] = source_selector.get_col('T')
-        source_5sels['sheared']['bpz_mean'] = pz_selector.get_col('zmean_sof')
-        source_5sels['sheared']['bpz_zmc'] = pz_selector.get_col('zmc_sof')
-        source_5sels['sheared']['som_bin'] = som_selector.get_col('tomo_bin_wide')
+        source_5sels['sheared']['bpz_mean'] = bpz_selector.get_col('zmean_sof')
+        source_5sels['sheared']['bpz_zmc'] = bpz_selector.get_col('zmc_sof')
+        source_5sels['sheared']['som_bin'] = som_selector.get_col('bhat')
 
         # Dictionary with the unsheared version and selection only:
         source = {}

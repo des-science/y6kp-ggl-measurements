@@ -43,9 +43,6 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
                 zerr_l = pz_selector.get_col('zmc_sof')[0]
                 ids = gold_selector.get_col('coadd_object_id')[0]
         w_l = lens_selector.get_col('weight')[0]
-        print 'Weights lenses:', w_l
-        assert len(ra_l)==len(ids), 'Something is wrong.'
-        print 'Range of lens weights:', np.min(w_l), np.max(w_l)
 
         # Select galaxies that belong to some lens z-bin
         zbins = zbins['lims']
@@ -58,6 +55,12 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
         ids = ids[maskzl]
         w_l = w_l[maskzl]
 
+        print 'Weights lenses:', w_l
+        assert len(ra_l)==len(ids), 'Something is wrong.'
+        print 'Range of lens weights:', np.min(w_l), np.max(w_l)
+        print 'Mean of lens weights:', np.mean(w_l)
+        print 'Len zero lens weights:', len(w_l[w_l==0])
+        
         #Load ra,dec, from random catalog 
         ra_r = ran_selector.get_col('ra')[0] 
         dec_r = ran_selector.get_col('dec')[0] 
@@ -86,7 +89,11 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
         dec_r = np.concatenate([dec_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i in range(len(zbins)-1)]) 
         z_r = np.concatenate([z_r[(z_r<zbins[i+1])&(z_r>zbins[i])][r[i] < d[i]] for i in range(len(zbins)-1)]) 
 
-        print 'nrand after', len(ra_r)
+
+        print 'd', d
+        print 'n_lens', len(ra_l), n_lens
+        print 'n_rand', len(ra_r), n_rand
+        
 
         # Path to save the lens catalogs already jackknifed
         os.system('mkdir -p %s'%path_save)
@@ -98,8 +105,6 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
                 jk_l = jk.jk(ra_l,dec_l,path_save)
         jk_r = jk.jk(ra_r,dec_r,path_save)
 
-        print 'Number of lenses:', len(ra_l)
-
         c1 = fits.Column(name='RA', format='E', array=ra_l)
         c2 = fits.Column(name='DEC', format='E', array=dec_l)
         c3 = fits.Column(name='Z', format='E', array=z_l)
@@ -109,7 +114,6 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
         c7 = fits.Column(name='ID', format='K', array=ids)
 
         CC = [c1,c2,c3,c4,c5,c6,c7]
-        #hdu = pf.new_table(CC, nrows=len(ra_l))
         t = fits.BinTableHDU.from_columns(CC)
         t.writeto('%s/lens.fits'%path_save, overwrite=True)
 
