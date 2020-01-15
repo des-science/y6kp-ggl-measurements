@@ -47,7 +47,7 @@ basic = {
     'mode':'data',
     'blind': 1,
     'run': 1,
-    'savetwopoint': 1,
+    'savetwopoint': 0,
     'plot': 0,
     'pool': 1,
     'computer': 'nersc'  #can be 'nersc', 'local', 'midway', etc
@@ -55,7 +55,7 @@ basic = {
 
 if basic['pool']:
     basic['num_threads'] = 1
-    basic['Ncores'] = 4
+    basic['Ncores'] = 2
     
 if not basic['pool']: basic['num_threads'] = 10
 
@@ -127,8 +127,13 @@ if basic['computer'] == 'nersc':
 if basic['computer'] == 'midway':
     paths['lens_cats'] = '../cats/'
 
-paths['lens_nz'] = 'y1_2pt_NG_mcal_1110.fits'
+if 'redmagic' in config['lens_v']:
+    paths['lens_nz'] = 'y1_2pt_NG_mcal_1110.fits' #needs to updated to Y3
+if 'maglim' in config['lens_v']:
+    paths['lens_nz'] = '../nzs/Nz-a4_b18_mag_lim_v2p2_zbinv2.fits'
+
 paths['source_nz'] = 'y1_2pt_NG_mcal_1110.fits'
+print paths['lens_nz']
 
 if basic['mode'] == 'data':
     paths['lenscats'] = paths['lens_cats'] + '%s/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk']) 
@@ -174,6 +179,7 @@ if 'redmagic' in config['lens_v'] or basic['mode']=='mice':
 if 'maglim' in config['lens_v']:
     zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6']
 zbins['sbins'] = ['s1', 's2', 's3', 's4']
+#zbins['sbins'] = ['s3']
 zbins['lsbins'] = [l + '_' + s for l in zbins['lbins'] for s in zbins['sbins']]
 zbins['sys'] = [0.2, 1.20]
 
@@ -235,7 +241,7 @@ plotting['cmap'] = viridis
 plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(zbins['lims'][i], zbins['lims'][i+1]) for i in range(len(zbins['lims'])-1)]
 #plotting['th_limit'] = [64.,40.,30., 24., 21.] # 12 Mpc/h 
 #plotting['th_limit'] = [42.67, 26.67 ,20., 16., 14.] # 8 Mpc/h 
-plotting['th_limit'] = [21.33, 13.33 , 10., 8., 7.] # 4 Mpc/h 
+plotting['th_limit'] = [21.33, 13.33 , 10., 8., 7., 6.] # 4 Mpc/h #check values for last bin
 if config['zslim_v'] == 'y1':
     plotting['redshift_s'] = [r'$%0.2f < z_s < %0.2f $'%(zbins['source_lims'][i], zbins['source_lims'][i+1]) for i in range(len(zbins['source_lims'])-1)]
 if config['zslim_v'] == 'som':

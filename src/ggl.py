@@ -66,8 +66,9 @@ class GGL(object):
         else:
             source['e1'] = data[params['source_group']]['g1'][:][index]
             source['e2'] = -data[params['source_group']]['g2'][:][index]
-	source['z'] = data[params['sourcez_group']]['zmean_sof'][:][index]
-	source['ztrue'] = data[params['sourcez_group']]['z'][:][index]
+	source['zbpz'] = data[params['source_bpz_group']]['zmean_sof'][:][index]
+	source['ztrue'] = data[params['source_bpz_group']]['z'][:][index]
+        source['zbin'] = data[params['source_sompz_group']]['bhat'][:][index]
 
         return source
 
@@ -760,7 +761,7 @@ class Measurement(GGL):
     		    R = 1.
 		    source = {}
 		    for k in source_all.keys():
-			source[k] = source_all[k][(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
+			source[k] = source_all[k][(source_all['zbin'] >= self.zbins[sbin][0]) & (source_all['zbin'] <= self.zbins[sbin][1])]
                     print 'Length source', sbin, len(source['ra'])
 
                     zbins, nz_s = self.get_nz(source['ztrue'])		    
@@ -778,7 +779,8 @@ class Measurement(GGL):
                     else:
                         print 'Using z to bin the lenses.'
                         lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
-                    print 'Length lens', lbin, len(lens['ra'])
+                    
+                    print 'Length lens', lbin, len(lens['ra']), self.zbins[lbin][0], self.zbins[lbin][1]
 
                     if self.basic['mode'] == 'buzzard':
                         zbins, nz_l = self.get_nz(lens['ztrue'])		    
@@ -858,8 +860,10 @@ class Measurement(GGL):
                 file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
                 lens_nz = file_lens_nz.get_kernel('nz_lens')
 
-            if 'stellar_mass' in self.paths['lens_nz']:
+            print self.paths['lens_nz']
+            if 'Nz-a4_b18_mag_lim_v2p2' in self.paths['lens_nz']:
                 import astropy
+                print 'working'
                 ext = astropy.io.fits.open(self.paths['lens_nz'])['nz_lens']
                 lens_nz = twopoint.NumberDensity.from_fits(ext)
 
@@ -1099,9 +1103,9 @@ class Measurement(GGL):
         bins_s = np.transpose(pairs)[1]
         nbins_l = np.max(bins_l)
         nbins_s = np.max(bins_s)
-        print nbins_s
-        print len(self.zbins['sbins'])
-        print self.zbins['sbins']
+        print len(self.zbins['lbins'])
+        print self.zbins['lbins']
+        print nbins_l
         assert len(self.zbins[
                        'lbins']) == nbins_l, 'Number of lens bins in info does not match with the one in the two-point file.'
         assert len(self.zbins[
