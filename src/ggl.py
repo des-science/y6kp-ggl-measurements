@@ -863,7 +863,6 @@ class Measurement(GGL):
             print self.paths['lens_nz']
             if 'Nz-a4_b18_mag_lim_v2p2' in self.paths['lens_nz']:
                 import astropy
-                print 'working'
                 ext = astropy.io.fits.open(self.paths['lens_nz'])['nz_lens']
                 lens_nz = twopoint.NumberDensity.from_fits(ext)
 
@@ -1077,7 +1076,7 @@ class Measurement(GGL):
         sn = np.sqrt(null_chi2 - dof)
 
         path_save = self.get_path_test_allzbins()
-        print 'S/N of the full measurements:', float(sn)
+        print 'S/N of the full measurements %s:'%string, float(sn)
         np.savetxt(path_save + 'sn_ratio_full_measurements_%s' % string, sn, fmt='%0.5g',
                    header='S/N ratio computed with JK covariance, S/N = sqrt(null chi2 - ndof)')
 
@@ -1103,9 +1102,6 @@ class Measurement(GGL):
         bins_s = np.transpose(pairs)[1]
         nbins_l = np.max(bins_l)
         nbins_s = np.max(bins_s)
-        print len(self.zbins['lbins'])
-        print self.zbins['lbins']
-        print nbins_l
         assert len(self.zbins[
                        'lbins']) == nbins_l, 'Number of lens bins in info does not match with the one in the two-point file.'
         assert len(self.zbins[
@@ -1221,7 +1217,6 @@ class Measurement(GGL):
                     ax[s][l].set_title(self.plotting['redshift_l'][l], size='larger')
 
                 ax[s][l].axvspan(self.config['thlims'][0], self.plotting['th_limit'][l], color='gray', alpha=0.2)
-                print self.config['thlims'][0]
 
         ax[0][len(self.zbins['sbins'])].legend(frameon=False, fontsize=16, loc='lower right')
         self.save_plot('boost_factors')
@@ -1251,13 +1246,12 @@ class Measurement(GGL):
 
                # Load cov
                path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
-               print path_test
                if os.path.exists(path_test + 'cov_boost_factor'):
                    cov = np.loadtxt(path_test + 'cov_boost_factor')
                
                    corr = corrmatrix(cov)
 
-                   th_edges = np.logspace(np.log10(2.5), np.log10(250), 21)
+                   th_edges = np.logspace(np.log10(self.config['thlims'][0]), np.log10(self.config['thlims'][1]), self.config['nthbins']+1)
                    x = th_edges
                    y = th_edges
                    X, Y = np.meshgrid(x, y)
@@ -1266,8 +1260,6 @@ class Measurement(GGL):
                    im = ax[s][l].pcolormesh(x, y, np.array(corr), vmin = 0.5, vmax=1.)
                    ax[s][l].autoscale('tight')
 
-                   #im = ax[s][l].imshow(corr,interpolation='nearest',  extent = (self.config['thlims'][0], self.config['thlims'][1],self.config['thlims'][0], self.config['thlims'][1]),
-                   #                     aspect='auto', origin='lower', cmap=cmap)
                    cbar_ax = fig.add_axes([0.9, 0.1, 0.015, 0.8])
                    cbar = fig.colorbar(im, cax=cbar_ax)
                    cbar_ax.set_ylabel(r'$r_{ij}=\mathrm{Corr}(\mathcal{B}_{i}, \mathcal{B}_{j})$', size = 'large')
@@ -1393,7 +1385,6 @@ class Measurement(GGL):
                 chi2, ndf = self.get_chi2(path_test, 'gx')
                 chi2s.append(chi2)
         chi2s = np.array(chi2s)
-        print len(chi2s)
         ax[1].hist(chi2s, bins=7, color=colors[c], ec=colors[c], lw=2, normed=True, histtype='step', alpha=1,
                    label=labels[c])
 
