@@ -1226,6 +1226,71 @@ class Measurement(GGL):
         ax[0][len(self.zbins['sbins'])].legend(frameon=False, fontsize=16, loc='lower right')
         self.save_plot('boost_factors')
 
+
+    def plot_boost_factors_cov(self):
+        
+        plt.rc('text', usetex=self.plotting['latex'])
+        plt.rc('font', family='serif')
+        cmap = self.plotting['cmap']
+
+        fig, ax = plt.subplots(len(self.zbins['sbins']),len(self.zbins['lbins']),figsize = (20, 15), sharey=True,sharex=True) #gridspec_kw = {'height_ratios':[1, 1, 1, 1, 1]})
+        fig.subplots_adjust(hspace=0.1,wspace=0.1, right=0.885)
+
+        def corrmatrix(COV):
+           COV = np.mat(COV)
+           D = np.diag(np.sqrt(np.diag(COV)))
+           d = np.linalg.inv(D)
+           CORR = d*COV*d
+           return CORR
+
+        # To iterate between lens bins
+        for l in range(0, len(self.zbins['lbins'])):
+
+           # To iterate between source bins
+           for s in range(len(self.zbins['sbins'])):
+
+               # Load cov
+               path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
+               print path_test
+               if os.path.exists(path_test + 'cov_boost_factor'):
+                   cov = np.loadtxt(path_test + 'cov_boost_factor')
+               
+                   corr = corrmatrix(cov)
+
+                   th_edges = np.logspace(np.log10(2.5), np.log10(250), 21)
+                   x = th_edges
+                   y = th_edges
+                   X, Y = np.meshgrid(x, y)
+                   ax[s][l].set_xscale('log')
+                   ax[s][l].set_yscale('log')
+                   im = ax[s][l].pcolormesh(x, y, np.array(corr), vmin = 0.5, vmax=1.)
+                   ax[s][l].autoscale('tight')
+
+                   #im = ax[s][l].imshow(corr,interpolation='nearest',  extent = (self.config['thlims'][0], self.config['thlims'][1],self.config['thlims'][0], self.config['thlims'][1]),
+                   #                     aspect='auto', origin='lower', cmap=cmap)
+                   cbar_ax = fig.add_axes([0.9, 0.1, 0.015, 0.8])
+                   cbar = fig.colorbar(im, cax=cbar_ax)
+                   cbar_ax.set_ylabel(r'$r_{ij}=\mathrm{Corr}(\mathcal{B}_{i}, \mathcal{B}_{j})$', size = 'large')
+                   cbar.ax.tick_params(labelsize='large') 
+               ax[s][l].set_xlim(self.config['thlims'][0], self.config['thlims'][1])
+               ax[s][l].set_ylim(self.config['thlims'][0], self.config['thlims'][1])
+
+               ax[s][l].xaxis.set_major_formatter(ticker.FormatStrFormatter('$%0.0f$'))
+               ax[s][l].yaxis.set_major_formatter(ticker.FormatStrFormatter('$%0.0f$'))
+               ax[s][l].tick_params(axis='both', which='major', labelsize ='large')
+               ax[s][l].tick_params(axis='both', which='minor', labelsize='large')
+
+               if s == 3:
+                  ax[s][l].set_xlabel(r'$\theta$ [arcmin]',size='large')
+               if l == 0:
+                  ax[s][l].set_ylabel('%s\n'%self.plotting['redshift_s'][s] + r'$\theta$ [arcmin]',size='large', linespacing = 3)
+               if s == 0:
+                  ax[s][l].set_title(self.plotting['redshift_l'][l],size='large')
+
+        self.save_plot('boost_factors_cov')
+
+
+
     def plot_randoms(self):
         """
         Makes plot of the tangential shear around random points.

@@ -5,7 +5,7 @@ T = True
 F = False
 
 run_measurement = T
-run_responses_nk = T
+run_responses_nk = F
 run_responses_ng = F
 run_stars = F
 run_psf = F
@@ -28,6 +28,7 @@ if run_measurement:
 
     if basic['plot']:
         measurement.plot_boostfactors()
+        measurement.plot_boost_factors_cov()
         measurement.plot_randoms()
         measurement.plot_gammax()	
         measurement.compute_sn_ratio('gt')
