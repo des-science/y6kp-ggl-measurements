@@ -829,6 +829,30 @@ class Measurement(GGL):
         and saves it to a file.
         """
 
+        def fix_nz(nz_in):
+            """
+            Function to make the nzs compatible with the blinding script.
+            If the redshift is negative (even zlow) it removes it, since
+            otherwise the blinding script crashes. 
+            nz_in: NumberDensity object from twopoint file library, input.
+            nz_out: NumberDensity object from twopoint file library, output of this function, nz fixed.
+            """
+            mask = nz_in.zlow>0
+            if mask.sum()!=len(nz_in.zlow):
+                print 'Removing lines of the nzs with negative redshift in zlow, for %s.'%nz_in.name
+                zlow = nz_in.zlow[mask]
+                z = nz_in.z[mask]
+                zhigh = nz_in.zhigh[mask]
+                nzs = [nz_in.nzs[i][mask] for i in range(len(nz_in.nzs))]
+                name = nz_in.name
+                nz_out = twopoint.NumberDensity(name, zlow, z, zhigh, nzs)
+                return nz_out
+            else:
+                print 'Return the same nz since it is alredy good for the blinding script %s.'%nz_in.name
+                return nz_in
+
+             
+        
         # Preparing spectrum
         length = self.config['nthbins'] * len(self.zbins['lbins']) * len(self.zbins['sbins'])
         values = np.zeros(length, dtype=float)
@@ -856,19 +880,15 @@ class Measurement(GGL):
 
         # Preparing N(z) for the blinding script
         if self.basic['mode'] == 'data' or self.basic['mode'] == 'mice':
-            if 'y1_2pt_NG_mcal_1110' in self.paths['lens_nz']:
-                file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
-                lens_nz = file_lens_nz.get_kernel('nz_lens')
 
-            print self.paths['lens_nz']
-            if 'Nz-a4_b18_mag_lim_v2p2' in self.paths['lens_nz']:
-                import astropy
-                ext = astropy.io.fits.open(self.paths['lens_nz'])['nz_lens']
-                lens_nz = twopoint.NumberDensity.from_fits(ext)
+            file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
+            lens_nz = file_lens_nz.get_kernel('nz_lens')
+            #lens_nz = fix_nz(lens_nz)
 
             if 'y1_2pt_NG_mcal_1110' in self.paths['source_nz']:
                 file_source_nz = twopoint.TwoPointFile.from_fits(self.paths['source_nz'])
                 source_nz = file_source_nz.get_kernel('nz_source')
+                #source_nz = fix_nz(source_nz)
 
             print 'Saving TwoPointFile with lens N(z) from %s'%(self.paths['lens_nz'])
             print 'Saving TwoPointFile with source N(z) from %s'%(self.paths['source_nz'])
@@ -903,9 +923,7 @@ class Measurement(GGL):
                                                   angle=angle, angle_unit='arcmin')
 
             cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['gammat'], [length], cov)
-
             gammat_twopoint = twopoint.TwoPointFile([gammat], [lens_nz, source_nz], windows=None, covmat_info=cov_mat_info)
-
             twopointfile_unblind = self.get_twopointfile_name(string)
 
             # Remove file if it exists already because to_fits function doesn't overwrite
@@ -926,6 +944,10 @@ class Measurement(GGL):
             print 'Saving TwoPointFile'
             boost_factor_twopoint = twopoint.TwoPointFile([boost_factor], [lens_nz, source_nz], windows=None, covmat_info=cov_mat_info)
             save_path = os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits'%string)
+
+            # Remove file if it exists already because to_fits function doesn't overwrite                                                                                                                                                                                    
+            if os.path.isfile(save_path):
+                os.system('rm %s' % (save_path))
 
             boost_factor_twopoint.to_fits(save_path)
 
