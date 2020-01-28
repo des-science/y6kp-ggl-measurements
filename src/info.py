@@ -46,16 +46,16 @@ Then you are done. All this process is only need for the gammat measurements, no
 basic = {
     'mode':'data',
     'blind': 1,
-    'run': 1,
+    'run': 0,
     'savetwopoint': 0,
-    'plot': 0,
+    'plot': 1,
     'pool': 1,
     'computer': 'nersc'  #can be 'nersc', 'local', 'midway', etc
 }
 
 if basic['pool']:
     basic['num_threads'] = 1
-    basic['Ncores'] = 2
+    basic['Ncores'] = 7
     
 if not basic['pool']: basic['num_threads'] = 10
 
@@ -75,8 +75,8 @@ config_data = {
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_12_3_19.h5',
-    #'lens_v': 'redmagic',
-    'lens_v': 'maglim',
+    'lens_v': 'redmagic',
+    #'lens_v': 'maglim',
     'lens_w': True, #use LSS weights for the lenses
     'zslim_v': 'som',
     'zs_v': 'bpz',
@@ -128,9 +128,9 @@ if basic['computer'] == 'midway':
     paths['lens_cats'] = '../cats/'
 
 if 'redmagic' in config['lens_v']:
-    paths['lens_nz'] = 'y1_2pt_NG_mcal_1110.fits' #needs to updated to Y3
+    paths['lens_nz'] = '../simulated_dvs/sim_fiducial_redmagic_sompzv0.132_covDec2019.fits'
 if 'maglim' in config['lens_v']:
-    paths['lens_nz'] = '../nzs/Nz-a4_b18_mag_lim_v2p2_zbinv2.fits'
+    paths['lens_nz'] = '../simulated_dvs/sim_fiducial_maglim_sompzv0.132_covDec2019.fits'
 
 paths['source_nz'] = 'y1_2pt_NG_mcal_1110.fits'
 print paths['lens_nz']
@@ -143,7 +143,7 @@ if basic['mode'] == 'data':
     print '--------------------------\nUsing randoms file in:\n', paths['randoms'] 
 
     paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
-                                        config_data['lens_v'], 'zllim_%s'%config_data['zllim_v'], 'njk_%d'%config_data['njk'],
+                                        config_data['lens_v'], 'zllim_%s'%config_data['zllim_v'], 'lens_w_%s'%config_data['lens_w'], 'njk_%d'%config_data['njk'],
                                         'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
                                         'bslop_%0.1g'%config_data['bslop']) 
 
@@ -165,6 +165,8 @@ if basic['mode'] == 'mice':
 paths['runs_config'] = os.path.join(paths['runs'], paths['config_%s'%basic['mode']]) + '/'
 paths['plots_config'] = os.path.join(paths['plots'], paths['config_%s'%basic['mode']]) + '/'
 
+
+print paths['runs_config']
 """
 ZBINS
 ---------------------------------
@@ -178,6 +180,7 @@ if 'redmagic' in config['lens_v'] or basic['mode']=='mice':
     zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5']
 if 'maglim' in config['lens_v']:
     zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6']
+#zbins['sbins'] = ['s2', 's3', 's4'] 
 zbins['sbins'] = ['s1', 's2', 's3', 's4']
 #zbins['sbins'] = ['s3']
 zbins['lsbins'] = [l + '_' + s for l in zbins['lbins'] for s in zbins['sbins']]
