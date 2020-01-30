@@ -831,6 +831,7 @@ class Measurement(GGL):
 
         def fix_nz(nz_in):
             """
+            Function probably not needed in the end.
             Function to make the nzs compatible with the blinding script.
             If the redshift is negative (even zlow) it removes it, since
             otherwise the blinding script crashes. 
@@ -878,18 +879,15 @@ class Measurement(GGL):
                 dv_start += self.config['nthbins']
                 cov[bin_pair_inds[0]:bin_pair_inds[-1] + 1, bin_pair_inds] = cov_ls
 
-        # Preparing N(z) for the blinding script
+        # Preparing N(z) 
         if self.basic['mode'] == 'data' or self.basic['mode'] == 'mice':
 
             file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
             lens_nz = file_lens_nz.get_kernel('nz_lens')
             #lens_nz = fix_nz(lens_nz)
-
-            if 'y1_2pt_NG_mcal_1110' in self.paths['source_nz']:
-                file_source_nz = twopoint.TwoPointFile.from_fits(self.paths['source_nz'])
-                source_nz = file_source_nz.get_kernel('nz_source')
-                #source_nz = fix_nz(source_nz)
-
+            file_source_nz = twopoint.TwoPointFile.from_fits(self.paths['source_nz'])
+            source_nz = file_source_nz.get_kernel('nz_source')
+            #source_nz = fix_nz(source_nz)
             print 'Saving TwoPointFile with lens N(z) from %s'%(self.paths['lens_nz'])
             print 'Saving TwoPointFile with source N(z) from %s'%(self.paths['source_nz'])
 

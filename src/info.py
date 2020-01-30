@@ -47,8 +47,8 @@ basic = {
     'mode':'data',
     'blind': 1,
     'run': 0,
-    'savetwopoint': 0,
-    'plot': 1,
+    'savetwopoint': 1,
+    'plot': 0,
     'pool': 1,
     'computer': 'nersc'  #can be 'nersc', 'local', 'midway', etc
 }
@@ -77,7 +77,7 @@ config_data = {
     'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_12_3_19.h5',
     'lens_v': 'redmagic',
     #'lens_v': 'maglim',
-    'lens_w': True, #use LSS weights for the lenses
+    'lens_w': True,  #use LSS weights for the lenses
     'zslim_v': 'som',
     'zs_v': 'bpz',
     'zllim_v': 'y3',
@@ -132,7 +132,8 @@ if 'redmagic' in config['lens_v']:
 if 'maglim' in config['lens_v']:
     paths['lens_nz'] = '../simulated_dvs/sim_fiducial_maglim_sompzv0.132_covDec2019.fits'
 
-paths['source_nz'] = 'y1_2pt_NG_mcal_1110.fits'
+paths['source_nz'] = paths['lens_nz']
+#paths['source_nz'] = 'y1_2pt_NG_mcal_1110.fits'
 print paths['lens_nz']
 
 if basic['mode'] == 'data':
