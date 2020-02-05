@@ -100,6 +100,22 @@ config_mice = {
     'zllim_v': 'y1'
     }
 
+
+def path_config(config):
+    '''
+    Functin that defines where the measurements are saved based on the parameters defined in the config dictionary.
+    '''
+    return os.path.join('mastercat_%s'%config['mastercat_v'],
+        'zslim_%s'%config['zslim_v'],
+        'zs_%s'%config['zs_v'],
+        config['lens_v'],
+        'zllim_%s'%config['zllim_v'],
+        'lens_w_%s'%config['lens_w'],
+        'njk_%d'%config['njk'],
+        'thbin_%0.1f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
+        'bslop_%0.1g'%config['bslop']) 
+
+
 if basic['mode'] == 'data':
     config = config_data
 if basic['mode'] == 'mice':
@@ -143,11 +159,8 @@ if basic['mode'] == 'data':
     print '--------------------------\nUsing lens file in:\n', paths['lens'] 
     print '--------------------------\nUsing randoms file in:\n', paths['randoms'] 
 
-    paths['config_data'] = os.path.join('mastercat_%s'%config_data['mastercat_v'], 'zslim_%s'%config_data['zslim_v'], 'zs_%s'%config_data['zs_v'],
-                                        config_data['lens_v'], 'zllim_%s'%config_data['zllim_v'], 'lens_w_%s'%config_data['lens_w'], 'njk_%d'%config_data['njk'],
-                                        'thbin_%0.1f_%d_%d'%(config_data['thlims'][0], config_data['thlims'][1], config_data['nthbins']),
-                                        'bslop_%0.1g'%config_data['bslop']) 
 
+    paths['config_data'] = path_config(config_data)
     paths['theory_size_all_covmat'] = paths['runs']+paths['config_data'] + '/size/theory_size_all_covmat.fits'
     paths['hist_n_of_z_lenses_witherr_size'] = paths['runs']+paths['config_data'] +'/size/hist_n_of_z_lenses_witherr_size'
     paths['hist_n_of_z_low_size'] = paths['runs']+paths['config_data']+'/size/hist_n_of_z_low_size'
