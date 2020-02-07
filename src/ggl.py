@@ -544,7 +544,7 @@ class GGL(object):
         np.savetxt(path_test + 'weights' + rp, weights, header='weights for all jackknife regions')
         np.savetxt(path_test + 'npairs' + rp, npairs, header='npairs for all jackknife regions')
 
-    def compute_boost_factor(self, jk_l, jk_r, wnum, wnum_r):
+    def compute_boost_factor(self, jk_l, jk_r, wnum, wnum_r, w_l):
         """
         Computes the boost factor for a given set of weights for the lenses and randoms.
         Uses Eq. from Sheldon et al. (2004)
@@ -553,13 +553,14 @@ class GGL(object):
         jk_r: number of assigned jk region per random point
         wnum: array of weights for the lenses, for all jk regions -1, each time different region.
         wnum_r: array of weights for the randoms, for all jk regions -1, each time different region. 
+        w_l: weights assigned to each lens galaxy.
         """
 
         bf_jk = []
         jks = np.arange(self.config['njk'])
         ratio_n_jk = np.zeros(self.config['njk'])
         for jk in jks:
-            ratio_n_jk[jk] = float((jk_r != jk).sum()) / (jk_l != jk).sum()
+            ratio_n_jk[jk] = float((jk_r != jk).sum()) / ((jk_l != jk)*w_l).sum()
             bf_jk.append(ratio_n_jk[jk] * wnum[jk] / wnum_r[jk])
 
         bf_jk = np.array(bf_jk)
@@ -805,7 +806,7 @@ class Measurement(GGL):
     		    gt_all = (gtnum / wnum) / R - (gtnum_r / wnum_r) / R
     		    gx_all = (gxnum / wnum) / R - (gxnum_r / wnum_r) / R
 
-    		    bf_all = self.compute_boost_factor(lens['jk'], random['jk'], wnum, wnum_r)
+    		    bf_all = self.compute_boost_factor(lens['jk'], random['jk'], wnum, wnum_r, lens['w'])
                     gt_all_boosted = bf_all*(gtnum / wnum)/R - (gtnum_r / wnum_r) / R 
 
     		    self.process_run(gt_all, theta, path_test, 'gt')
