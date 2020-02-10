@@ -26,16 +26,6 @@ if run_measurement:
         measurement.save_2pointfile('gt_boosted')
         measurement.save_2pointfile('boost_factor')
 
-    if basic['plot']:
-        measurement.plot_boostfactors()
-        measurement.plot_boost_factors_cov()
-        measurement.plot_randoms()
-        measurement.plot_gammax()	
-        measurement.compute_sn_ratio('gt')
-        measurement.compute_sn_ratio('gt_boosted')
-        measurement.plot_from_twopointfile('gt')
-        measurement.plot_from_twopointfile('gt_boosted')
-
 if run_responses_nk:
     responses = ResponsesScale(basic, config, paths, zbins, plotting)
     responses.run()
