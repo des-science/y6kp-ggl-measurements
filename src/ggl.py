@@ -72,6 +72,72 @@ class GGL(object):
 
         return source
 
+
+    def get_responses(self,calibrator, mask=None):
+        '''
+        Function to deal with responses and make sure all things are good.
+        It is a function so we can use it for several samples, for instance,
+        for the non-tomographic sample, each of the tomographic bins,
+        and other selections you could come up with.
+        Makes several tests to assure internal consistency and finally
+        returns the relevant quantities.
+        '''
+        # These responses below do no include the weights,
+        # they are just the full response (Rg+Rs) for each object, component and this selection
+        # c is just zero for Y3, would be the additive response
+        R11, c1, w1 = calibrator.calibrate('e_1', return_full=True, mask=mask) 
+        R22, c2, w2 = calibrator.calibrate('e_2', return_full=True, mask=mask)
+        R = (R11+R22)/2.
+
+        # since (if) the weights are the same we can just keep one column
+        assert ((w1==w2).all())
+        w = w1
+
+        # Get the total mean response directly
+        R11_mean = calibrator.calibrate('e_1', mask=mask)[0] # this is a scalar
+        R22_mean = calibrator.calibrate('e_2', mask=mask)[0]
+        R_mean = np.mean([R11_mean, R22_mean])
+
+        # And check everything holds
+        assert(R11_mean == np.average(R11,weights=w))
+        assert(R22_mean == np.average(R22,weights=w))
+
+        # Lets get the quantity we need to weight our redshift
+        # distributions with: weights*fullresponse(Rgamma+Rs)
+        wR = calibrator.calibrate('e_1', return_wRgS=True, mask=mask)
+        wRg = calibrator.calibrate('e_1', return_wRg=True, mask=mask)
+
+        # Responses are tricky! So again lets check it all makes sense
+        assert(np.isclose(wR,w*R).all())
+        Rg = wRg/w
+        Rg_mean = np.average(Rg, weights=w)
+        Rs_mean = R_mean-Rg_mean
+        assert (np.isclose(Rs_mean,(np.average(wR/w, weights=w) - Rg_mean)))
+
+        # Let's make some prints
+        print('From xcorr: R = %0.4f'%R_mean) 
+        print('From xcorr: Rg = %0.4f'%Rg_mean)
+        print('From xcorr: Rs = %0.4f'%Rs_mean)
+        print('From xcorr: R11 = %0.4f'%R11_mean) 
+        print('From xcorr: R22 = %0.4f'%R22_mean)
+
+        # Save in two separate dictionaries, one to save to file, one needed later in the code
+        save = {}
+        save['R_mean'] = R_mean
+        save['Rg_mean'] = Rg_mean
+        save['Rs_mean'] = Rs_mean
+        save['R11_mean'] = R11_mean
+        save['R22_mean'] = R22_mean
+
+        res = {}
+        res['R_mean'] = R_mean
+        res['R'] = R
+        res['wR'] = wR
+        res['w'] = w #weights but for convienence we load them here
+        
+        return res, save
+
+ 
     def load_metacal(self):
         """
         Loads metacal data for Y3 catalog using h5 interface.
@@ -156,27 +222,19 @@ class GGL(object):
         source['bpz_zmc'] = source_5sels['sheared']['bpz_zmc'][0]
         source['som_bin'] = source_5sels['sheared']['som_bin'][0]
 
-        # -------------------------------
-        # Notes from Troxel on responses: 
-        # -------------------------------
-        # R1,c,w = source_calibrator.calibrate('e_1', mask=mask) 
-        # Optionally pass an additional mask to use when calculating the selection response. The returned R1 is <Rg_1 + Rs_1>. 
-        # To get an array of R's, use return_wRg=True to get [Rg_1+Rg_2]/2 for each object or return_wRgS=True to include the selection response. 
-        # return_full=True returns the non-component-averaged version of the full response.                
-        # --------------
-        # Also note that:
-        # --------------
-        # R11 is a scalar, source['R11'] is an array of length the number of galaxies
-        # R11 is equal to np.mean(source['R11']).
+        # lets deal with responses, check function above
+        dict_responses, dict_to_file = self.get_responses(source_calibrator)
 
-        source['Rgamma'] = source_calibrator.calibrate('e_1', return_wRg=True)
-        print 'Mean Rgamma', np.mean(source['Rgamma'])
-        R11, _, _ = source_calibrator.calibrate('e_1')
-        R22, _, _ = source_calibrator.calibrate('e_2')
-        source['Rmean'] = np.mean([R11, R22])
-        source['R11'] = source_calibrator.calibrate('e_1', return_full=True)[0]
-        source['R22'] = source_calibrator.calibrate('e_2', return_full=True)[0]
-        print 'Response full sample', source['Rmean']
+        # Lets include the responses dictionary into the source dictionary
+        source = dict(source, **dict_responses)
+
+        # Lets save some of the mean responses values
+        # might be useful to put the numbers in the papers        
+        import json
+        with open(self.get_path_test_allzbins() + 'responses_untomographic', 'w') as file:
+            file.write(json.dumps(dict_to_file))
+        # can be loaded with: json.load(open('test'))
+         
         return source, source_5sels, source_calibrator
 
     def load_metacal_bin(self, source, source_5sels, calibrator, bin_low, bin_high):
@@ -204,15 +262,20 @@ class GGL(object):
         source_bin['size'] = source['size'][photoz_masks[0]]
         source_bin['bpz_mean'] = source['bpz_mean'][photoz_masks[0]]
         source_bin['bpz_zmc'] = source['bpz_zmc'][photoz_masks[0]]
-        source_bin['Rgamma'] = source['Rgamma'][photoz_masks[0]]
 
-        R11, _, _ = calibrator.calibrate('e_1', mask=photoz_masks)
-        R22, _, _ = calibrator.calibrate('e_2', mask=photoz_masks)
-        source_bin['Rmean'] = np.mean([R11, R22])
-        source_bin['R11'] = calibrator.calibrate('e_1', return_full=True, mask=photoz_masks)[0]
-        source_bin['R22'] = calibrator.calibrate('e_2', return_full=True, mask=photoz_masks)[0]
-        print 'Mean response redshift bin (%d, %d):' % (bin_low, bin_high), source_bin['Rmean'], np.mean(
-            source_bin['Rgamma']), np.mean(source_bin['R11']), np.mean(source_bin['R22'])
+        # lets deal with responses, check function above
+        dict_responses, dict_to_file = self.get_responses(calibrator, mask=photoz_masks)
+
+        # Lets include the responses dictionary into the source dictionary
+        source_bin = dict(source_bin, **dict_responses)
+
+        # Lets save some of the mean responses values
+        # might be useful to put the numbers in the papers        
+        import json
+        with open(self.get_path_test_allzbins() + 'responses_%d_%d'%(bin_low, bin_high), 'w') as file:
+            file.write(json.dumps(dict_to_file))
+        # can be loaded with: json.load(open('test'))
+        
         return source_bin
 
     def load_metacal_bin_sels_responses(self, source_5sels, bin_low, bin_high):
@@ -235,62 +298,23 @@ class GGL(object):
         return source_bin_sels
 
 
-    def load_metacal_bin_bpz(self, source, source_5sels, calibrator, zlim_low, zlim_high):
+    def subtract_mean_shear(self, cat):
         """
-        DEPRECATED (BPZ binning is not default)
-        source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
-        source_5sels: dictionary containing relevant columns for the sources, with the baseline selection applied already,
-                     for each of the 5 selections 1p, 1m, 2p, 2m. 
-        calibrator: class to compute the response. Taken from baseline selection.
-        zlim_low, zlim_high: limits to select the tomographic bin.
-        Obtains 5 masks (unsheared, sheared 1p, 1m, 2p, 2m) to obtain the new selection response.
-        Returns: Source dictionary masked with the unsheared mask and with the mean response updated.
+        Subtracts the weighted mean shear from a source catalog, 
+        from each component.
         """
-        photoz_masks = [
-            (source_5sels['sheared']['bpz_mean'][i] > zlim_low) & (source_5sels['sheared']['bpz_mean'][i] < zlim_high)
-            for i in range(5)]
-        source_bin = {}
-        source_bin['ra'] = source['ra'][photoz_masks[0]]
-        source_bin['dec'] = source['dec'][photoz_masks[0]]
-        source_bin['e1'] = source['e1'][photoz_masks[0]]
-        source_bin['e2'] = source['e2'][photoz_masks[0]]
-        source_bin['psf_e1'] = source['psf_e1'][photoz_masks[0]]
-        source_bin['psf_e2'] = source['psf_e2'][photoz_masks[0]]
-        source_bin['snr'] = source['snr'][photoz_masks[0]]
-        source_bin['size'] = source['size'][photoz_masks[0]]
-        source_bin['bpz_mean'] = source['bpz_mean'][photoz_masks[0]]
-        source_bin['bpz_zmc'] = source['bpz_zmc'][photoz_masks[0]]
-        source_bin['Rgamma'] = source['Rgamma'][photoz_masks[0]]
+        mean_e1 = np.average(cat['e1'], weights=cat['w'])
+        mean_e2 = np.average(cat['e2'], weights=cat['w'])
 
-        R11, _, _ = calibrator.calibrate('e_1', mask=photoz_masks)
-        R22, _, _ = calibrator.calibrate('e_2', mask=photoz_masks)
-        source_bin['Rmean'] = np.mean([R11, R22])
-        source_bin['R11'] = calibrator.calibrate('e_1', return_full=True, mask=photoz_masks)[0]
-        source_bin['R22'] = calibrator.calibrate('e_2', return_full=True, mask=photoz_masks)[0]
-        print 'Mean response redshift bin (%0.2f, %0.2f):' % (zlim_low, zlim_high), source_bin['Rmean'], np.mean(
-            source_bin['Rgamma']), np.mean(source_bin['R11']), np.mean(source_bin['R22'])
-        return source_bin
+        cat['e1'] -= mean_e1
+        cat['e2'] -= mean_e2
 
-    def load_metacal_bin_sels_responses_bpz(self, source_5sels, zlim_low, zlim_high):
-        """
-        DEPRECATED (BPZ binning is not default)
-        source_5sels: Nested dictionary containing relevant columns for the sources, with the baseline selection applied already,
-                   for each of the unsheared and sheared versions and for each selection.
-        zlim_low, zlim_high: limits to select the tomographic bin.
-        Returns: Source dictionary masked each time with one of the photo-z masks, to compute the selection response manually and
-                 test its scale dependence. 
-        """
-        photoz_masks = [
-            (source_5sels['sheared']['bpz_mean'][i] > zlim_low) & (source_5sels['sheared']['bpz_mean'][i] < zlim_high)
-            for i in range(5)]
-        source_bin_sels = {}
-        source_bin_sels['ra'] = [source_5sels['unsheared']['ra'][i][photoz_masks[i]] for i in range(1, 5)]
-        source_bin_sels['dec'] = [source_5sels['unsheared']['dec'][i][photoz_masks[i]] for i in range(1, 5)]
-        source_bin_sels['e1'] = [source_5sels['unsheared']['e1'][i][photoz_masks[i]] for i in range(1, 5)]
-        source_bin_sels['e2'] = [source_5sels['unsheared']['e2'][i][photoz_masks[i]] for i in range(1, 5)]
+        print('Subtracting mean shear.')
+        print('Mean e1:', mean_e1)
+        print('Mean e2:', mean_e2)
 
-        return source_bin_sels
-
+        return cat, np.array([mean_e1, mean_e2])
+    
     def get_lens(self, lens):
         """
         Given a lens sample, returns ra, dec, jk and weight, in case it exists.
@@ -409,12 +433,10 @@ class GGL(object):
                     if self.basic['mode'] == 'data' or self.basic['mode'] == 'data_y1sources' or self.basic[
                         'mode'] == 'buzzard':
                         cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s],
-                                                 w=w[bool_s],
-                                                 ra_units='deg', dec_units='deg')
+                                                 w=w[bool_s], ra_units='deg', dec_units='deg')
                     if self.basic['mode'] == 'mice':
                         cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=-e1[bool_s], g2=e2[bool_s],
-                                                 w=w[bool_s],
-                                                 ra_units='deg', dec_units='deg')
+                                                 w=w[bool_s], ra_units='deg', dec_units='deg')
                 if 'NK' in type_corr:
                     cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], k=scalar[bool_s], w=w[bool_s],
                                              ra_units='deg', dec_units='deg')
@@ -726,6 +748,7 @@ class Measurement(GGL):
 
         if self.basic['mode'] == 'data':
             lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
+            mean_shears = []
 
         if self.basic['mode'] == 'mice':
             lens_all, random_all = self.load_data_or_sims()
@@ -741,8 +764,12 @@ class Measurement(GGL):
 		if self.basic['mode'] == 'data':
                     print 'Source bin:', self.zbins[sbin][0], self.zbins[sbin][1]
 		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, bin_low=self.zbins[sbin][0], bin_high=self.zbins[sbin][1])
-		    R = source['Rmean']
+		    R = source['R_mean']
                     print 'Length source', sbin, len(source['ra'])
+
+                    # New!! we need to subtract the mean shear 
+                    source, mean_shear = self.subtract_mean_shear(source)
+                    mean_shears.append(mean_shear)
 
 		if self.basic['mode'] == 'data_y1sources':
 		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
@@ -754,7 +781,7 @@ class Measurement(GGL):
     		    R = 1.
                     #source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
                     source = pf.getdata(self.paths['mice'] + 'mice2_shear_fullsample_bin%s.fits'%sbin[-1])
-
+ 
 		if self.basic['mode'] == 'buzzard':
     		    """
     		    In this case there are no responses, so we set it to one.
@@ -774,6 +801,7 @@ class Measurement(GGL):
     		    path_test = self.get_path_test(lbin, sbin)
     		    make_directory(path_test)
 
+                    # Decide how to bin the lenses
                     if 'ztrue' in self.config['zllim_v']:
                         print 'Using ztrue to bin the lenses.'
                         lens = lens_all[(lens_all['ztrue'] > self.zbins[lbin][0]) & (lens_all['ztrue'] < self.zbins[lbin][1])]
@@ -786,7 +814,6 @@ class Measurement(GGL):
                     if self.basic['mode'] == 'buzzard':
                         zbins, nz_l = self.get_nz(lens['ztrue'])		    
                         np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
-                    
 
     		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
     		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
@@ -814,6 +841,8 @@ class Measurement(GGL):
     		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
     		    self.process_run(bf_all, theta, path_test, 'boost_factor')
     		    self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
+
+        np.savetxt(self.get_path_test_allzbins()+'mean_shears', mean_shears, header = 'Mean_e1 Mean_e2 (for each redshift bin)')
 
 
                     
@@ -852,7 +881,6 @@ class Measurement(GGL):
             else:
                 print 'Return the same nz since it is alredy good for the blinding script %s.'%nz_in.name
                 return nz_in
-
              
         
         # Preparing spectrum
