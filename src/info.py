@@ -46,8 +46,8 @@ Then you are done. All this process is only need for the gammat measurements, no
 basic = {
     'mode':'data',
     'blind': 1,
-    'run': 0,
-    'savetwopoint': 1,
+    'run': 1,
+    'savetwopoint': 0,
     'plot': 0,
     'pool': 1,
     'computer': 'nersc'  #can be 'nersc', 'local', 'midway', etc
@@ -55,7 +55,7 @@ basic = {
 
 if basic['pool']:
     basic['num_threads'] = 1
-    basic['Ncores'] = 7
+    basic['Ncores'] = 10
     
 if not basic['pool']: basic['num_threads'] = 10
 
@@ -74,7 +74,7 @@ config_data = {
     'bslop': 0.1,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
-    'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_12_3_19.h5',
+    'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_03_31_20.h5',
     'lens_v': 'redmagic',
     #'lens_v': 'maglim',
     'lens_w': True,  #use LSS weights for the lenses
@@ -83,11 +83,12 @@ config_data = {
     'zllim_v': 'y3',
     }
 
-config_data['mastercat_v'] = config_data['filename_mastercat'][-23:-3]
+config_data['mastercat_v'] = config_data['filename_mastercat'][37:-3]
 if basic['computer']=='midway':
     config_data['filename_mastercat'] = '/project2/chihway/data/des_y3_catalogs/y3kp_sample/' + config_data['mastercat_v'] + '.h5'
 
 print config_data['filename_mastercat']
+
 config_mice = {
     'njk': 300,
     'bslop': 0.1,
@@ -105,14 +106,14 @@ def path_config(config):
     '''
     Functin that defines where the measurements are saved based on the parameters defined in the config dictionary.
     '''
-    return os.path.join('mastercat_%s'%config['mastercat_v'],
+    return os.path.join(config['mastercat_v'],
         'zslim_%s'%config['zslim_v'],
         'zs_%s'%config['zs_v'],
         config['lens_v'],
         'zllim_%s'%config['zllim_v'],
         'lens_w_%s'%config['lens_w'],
         'njk_%d'%config['njk'],
-        'thbin_%0.1f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
+        'thbin_%0.2f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
         'bslop_%0.1g'%config['bslop']) 
 
 
@@ -144,13 +145,13 @@ if basic['computer'] == 'midway':
     paths['lens_cats'] = '../cats/'
 
 if 'redmagic' in config['lens_v']:
-    paths['lens_nz'] = '../simulated_dvs/sim_fiducial_redmagic_sompzv0.132_covDec2019.fits'
+    paths['lens_nz'] = '../nzs_Y3_mastercat_03_31_20/2pt_shearcat_03_31_20_sompz_v0.40_smooth.fits'
 if 'maglim' in config['lens_v']:
     paths['lens_nz'] = '../simulated_dvs/sim_fiducial_maglim_sompzv0.132_covDec2019.fits'
 
-paths['source_nz'] = paths['lens_nz']
-#paths['source_nz'] = 'y1_2pt_NG_mcal_1110.fits'
+paths['source_nz'] = '../nzs_Y3_mastercat_03_31_20/2pt_shearcat_03_31_20_sompz_v0.40_smooth.fits'
 print paths['lens_nz']
+print paths['source_nz']
 
 if basic['mode'] == 'data':
     paths['lenscats'] = paths['lens_cats'] + '%s/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk']) 
@@ -158,7 +159,7 @@ if basic['mode'] == 'data':
     paths['randoms'] = paths['lenscats'] + 'random.fits'
     print '--------------------------\nUsing lens file in:\n', paths['lens'] 
     print '--------------------------\nUsing randoms file in:\n', paths['randoms'] 
-
+    print '--------------------------'
 
     paths['config_data'] = path_config(config_data)
     paths['theory_size_all_covmat'] = paths['runs']+paths['config_data'] + '/size/theory_size_all_covmat.fits'
@@ -180,7 +181,9 @@ paths['runs_config'] = os.path.join(paths['runs'], paths['config_%s'%basic['mode
 paths['plots_config'] = os.path.join(paths['plots'], paths['config_%s'%basic['mode']]) + '/'
 
 
-print paths['runs_config']
+print 'Saving measurements at:', paths['runs_config']
+print '--------------------------\n'
+
 """
 ZBINS
 ---------------------------------
@@ -193,8 +196,7 @@ zbins = {}
 if 'redmagic' in config['lens_v'] or basic['mode']=='mice':
     zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5']
 if 'maglim' in config['lens_v']:
-    zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6']
-#zbins['sbins'] = ['s2', 's3', 's4'] 
+    zbins['lbins'] = ['l1', 'l2', 'l3','l4', 'l5', 'l6']
 zbins['sbins'] = ['s1', 's2', 's3', 's4']
 #zbins['sbins'] = ['s3']
 zbins['lsbins'] = [l + '_' + s for l in zbins['lbins'] for s in zbins['sbins']]
@@ -257,8 +259,8 @@ plotting['latex'] = False
 plotting['cmap'] = viridis
 plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(zbins['lims'][i], zbins['lims'][i+1]) for i in range(len(zbins['lims'])-1)]
 #plotting['th_limit'] = [64.,40.,30., 24., 21.] # 12 Mpc/h 
-#plotting['th_limit'] = [42.67, 26.67 ,20., 16., 14.] # 8 Mpc/h 
-plotting['th_limit'] = [21.33, 13.33 , 10., 8., 7., 6.] # 4 Mpc/h #check values for last bin
+plotting['th_limit'] = [42.67, 26.67 ,20., 16., 14.] # 8 Mpc/h 
+#plotting['th_limit'] = [21.33, 13.33 , 10., 8., 7., 6.] # 4 Mpc/h #check values for last bin
 if config['zslim_v'] == 'y1':
     plotting['redshift_s'] = [r'$%0.2f < z_s < %0.2f $'%(zbins['source_lims'][i], zbins['source_lims'][i+1]) for i in range(len(zbins['source_lims'])-1)]
 if config['zslim_v'] == 'som':
