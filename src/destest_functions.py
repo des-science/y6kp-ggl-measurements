@@ -32,6 +32,7 @@ def create_destest_yaml( params, name, cal_type, group, table, select_path ):
     destest_dict['select_path'] = select_path
     destest_dict['e'] = ['e_1','e_2']
     destest_dict['Rg'] = ['R11','R22']
+    destest_dict['w'] = 'weight'
 
     return destest_dict
 
@@ -59,6 +60,7 @@ def load_catalog(pipe_params, name, cal_type, group, table, select_path, inherit
         return sel, cal
     else:
         return sel
+
 '''
 # Read yaml file that defines all the catalog selections used
 params = yaml.load(open('cats.yaml'))
@@ -88,17 +90,18 @@ pz_selector = load_catalog(
 ran_selector = load_catalog(
     params, 'ran', None, params['ran_group'], params['ran_table'], params['ran_path'])
 
-# Get some source photo-z binning information, cut to range 0.1<z_mean<1.3
-pzbin = pz_selector.get_col('zmean_sof')[0] 
-mask = (pzbin>0.1)&(pzbin<1.3)
-
-
-# Note that get_col() returns a tuple. If its a catalog like gold, it will have length 0, but for something like metacal, it will have length 5 (in the order of the table variable list passed in cats.yaml, i.e., 'unsheared', 'sheared_1p', 'sheared_1m', 'sheared_2p', 'sheared_2m')
-# Note that get_col() applies the index mask specified by the 'path' variable in the cats.yaml file automatically.
-
-# Get responses (c, which doesn't exist for our catalogs), and weights
-R1,c,w = source_calibrator.calibrate('e_1', mask=mask) # Optionally pass an additional mask to use when calculating the selection response. The returned R1 is <Rg_1 + Rs_1>. To get an array of R's, use return_wRg=True to get [Rg_1+Rg_2]/2 for each object or return_wRgS=True to include the selection response. return_full=True returns the non-component-averaged version of the full response.
-R2,c,w = source_calibrator.calibrate('e_2', mask=mask)
+# Get some source photo-z binning information, cut to range 0.1<z_mean<1.3                                                  
+for i in range(4):
+    pzbin = pz_selector.get_col('bhat') # 5-tuple for metacal (un)sheared versions                                         
+    mask = [pzbin[j] == i for j in range(5)] # First tomographic bin                                                               
+    # Note that get_col() returns a tuple. If its a catalog like gold, it will have length 0, but for something like metacal, it will have length 5 (in the order of the table variable list passed in cats.yaml, i.e., 'unsheared', 'sheared_1p', 'sheared_1m', 'sheared_2p', 'sheared_2m')                                                               
+    # Note that get_col() applies the index mask specified by the 'path' variable in the cats.yaml file automatically.         # Get responses (c, which doesn't exist for our catalogs), and weights                                                      
+    R1,c,w = source_calibrator.calibrate('e_1', mask=mask) # Optionally pass an additional mask to use when calculating the selection response. The returned R1 is <Rg_1 + Rs_1>. To get an array of R's, use return_wRg=True to get [Rg_1+Rg_2]/2 for each object or return_wRgS=True to include the selection response. return_full=True returns the non-component-averaged version of the full response.
+    print(R1,c,w)
+    g1=source_selector.get_col('e_1')
+    print(len(w),[len(g1[j]) for j in range(4)])
+    R2,c,w = source_calibrator.calibrate('e_2', mask=mask)
+    print(R2,c,w)
 
 # Load ra,dec from gold catalog
 ra  = gold_selector.get_col('ra')[0]
@@ -114,5 +117,7 @@ dec2 = ran_selector.get_col('dec')[0]
 g1=source_selector.get_col('e_1')
 g2=source_selector.get_col('e_2')
 
-print len(ra),len(dec),len(ra2),len(dec2)
+pz_selector = load_catalog(
+        params, 'pzdnf', None, params['dnf_group'], params['dnf_table'], params['dnf_path'], inherit=alt_lens_selector)
+
 '''

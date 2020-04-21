@@ -46,8 +46,8 @@ Then you are done. All this process is only need for the gammat measurements, no
 basic = {
     'mode':'data',
     'blind': 1,
-    'run': 1,
-    'savetwopoint': 0,
+    'run': 0,
+    'savetwopoint': 1,
     'plot': 0,
     'pool': 1,
     'computer': 'nersc'  #can be 'nersc', 'local', 'midway', etc
@@ -87,7 +87,7 @@ config_data['mastercat_v'] = config_data['filename_mastercat'][37:-3]
 if basic['computer']=='midway':
     config_data['filename_mastercat'] = '/project2/chihway/data/des_y3_catalogs/y3kp_sample/' + config_data['mastercat_v'] + '.h5'
 
-print config_data['filename_mastercat']
+print(config_data['filename_mastercat'])
 
 config_mice = {
     'njk': 300,
@@ -122,7 +122,7 @@ if basic['mode'] == 'data':
 if basic['mode'] == 'mice':
     config = config_mice
 
-print '\nChosen configuration:\n--------------------------\n', config
+print('\nChosen configuration:\n--------------------------\n', config)
 
 """
 PATHS
@@ -150,16 +150,16 @@ if 'maglim' in config['lens_v']:
     paths['lens_nz'] = '../simulated_dvs/sim_fiducial_maglim_sompzv0.132_covDec2019.fits'
 
 paths['source_nz'] = '../nzs_Y3_mastercat_03_31_20/2pt_shearcat_03_31_20_sompz_v0.40_smooth.fits'
-print paths['lens_nz']
-print paths['source_nz']
+print(paths['lens_nz'])
+print(paths['source_nz'])
 
 if basic['mode'] == 'data':
     paths['lenscats'] = paths['lens_cats'] + '%s/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk']) 
     paths['lens'] = paths['lenscats'] + 'lens.fits'
     paths['randoms'] = paths['lenscats'] + 'random.fits'
-    print '--------------------------\nUsing lens file in:\n', paths['lens'] 
-    print '--------------------------\nUsing randoms file in:\n', paths['randoms'] 
-    print '--------------------------'
+    print ('--------------------------\nUsing lens file in:\n', paths['lens'])
+    print ('--------------------------\nUsing randoms file in:\n', paths['randoms'])
+    print ('--------------------------')
 
     paths['config_data'] = path_config(config_data)
     paths['theory_size_all_covmat'] = paths['runs']+paths['config_data'] + '/size/theory_size_all_covmat.fits'
@@ -181,8 +181,8 @@ paths['runs_config'] = os.path.join(paths['runs'], paths['config_%s'%basic['mode
 paths['plots_config'] = os.path.join(paths['plots'], paths['config_%s'%basic['mode']]) + '/'
 
 
-print 'Saving measurements at:', paths['runs_config']
-print '--------------------------\n'
+print ('Saving measurements at:', paths['runs_config'])
+print ('--------------------------\n')
 
 """
 ZBINS

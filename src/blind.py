@@ -1,5 +1,5 @@
 import os
-from info import paths
+from info import paths, config
 
 path_2pt_pipeline = '../../2pt_pipeline/'
 
@@ -16,7 +16,7 @@ def blind_measurements(name):
         name_twopointfile = os.path.join(paths['runs_config'], 'measurement', '%s_twopointfile.fits'%name)
         filename_absolute_path = owd[:-3] + name_twopointfile[2:]
         os.chdir(path_2pt_pipeline)
-        os.system('python pipeline/blind_2pt_usingcosmosis.py -s Y3_blinded -i pipeline/blinding_params_template.ini -b add -u %s'%filename_absolute_path)
+        os.system('python pipeline/blind_2pt_usingcosmosis.py -s Y3_blinded -i pipeline/blinding_params_template_%s.ini -b add -u %s'%(config['lens_v'], filename_absolute_path))
         os.chdir(owd)
         if os.path.exists('%s_BLINDED.fits'%name_twopointfile[:-5]):
             os.system('rm %s'%name_twopointfile)

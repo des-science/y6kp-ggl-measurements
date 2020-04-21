@@ -797,50 +797,55 @@ class Measurement(GGL):
                     np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
 
     		for l, lbin in enumerate(self.zbins['lbins']):
-    		    print 'Running measurement for lens %s.' % lbin
     		    path_test = self.get_path_test(lbin, sbin)
-    		    make_directory(path_test)
-
-                    # Decide how to bin the lenses
-                    if 'ztrue' in self.config['zllim_v']:
-                        print 'Using ztrue to bin the lenses.'
-                        lens = lens_all[(lens_all['ztrue'] > self.zbins[lbin][0]) & (lens_all['ztrue'] < self.zbins[lbin][1])]
-                    else:
-                        print 'Using z to bin the lenses.'
-                        lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
                     
-                    print 'Length lens', lbin, len(lens['ra']), self.zbins[lbin][0], self.zbins[lbin][1]
+                    if os.path.exists(path_test + 'mean_gt_boosted'):
+                        print('Measurements for this bin already exist. SKIPPING!')
 
-                    if self.basic['mode'] == 'buzzard':
-                        zbins, nz_l = self.get_nz(lens['ztrue'])		    
-                        np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
+                    else:
+    		        print 'Running measurement for lens %s.' % lbin
+                        make_directory(path_test)
 
-    		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
-    		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
-    		    gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
+                        # Decide how to bin the lenses
+                        if 'ztrue' in self.config['zllim_v']:
+                            print 'Using ztrue to bin the lenses.'
+                            lens = lens_all[(lens_all['ztrue'] > self.zbins[lbin][0]) & (lens_all['ztrue'] < self.zbins[lbin][1])]
+                        else:
+                            print 'Using z to bin the lenses.'
+                            lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
 
-    		    if self.basic['mode']  == 'data':
-    			random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-    		    if self.basic['mode']  == 'buzzard':
-    			random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-    		    if self.basic['mode']  == 'mice':
-    			random = random_all[l*len(random_all)/len(self.zbins['lbins']):(l+1)*len(random_all)/len(self.zbins['lbins'])]
+                        print 'Length lens', lbin, len(lens['ra']), self.zbins[lbin][0], self.zbins[lbin][1]
 
-    		    theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
-    		    self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, True)
-    		    gtnum_r, gxnum_r, wnum_r = self.numerators_jackknife(gts, gxs, weights)
+                        if self.basic['mode'] == 'buzzard':
+                            zbins, nz_l = self.get_nz(lens['ztrue'])		    
+                            np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
 
-    		    gt_all = (gtnum / wnum) / R - (gtnum_r / wnum_r) / R
-    		    gx_all = (gxnum / wnum) / R - (gxnum_r / wnum_r) / R
+                        theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
+                        self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
+                        gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
 
-    		    bf_all = self.compute_boost_factor(lens['jk'], random['jk'], wnum, wnum_r, lens['w'])
-                    gt_all_boosted = bf_all*(gtnum / wnum)/R - (gtnum_r / wnum_r) / R 
+                        if self.basic['mode']  == 'data':
+                            random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+                        if self.basic['mode']  == 'buzzard':
+                            random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+                        if self.basic['mode']  == 'mice':
+                            random = random_all[l*len(random_all)/len(self.zbins['lbins']):(l+1)*len(random_all)/len(self.zbins['lbins'])]
 
-    		    self.process_run(gt_all, theta, path_test, 'gt')
-    		    self.process_run(gx_all, theta, path_test, 'gx')
-    		    self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
-    		    self.process_run(bf_all, theta, path_test, 'boost_factor')
-    		    self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
+                        theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
+                        self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, True)
+                        gtnum_r, gxnum_r, wnum_r = self.numerators_jackknife(gts, gxs, weights)
+
+                        gt_all = (gtnum / wnum) / R - (gtnum_r / wnum_r) / R
+                        gx_all = (gxnum / wnum) / R - (gxnum_r / wnum_r) / R
+
+                        bf_all = self.compute_boost_factor(lens['jk'], random['jk'], wnum, wnum_r, lens['w'])
+                        gt_all_boosted = bf_all*(gtnum / wnum)/R - (gtnum_r / wnum_r) / R 
+
+                        self.process_run(gt_all, theta, path_test, 'gt')
+                        self.process_run(gx_all, theta, path_test, 'gx')
+                        self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
+                        self.process_run(bf_all, theta, path_test, 'boost_factor')
+                        self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
 
         np.savetxt(self.get_path_test_allzbins()+'mean_shears', mean_shears, header = 'Mean_e1 Mean_e2 (for each redshift bin)')
 
@@ -911,12 +916,21 @@ class Measurement(GGL):
         # Preparing N(z) 
         if self.basic['mode'] == 'data' or self.basic['mode'] == 'mice':
 
+            lensfile = pf.open(self.paths['lens_nz'])
+            lens_nz = twopoint.NumberDensity.from_fits(lensfile[2])
+            assert (lens_nz.name=='nz_lens')
+            
+            sourcefile = pf.open(self.paths['source_nz'])
+            source_nz = twopoint.NumberDensity.from_fits(lensfile[1])
+            assert (source_nz.name=='nz_source')
+
+            '''
+            If it is a TwoPointFile use the code below
             file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
             lens_nz = file_lens_nz.get_kernel('nz_lens')
-            #lens_nz = fix_nz(lens_nz)
             file_source_nz = twopoint.TwoPointFile.from_fits(self.paths['source_nz'])
             source_nz = file_source_nz.get_kernel('nz_source')
-            #source_nz = fix_nz(source_nz)
+            '''
             print 'Saving TwoPointFile with lens N(z) from %s'%(self.paths['lens_nz'])
             print 'Saving TwoPointFile with source N(z) from %s'%(self.paths['source_nz'])
 
@@ -960,6 +974,7 @@ class Measurement(GGL):
             gammat_twopoint.to_fits(twopointfile_unblind)
 
         if string == 'boost_factor':
+            # saves the boost factors independently in a fits file
             boost_factor = twopoint.SpectrumMeasurement('boost_factor', (bin1, bin2),
                                                         (twopoint.Types.galaxy_position_real,
                                                          twopoint.Types.galaxy_shear_plus_real),

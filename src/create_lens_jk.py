@@ -4,7 +4,6 @@ import yaml
 sys.path.append('../../destest/')
 sys.path.append('../../kmeans_radec/')
 import destest
-#import pyfits as pf
 import astropy.io.fits as fits
 from info import zbins, config, paths
 import destest_functions
