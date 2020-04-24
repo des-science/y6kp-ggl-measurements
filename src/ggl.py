@@ -887,7 +887,18 @@ class Measurement(GGL):
                 print 'Return the same nz since it is alredy good for the blinding script %s.'%nz_in.name
                 return nz_in
              
-        
+        # adapted from save_2pt, removed unused options
+        def get_scales(x_min, x_max, nbins):
+            """
+            Get scales
+            """
+            log_lims = np.linspace(np.log(x_min), np.log(x_max), nbins+1 )
+            lims = np.exp(log_lims)
+            xmin = lims[:-1]
+            xmax = lims[1:]
+            mids = (2./3.) * (xmax**3 - xmin**3) / (xmax**2 - xmin**2)
+            return lims, mids
+            
         # Preparing spectrum
         length = self.config['nthbins'] * len(self.zbins['lbins']) * len(self.zbins['sbins'])
         values = np.zeros(length, dtype=float)
@@ -895,9 +906,14 @@ class Measurement(GGL):
         bin2 = np.zeros_like(bin1)
         angular_bin = np.zeros_like(bin1)
         angle = np.zeros_like(values)
+        angle_min = np.zeros_like(values)
+        angle_max = np.zeros_like(values)
         dv_start = 0
         cov = np.zeros((length, length))
-
+        # getting the edges of the angular bins
+        # Also replacing theta to be exactly the same as theory lines
+        edges, mids = get_scales(self.config['thlims'][0], self.config['thlims'][1], self.config['nthbins'])
+        
         for l in range(0, len(self.zbins['lbins'])):
             for s in range(len(self.zbins['sbins'])):
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
@@ -909,7 +925,10 @@ class Measurement(GGL):
                 bin1[bin_pair_inds] = l + 1
                 bin2[bin_pair_inds] = s + 1
                 angular_bin[bin_pair_inds] = np.arange(self.config['nthbins'])
-                angle[bin_pair_inds] = theta
+                angle[bin_pair_inds] = mids
+                # now these needed in the twopoint files for blinding
+                angle_min[bin_pair_inds] = edges[0:-1]
+                angle_max[bin_pair_inds] = edges[1:]
                 dv_start += self.config['nthbins']
                 cov[bin_pair_inds[0]:bin_pair_inds[-1] + 1, bin_pair_inds] = cov_ls
 
@@ -961,7 +980,8 @@ class Measurement(GGL):
                                                   (twopoint.Types.galaxy_position_real,
                                                    twopoint.Types.galaxy_shear_plus_real),
                                                   ('nz_lens', 'nz_source'), 'SAMPLE', angular_bin, values,
-                                                  angle=angle, angle_unit='arcmin')
+                                                  angle=angle, angle_unit='arcmin',
+                                                  angle_min=angle_min, angle_max=angle_max) 
 
             cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['gammat'], [length], cov)
             gammat_twopoint = twopoint.TwoPointFile([gammat], [lens_nz, source_nz], windows=None, covmat_info=cov_mat_info)

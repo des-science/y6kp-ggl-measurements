@@ -46,7 +46,7 @@ Then you are done. All this process is only need for the gammat measurements, no
 basic = {
     'mode':'data',
     'blind': 1,
-    'run': 0,
+    'run': 1,
     'savetwopoint': 1,
     'plot': 0,
     'pool': 1,
