@@ -47,7 +47,7 @@ basic = {
     'mode':'data',
     'blind': 1,
     'run': 1,
-    'savetwopoint': 0,
+    'savetwopoint': 1,
     'plot': 0,
     'pool': 1,
     'computer': 'nersc'  #can be 'nersc', 'local', 'midway', etc
@@ -137,6 +137,9 @@ paths['plots'] = '../plots/'
 paths['yaml'] = 'cats.yaml' 
 paths['y3'] = '../../ggl_results/'
 paths['y3_exp'] = '../../ggl_data/'
+paths['sim_dv'] =  '../simulated_dvs/%s/'%config['mastercat_v']
+print(paths['sim_dv'])
+
 if basic['computer'] == 'nersc':
     paths['y3_sysmap'] = '/global/project/projectdirs/des/ggl/systematic_maps/'
     paths['lens_cats'] = '/global/project/projectdirs/des/ggl/lens_cats/'
@@ -145,11 +148,13 @@ if basic['computer'] == 'midway':
     paths['lens_cats'] = '../cats/'
 
 if 'redmagic' in config['lens_v']:
-    paths['lens_nz'] = '../nzs_Y3_mastercat_03_31_20/2pt_shearcat_03_31_20_sompz_v0.40_smooth.fits'
+    paths['lens_nz'] = paths['sim_dv'] + 'v0.40_fiducial.fits'
+    paths['source_nz'] = paths['sim_dv'] + 'v0.40_fiducial.fits'
+    
 if 'maglim' in config['lens_v']:
-    paths['lens_nz'] = '../simulated_dvs/sim_fiducial_maglim_sompzv0.132_covDec2019.fits'
+    paths['lens_nz'] = paths['sim_dv'] + 'fiducial_maglim_cov_sourcesv040.fits'
+    paths['source_nz'] = paths['sim_dv'] + 'fiducial_maglim_cov_sourcesv040.fits'
 
-paths['source_nz'] = '../nzs_Y3_mastercat_03_31_20/2pt_shearcat_03_31_20_sompz_v0.40_smooth.fits'
 print(paths['lens_nz'])
 print(paths['source_nz'])
 

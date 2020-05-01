@@ -935,6 +935,18 @@ class Measurement(GGL):
         # Preparing N(z) 
         if self.basic['mode'] == 'data' or self.basic['mode'] == 'mice':
 
+            #If it is a TwoPointFile use the code below
+            file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
+            lens_nz = file_lens_nz.get_kernel('nz_lens')
+            file_source_nz = twopoint.TwoPointFile.from_fits(self.paths['source_nz'])
+            source_nz = file_source_nz.get_kernel('nz_source')
+
+            print 'Saving TwoPointFile with lens N(z) from %s'%(self.paths['lens_nz'])
+            print 'Saving TwoPointFile with source N(z) from %s'%(self.paths['source_nz'])
+
+            '''
+            # If instead of a TwoPointFile we only have the number densities objects
+            # use this code below.
             lensfile = pf.open(self.paths['lens_nz'])
             lens_nz = twopoint.NumberDensity.from_fits(lensfile[2])
             assert (lens_nz.name=='nz_lens')
@@ -942,16 +954,7 @@ class Measurement(GGL):
             sourcefile = pf.open(self.paths['source_nz'])
             source_nz = twopoint.NumberDensity.from_fits(lensfile[1])
             assert (source_nz.name=='nz_source')
-
             '''
-            If it is a TwoPointFile use the code below
-            file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
-            lens_nz = file_lens_nz.get_kernel('nz_lens')
-            file_source_nz = twopoint.TwoPointFile.from_fits(self.paths['source_nz'])
-            source_nz = file_source_nz.get_kernel('nz_source')
-            '''
-            print 'Saving TwoPointFile with lens N(z) from %s'%(self.paths['lens_nz'])
-            print 'Saving TwoPointFile with source N(z) from %s'%(self.paths['source_nz'])
 
         if self.basic['mode'] == 'buzzard':
             # zbins

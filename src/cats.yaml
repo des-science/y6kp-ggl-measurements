@@ -60,4 +60,4 @@ ran_path  : 'index/redmagic/combined_sample_fid/random_select'
 
 alt_ran_group : 'randoms'
 alt_ran_table : ['maglim']
-alt_ran_path  : None
+alt_ran_path  : 'index/maglim/random_select'
