@@ -846,8 +846,9 @@ class Measurement(GGL):
                         self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
                         self.process_run(bf_all, theta, path_test, 'boost_factor')
                         self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
-
-        np.savetxt(self.get_path_test_allzbins()+'mean_shears', mean_shears, header = 'Mean_e1 Mean_e2 (for each redshift bin)')
+                        
+        if self.basic['mode'] == 'data':
+            np.savetxt(self.get_path_test_allzbins()+'mean_shears', mean_shears, header = 'Mean_e1 Mean_e2 (for each redshift bin)')
 
 
                     
