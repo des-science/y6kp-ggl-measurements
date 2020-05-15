@@ -70,8 +70,6 @@ class GGL(object):
 	source['zbpz'] = data[params['source_bpz_group']]['zmean_sof'][:][index]
 	source['ztrue'] = data[params['source_bpz_group']]['z'][:][index]
         source['zbin'] = data_sompz[params['source_sompz_group']]['bhat'][:][index]
-        print 'All good'
-        print jhda
 
         return source
 
