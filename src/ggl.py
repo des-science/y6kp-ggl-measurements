@@ -53,6 +53,7 @@ class GGL(object):
         # Here self.paths['yaml'] will be shearratio/src/buzzard.yaml
         params = yaml.load(open(self.paths['yaml']))
         data = h.File(params['datafile'])
+        data_sompz = h.File(params['sompzfile'])
 
         # Dictionary with the unsheared version and selection only:
         index = data['index/select/']
@@ -68,7 +69,9 @@ class GGL(object):
             source['e2'] = -data[params['source_group']]['g2'][:][index]
 	source['zbpz'] = data[params['source_bpz_group']]['zmean_sof'][:][index]
 	source['ztrue'] = data[params['source_bpz_group']]['z'][:][index]
-        source['zbin'] = data[params['source_sompz_group']]['bhat'][:][index]
+        source['zbin'] = data_sompz[params['source_sompz_group']]['bhat'][:][index]
+        print 'All good'
+        print jhda
 
         return source
 
