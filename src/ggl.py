@@ -1196,8 +1196,16 @@ class Measurement(GGL):
         assert len(self.zbins[
                        'sbins']) == nbins_s, 'Number of source bins in info does not match with the one in the two-point file.'
 
-        cmap = self.plotting['cmap']
-        cmap_step = 0.25
+
+        if self.plotting['use_cmap']:
+            cmap = self.plotting['cmap']
+            cmap_step = 0.25
+            colors = []
+            for s in range(len(self.zbins['sbins'])):
+                colors.append(plt.get_cmap(cmap)(cmap_step * s))
+            
+        else:
+            colors = self.plotting['colors']
         title_source = self.plotting['catname']
 
         # Figure
@@ -1221,10 +1229,10 @@ class Measurement(GGL):
                     mask_pos = gt > 0
 
                     ax[j][l % 3].errorbar(th[mask_neg] * (1 + 0.05 * s), -gt[mask_neg], err[mask_neg], fmt='.', mfc='None',
-                                          mec=plt.get_cmap(cmap)(cmap_step * s), ecolor=plt.get_cmap(cmap)(cmap_step * s), capsize=2)
+                                          mec=colors[s], ecolor=colors[s], capsize=2)
                     ax[j][l % 3].errorbar(th[mask_pos] * (1 + 0.05 * s), gt[mask_pos], err[mask_pos], fmt='.',
-                                          color=plt.get_cmap(cmap)(cmap_step * s),
-                                          mec=plt.get_cmap(cmap)(cmap_step * s), label=self.plotting['redshift_s'][s], capsize=2)
+                                          color=colors[s],
+                                          mec=colors[s], label=self.plotting['redshift_s'][s], capsize=2)
 
                     ax[j][l % 3].set_xlim(self.config['thlims'][0]*0.8, self.config['thlims'][1]*1.2)
                     ax[j][l % 3].set_xscale('log')
@@ -1255,11 +1263,11 @@ class Measurement(GGL):
                              horizontalalignment='center', verticalalignment='center', transform=ax[j][l%3].transAxes, fontsize = 12, color = plt.get_cmap(cmap)(cmap_step*s))
                     """
 
-
-        fig.delaxes(ax[1, 2])
+    
         # ax[1][1].legend(handles[::-1], labels[::-1], frameon=True, fancybox = True,prop={'size':12}, numpoints = 1, loc='center left', bbox_to_anchor=(1, 0.5))
-        #ax[0][0].legend(frameon=False, fancybox=True, prop={'size': 12}, numpoints=1, loc='center')
-        #                bbox_to_anchor=(2.45, -0.52))
+        if self.config['lens_v'] == 'redmagic':
+            fig.delaxes(ax[1, 2])
+            ax[0][0].legend(frameon=False, fancybox=True, prop={'size': 12}, numpoints=1, loc='center',bbox_to_anchor=(2.45, -0.52))
         fig.suptitle(title_source, fontsize=16)
         fig.subplots_adjust(top=0.93)
         if self.basic['blind']:

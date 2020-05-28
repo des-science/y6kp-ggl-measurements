@@ -75,8 +75,8 @@ config_data = {
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_03_31_20.h5',
-    'lens_v': 'redmagic',
-    #'lens_v': 'maglim',
+    #'lens_v': 'redmagic',
+    'lens_v': 'maglim',
     'lens_w': True,  #use LSS weights for the lenses
     'zslim_v': 'som',
     'zs_v': 'bpz',
@@ -262,14 +262,17 @@ if basic['mode'] == 'mice':
 
 plotting['latex'] = False
 plotting['cmap'] = viridis
+plotting['colors'] = ['teal', 'powderblue', 'orange', 'tomato', 'k']
+plotting['use_cmap'] = True
 plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(zbins['lims'][i], zbins['lims'][i+1]) for i in range(len(zbins['lims'])-1)]
 #plotting['th_limit'] = [64.,40.,30., 24., 21.] # 12 Mpc/h 
-plotting['th_limit'] = [42.67, 26.67 ,20., 16., 14., 12.] # 8 Mpc/h #check values for maglim sample
+#plotting['th_limit'] = [42.67, 26.67 ,20., 16., 14., 12.] # 8 Mpc/h #check values for maglim sample
+plotting['th_limit'] = [26.83313651, 17.63634989, 13.61215672, 11.32891161, 10.01217238, 9] # arcmin, corresponding to 6 Mpc/h, check last bin (maglim)
 #plotting['th_limit'] = [21.33, 13.33 , 10., 8., 7., 6.] # 4 Mpc/h #check values for last bin
 if config['zslim_v'] == 'y1':
     plotting['redshift_s'] = [r'$%0.2f < z_s < %0.2f $'%(zbins['source_lims'][i], zbins['source_lims'][i+1]) for i in range(len(zbins['source_lims'])-1)]
 if config['zslim_v'] == 'som':
-    plotting['redshift_s'] = ['Bin 1', 'Bin 2', 'Bin 3', 'Bin 4']
+    plotting['redshift_s'] = ['$z_s$ bin 1', ' $z_s$ bin 2', '$z_s$ bin 3', '$z_s$ bin 4']
 
 plotting['titles_redmagic'] = ['redMaGiC HiDens', 'redMaGiC HiDens', 'redMaGiC HiDens', 'redMaGiC HiLum', 'redMaGiC HiLum']
 
