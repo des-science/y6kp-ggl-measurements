@@ -71,40 +71,44 @@ config_mice.
 
 config_data = {
     'njk': 150,
-    'bslop': 0.1,
+    'bslop': 0.0,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_03_31_20.h5',
-    #'lens_v': 'redmagic',
-    'lens_v': 'maglim',
+    'lens_v': 'redmagic',
+    #'lens_v': 'maglim',
     'lens_w': True,  #use LSS weights for the lenses
     'zslim_v': 'som',
     'zs_v': 'bpz',
     'zllim_v': 'y3',
+    'source_only_close_to_lens': False
     }
 
 config_data['mastercat_v'] = config_data['filename_mastercat'][37:-3]
+
 if basic['computer']=='midway':
     config_data['filename_mastercat'] = '/project2/chihway/data/des_y3_catalogs/y3kp_sample/' + config_data['mastercat_v'] + '.h5'
 
 print(config_data['filename_mastercat'])
 
 config_mice = {
-    'njk': 300,
-    'bslop': 0.1,
+    'njk': 150,
+    'bslop': 0.0,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'version': '2',
-    'lens_v': 'y1',
-    'zslim_v': 'y1',
-    'zs_v': 'bpz',
-    'zllim_v': 'y1'
+    'lens_v': 'redmagic',
+    'zslim_v': 'som',
+    'zs_v': 'v0.40',
+    'zllim_v': 'y3'
+    'source_only_close_to_lens': False
+    'suffle': False
     }
 
 
 def path_config(config):
     '''
-    Functin that defines where the measurements are saved based on the parameters defined in the config dictionary.
+    Function that defines where the measurements are saved based on the parameters defined in the config dictionary.
     '''
     return os.path.join(config['mastercat_v'],
         'zslim_%s'%config['zslim_v'],
@@ -114,8 +118,27 @@ def path_config(config):
         'lens_w_%s'%config['lens_w'],
         'njk_%d'%config['njk'],
         'thbin_%0.2f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
-        'bslop_%0.1g'%config['bslop']) 
+        'bslop_%0.1g'%config['bslop'],
+        'source_only_close_to_lens_%s'%config['source_only_close_to_lens']
+    ) 
 
+def path_config_mice(config):
+    '''
+    Function for mice that defines where the measurements are saved based on the parameters defined in the config dictionary.
+    '''
+    
+    os.path.join('mice', 'v_%s'%config['version'],
+                 'zslim_%s'%config['zslim_v'],
+                 'zs_%s'%config['zs_v'],
+                 config['lens_v'],
+                 'zllim_%s'%config['zllim_v'],
+                 'njk_%d'%config['njk'],
+                 'thbin_%0.2f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
+                 'bslop_%0.1g'%config['bslop'],
+                 'source_only_close_to_lens_%s'%config['source_only_close_to_lens'],
+                 'suffle_%s'%config['suffle']
+    )
+    
 
 if basic['mode'] == 'data':
     config = config_data
@@ -173,14 +196,15 @@ if basic['mode'] == 'data':
     paths['hist_n_of_z_high_size'] = paths['runs']+paths['config_data']+'/size/hist_n_of_z_high_size'
     
 if basic['mode'] == 'mice':
-    paths['mice'] = '/global/project/projectdirs/des/y3-bias/mice2/' 
+    #paths['mice'] = '/global/project/projectdirs/des/y3-bias/mice2/'
+    if config['suffle']:
+        paths['sources_mice'] = '/global/cscratch1/sd/mgatti/Mass_Mapping/taka/Mice_WL_shuffle_1024.fits'
+    else:
+        paths['sources_mice'] = '/global/cscratch1/sd/mgatti/Mass_Mapping/taka/Mice_WL_1024.fits'
     paths['lens_mice'] = paths['mice'] + 'lens.fits'
     paths['randoms_mice'] = paths['mice'] + 'random.fits'
-    paths['config_mice'] = os.path.join('mice', 'v_%s'%config_mice['version'], 'zslim_%s'%config_mice['zslim_v'], 'zs_%s'%config_mice['zs_v'],
-                                        'redmagic_%s'%config_mice['lens_v'], 'zllim_%s'%config_mice['zllim_v'], 'njk_%d'%config_mice['njk'],
-                                        'thbin_%0.1f_%d_%d'%(config_mice['thlims'][0], config_mice['thlims'][1], config_mice['nthbins']),
-                                        'bslop_%0.1g'%config_mice['bslop']) 
-
+    paths['config_mice'] = path_config_mice(config)
+    
 # Where we save the runs and plots for one particular configuration:
 paths['runs_config'] = os.path.join(paths['runs'], paths['config_%s'%basic['mode']]) + '/'
 paths['plots_config'] = os.path.join(paths['plots'], paths['config_%s'%basic['mode']]) + '/'

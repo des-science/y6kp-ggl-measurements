@@ -48,6 +48,22 @@ class GGL(object):
 	return zbins, nz 
 
 
+    def load_mice():
+        """
+        Function to load mice sources.
+        """
+        hdul = fits.open(self.paths['sources_mice'])
+        mice = hdul[1].data
+        source = {}
+        source['ra'] = mice['ra']
+        source['dec'] = mice['dec']
+        source['e1'] = -mice['g1'] #flip sign for MICE
+        source['e2'] = mice['g2']
+        source['zbin'] = mice['tomo']
+        
+        return source
+        
+
     def load_buzzard(self):
 
         # Here self.paths['yaml'] will be shearratio/src/buzzard.yaml
@@ -315,7 +331,7 @@ class GGL(object):
         print('Mean e2:', mean_e2)
 
         return cat, np.array([mean_e1, mean_e2])
-    
+     
     def get_lens(self, lens):
         """
         Given a lens sample, returns ra, dec, jk and weight, in case it exists.
@@ -429,18 +445,20 @@ class GGL(object):
                 bool_s = np.in1d(pix, pixsjk)
 
                 cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
-
+                
                 if type_corr == 'NG' or type_corr == 'NN':
-                    if self.basic['mode'] == 'data' or self.basic['mode'] == 'data_y1sources' or self.basic[
-                        'mode'] == 'buzzard':
+                    if self.config['source_only_close_to_lens']:
                         cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s],
                                                  w=w[bool_s], ra_units='deg', dec_units='deg')
-                    if self.basic['mode'] == 'mice':
-                        cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=-e1[bool_s], g2=e2[bool_s],
-                                                 w=w[bool_s], ra_units='deg', dec_units='deg')
+                    else:
+                        cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, g1=e1, g2=e2, w=w, ra_units='deg', dec_units='deg')
+                            
                 if 'NK' in type_corr:
-                    cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], k=scalar[bool_s], w=w[bool_s],
-                                             ra_units='deg', dec_units='deg')
+                    if self.config['source_only_close_to_lens']:
+                        cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], k=scalar[bool_s], w=w[bool_s],
+                                                 ra_units='deg', dec_units='deg')
+                    else:
+                        cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, k=scalar, w=w, ra_units='deg', dec_units='deg')
 
                 corr.process(cat_l, cat_s)
 
@@ -567,7 +585,7 @@ class GGL(object):
         np.savetxt(path_test + 'weights' + rp, weights, header='weights for all jackknife regions')
         np.savetxt(path_test + 'npairs' + rp, npairs, header='npairs for all jackknife regions')
 
-    def compute_boost_factor(self, jk_l, jk_r, wnum, wnum_r, w_l):
+    def compute_boost_factor_jackknife(self, jk_l, jk_r, wnum, wnum_r, w_l):
         """
         Computes the boost factor for a given set of weights for the lenses and randoms.
         Uses Eq. from Sheldon et al. (2004)
@@ -589,16 +607,49 @@ class GGL(object):
         bf_jk = np.array(bf_jk)
         return bf_jk
 
+
+    def compute_boost_factor_exact(self, wnum, wnum_r, lens, random):
+        """
+        Computes the boost factor for a given set of weights for the lenses and randoms.
+        Uses Eq. from Sheldon et al. (2004)
+        wnum: array of weights as a function of scale for the lens-source correlations, as output of TreeCorr.
+        wnum_r: similar array for random-source correlations.
+        lens: lens catalog including the single object weights.
+        random: random catalog which might include weights or not.
+        """
+        n_lens = np.sum(lens['w'])
+
+        try:
+            w_r = random['w']
+            n_ran = np.sum(w_r)
+	except:
+            n_ran = len(random['ra'])
+
+        bf = np.array((n_ran/n_lens)*(wnum/wnum_r))
+        
+        return bf
+
+    
     def numerators_jackknife(self, gts, gxs, ws):
         """
-        Given a path and a filename it loads the corresponding file for th, gt, gx, weights, etc.
-        Each file containts a quantity for all jk regions, together in the same file.
-        Note: Assumes the run was done with process, not process_cross treecorr functions.
-        (Advantage of process vs process_cross is that process allows you to save the shape noise err)
+        Inputs:
+        - gts: Tangential shear as output from TreeCorr for each single JK patch.
+        - gxs: Same object for the cross-component.
+        - ws: Same object for the weights, as they come out of TreeCorr, as a function of scale.
+
         Returns:
-        Theta, and the numerators of gt, gx and weights, to be combined later.
+        - The numerators of gt, gx and weights, as the sum of each of the N-1 patches, leaving
+        one out at a time. These quantites are combined later to get the JK covariance matrix and 
+        mean tangential shear from JK. The exact tangential shear (as if done without JK) is obtaned
+        using the function numerators_exact. 
+
+        Note: This function assumes the run was done with process, not process_cross treecorr functions.
+        Assuming that means that gts are already normalized by the weights, but here we want to 
+        'unnormalize' this quantity so it can be combined between different JK regions. 
+        (Advantage of process vs process_cross is that process allows you to save the shape noise err)
+
         """
-        # Obtain the numerators
+        # Obtain the numerators, see note above.
         gts = gts * ws
         gxs = gxs * ws
 
@@ -609,10 +660,39 @@ class GGL(object):
 
         return gt_num, gx_num, w_num
 
-    def process_run(self, all, theta, path_test, end):
+    def numerators_exact(self, gts, gxs, ws):
+        """
+        Inputs:
+        - gts: Tangential shear as output from TreeCorr for each single JK patch.
+        - gxs: Same object for the cross-component.
+        - ws: Same object for the weights, as they come out of TreeCorr, as a function of scale.
+
+        Returns:
+        - The numerators of gt, gx and weights, as the sum the N patches. This function recovers the 
+        tangential shear as if it was not done with JK. 
+
+        Note: This function assumes the run was done with process, not process_cross treecorr functions.
+        Assuming that means that gts are already normalized by the weights, but here we want to 
+        'unnormalize' this quantity so it can be combined between different JK regions. 
+        (Advantage of process vs process_cross is that process allows you to save the shape noise err)
+        """
+        # Obtain the numerators, see note above.
+        gts = gts * ws
+        gxs = gxs * ws
+
+        # Sum result from each JK patch to combine the mesurements
+        gt_num = np.sum(gts, axis=0) 
+        gx_num = np.sum(gxs, axis=0) 
+        w_num = np.sum(ws, axis=0) 
+
+        return gt_num, gx_num, w_num
+
+        
+    def process_run(self, exact, all, theta, path_test, end):
         """
         From the jackknife measurements in all jackknife regions but all, constructs covariance, mean and stats.
         Saves them into file.
+        exact: gt or gx as a sum of all JK regions, exact result as if we were not doing JK.
         all: gt_all or gx_all.
         theta: in arcmin.
         path_test: where to save the files.
@@ -634,13 +714,15 @@ class GGL(object):
 
         stats = np.array([chi2_hartlap, ndf])
 
-        np.savetxt(path_test + 'mean_%s' % end, zip(theta, mean, err), header='th, %s, err_%s' % (end, end))
+        np.savetxt(path_test + 'mean_JK_%s' % end, zip(theta, mean, err), header='th, %s, err_%s' % (end, end))
         np.savetxt(path_test + 'cov_%s' % end, cov)
         np.savetxt(path_test + 'all_%s' % end, all,
                    header='%s (sum of %s from all patches except for one, different each time)' % (end, end))
         np.savetxt(path_test + 'null_chi2_%s' % end, stats.reshape(1, stats.shape[0]),
                    fmt='%0.1f  %d', header='chi2_hartlap  ndf')
+        np.savetxt(path_test + '%s' % end, zip(theta, exact, err), header='th, %s, err_%s' % (end, end))
 
+        
     def get_chi2(self, path_test, end):
         """
         Load chi2 and degrees of freedom for a certain lens and source bin and test.
@@ -709,7 +791,8 @@ class GGL(object):
         if self.basic['mode'] == 'mice':
             lens_all = pf.getdata(self.paths['lens_mice'])
             random_all = pf.getdata(self.paths['randoms_mice'])
-            return lens_all, random_all
+            source_all = self.load_mice()            
+            return lens_all, random_all, source_all
 
         if self.basic['mode'] == 'buzzard':
             lens_all = pf.getdata(self.paths['lens_buzzard'])
@@ -743,6 +826,47 @@ class Measurement(GGL):
     def get_twopointfile_name(self, string):
         return os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits' % string)
 
+    def sel_lens_zbin(self, lens_all, lbin):
+        """
+        Select lens bins depending on whether its data or sims.
+        Input: 
+        - Lens_all: object including all redshifts bins, with all the lens information (ra, dec, w, z).
+        - lbin: which lens bin to select, e.g., 'l1'. Redshift edges defined in info.py file.
+        Returns:
+        - Lens: Selected reshift bin object with the same info.
+
+        """
+        # Decide how to bin the lenses
+        if 'ztrue' in self.config['zllim_v']:
+            print 'Using ztrue to bin the lenses.'
+            lens = lens_all[(lens_all['ztrue'] > self.zbins[lbin][0]) & (lens_all['ztrue'] < self.zbins[lbin][1])]
+        else:
+            print 'Using z to bin the lenses.'
+            lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
+
+        print 'Length lens', lbin, len(lens['ra']), self.zbins[lbin][0], self.zbins[lbin][1]
+
+        if self.basic['mode'] == 'buzzard':
+            zbins, nz_l = self.get_nz(lens['ztrue'])		    
+            np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
+            
+        return lens
+ 
+
+    def sel_random_zbin(self, random_all, lbin):
+        """
+        Similar function as sel_lens_zbin for random points.
+        """
+        # Randoms run
+        if self.basic['mode']  == 'data':
+            random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+        if self.basic['mode']  == 'buzzard':
+            random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+        if self.basic['mode']  == 'mice':
+            random = random_all[l*len(random_all)/len(self.zbins['lbins']):(l+1)*len(random_all)/len(self.zbins['lbins'])]
+        return random
+
+    
     def run(self):
 
 	make_directory(self.get_path_test_allzbins()+'/nzs/')
@@ -751,12 +875,8 @@ class Measurement(GGL):
             lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
             mean_shears = []
 
-        if self.basic['mode'] == 'mice':
-            lens_all, random_all = self.load_data_or_sims()
-
-        if self.basic['mode'] == 'buzzard':
+        if self.basic['mode'] == 'mice' or self.basic['mode'] == 'buzzard':
             lens_all, random_all, source_all = self.load_data_or_sims()
-
 
         for sbin in self.zbins['sbins']:
 
@@ -781,6 +901,7 @@ class Measurement(GGL):
     		    """
     		    R = 1.
                     #source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
+                    
                     source = pf.getdata(self.paths['mice'] + 'mice2_shear_fullsample_bin%s.fits'%sbin[-1])
  
 		if self.basic['mode'] == 'buzzard':
@@ -793,6 +914,9 @@ class Measurement(GGL):
 			source[k] = source_all[k][(source_all['zbin'] >= self.zbins[sbin][0]) & (source_all['zbin'] <= self.zbins[sbin][1])]
                     print 'Length source', sbin, len(source['ra'])
 
+                    print 'np.std(e1)', np.std(source['e1'])
+                    print 'np.std(e2)', np.std(source['e2'])
+                    
                     zbins, nz_s = self.get_nz(source['ztrue'])		    
                     np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'zbins',zbins,header='zbin limits')
                     np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
@@ -800,53 +924,46 @@ class Measurement(GGL):
     		for l, lbin in enumerate(self.zbins['lbins']):
     		    path_test = self.get_path_test(lbin, sbin)
                     
-                    if os.path.exists(path_test + 'mean_gt_boosted'):
+                    #if os.path.exists(path_test + 'mean_gt_boosted'):
+                    if os.path.exists(path_test + 'gt_boosted'):
                         print('Measurements for this bin already exist. SKIPPING!')
 
                     else:
     		        print 'Running measurement for lens %s.' % lbin
                         make_directory(path_test)
 
-                        # Decide how to bin the lenses
-                        if 'ztrue' in self.config['zllim_v']:
-                            print 'Using ztrue to bin the lenses.'
-                            lens = lens_all[(lens_all['ztrue'] > self.zbins[lbin][0]) & (lens_all['ztrue'] < self.zbins[lbin][1])]
-                        else:
-                            print 'Using z to bin the lenses.'
-                            lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
-
-                        print 'Length lens', lbin, len(lens['ra']), self.zbins[lbin][0], self.zbins[lbin][1]
-
-                        if self.basic['mode'] == 'buzzard':
-                            zbins, nz_l = self.get_nz(lens['ztrue'])		    
-                            np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
-
+                        # Lenses run
+                        lens = self.sel_lens_zbin(lens_all, lbin)
                         theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
-                        self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, False)
-                        gtnum, gxnum, wnum = self.numerators_jackknife(gts, gxs, weights)
+                        self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, random_bool=False)
+                        gtnum_jk, gxnum_jk, wnum_jk = self.numerators_jackknife(gts, gxs, weights)
+                        gtnum_ex, gxnum_ex, wnum_ex = self.numerators_exact(gts, gxs, weights)
 
-                        if self.basic['mode']  == 'data':
-                            random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-                        if self.basic['mode']  == 'buzzard':
-                            random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-                        if self.basic['mode']  == 'mice':
-                            random = random_all[l*len(random_all)/len(self.zbins['lbins']):(l+1)*len(random_all)/len(self.zbins['lbins'])]
-
+                        # Randoms run
+                        random = self.sel_random_zbin(random_all, lbin)
                         theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
-                        self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, True)
-                        gtnum_r, gxnum_r, wnum_r = self.numerators_jackknife(gts, gxs, weights)
+                        self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, random_bool=True)
+                        gtnum_jk_r, gxnum_jk_r, wnum_jk_r = self.numerators_jackknife(gts, gxs, weights)
+                        gtnum_ex_r, gxnum_ex_r, wnum_ex_r = self.numerators_exact(gts, gxs, weights)
 
-                        gt_all = (gtnum / wnum) / R - (gtnum_r / wnum_r) / R
-                        gx_all = (gxnum / wnum) / R - (gxnum_r / wnum_r) / R
+                        # Combine final estimator for JK covariance and mean, with and without boost factors
+                        gt_all = (gtnum_jk / wnum_jk) / R - (gtnum_jk_r / wnum_jk_r) / R
+                        gx_all = (gxnum_jk / wnum_jk) / R - (gxnum_jk_r / wnum_jk_r) / R
+                        bf_all = self.compute_boost_factor_jackknife(lens['jk'], random['jk'], wnum_jk, wnum_jk_r, lens['w'])
+                        gt_all_boosted = bf_all*(gtnum_jk / wnum_jk)/R - (gtnum_jk_r / wnum_jk_r) / R 
 
-                        bf_all = self.compute_boost_factor(lens['jk'], random['jk'], wnum, wnum_r, lens['w'])
-                        gt_all_boosted = bf_all*(gtnum / wnum)/R - (gtnum_r / wnum_r) / R 
+                        # Combine final estimator for exact results (as done without JK)
+                        gt = (gtnum_ex / wnum_ex) / R - (gtnum_ex_r / wnum_ex_r) / R
+                        gx = (gxnum_ex / wnum_ex) / R - (gxnum_ex_r / wnum_ex_r) / R                        
+                        bf = self.compute_boost_factor_exact(wnum_ex, wnum_ex_r, lens, random)
+                        gt_boosted = bf*(gtnum_ex/wnum_ex)/R - (gtnum_ex_r/wnum_ex_r)/R 
 
-                        self.process_run(gt_all, theta, path_test, 'gt')
-                        self.process_run(gx_all, theta, path_test, 'gx')
-                        self.process_run((gtnum_r / wnum_r) / R, theta, path_test, 'randoms')
-                        self.process_run(bf_all, theta, path_test, 'boost_factor')
-                        self.process_run(gt_all_boosted, theta, path_test, 'gt_boosted')
+                        self.process_run(gt, gt_all, theta, path_test, 'gt')
+                        self.process_run(gx, gx_all, theta, path_test, 'gx')
+                        self.process_run((gtnum_ex_r/wnum_ex_r)/R, (gtnum_jk_r/wnum_jk_r)/R, theta, path_test, 'randoms')
+                        self.process_run(bf, bf_all, theta, path_test, 'boost_factor')
+                        self.process_run(gt_boosted, gt_all_boosted, theta, path_test, 'gt_boosted')
+
                         
         if self.basic['mode'] == 'data':
             np.savetxt(self.get_path_test_allzbins()+'mean_shears', mean_shears, header = 'Mean_e1 Mean_e2 (for each redshift bin)')
@@ -919,7 +1036,7 @@ class Measurement(GGL):
         for l in range(0, len(self.zbins['lbins'])):
             for s in range(len(self.zbins['sbins'])):
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
-                theta, xi, xi_err = np.loadtxt(path_test + 'mean_%s' % string, unpack=True)
+                theta, xi, xi_err = np.loadtxt(path_test + '%s' % string, unpack=True)
                 cov_ls = np.loadtxt(path_test + 'cov_%s' % string)
 
                 bin_pair_inds = np.arange(dv_start, dv_start + self.config['nthbins'])
@@ -1035,7 +1152,7 @@ class Measurement(GGL):
         for l in range(0, len(self.zbins['lbins'])):
             for s in range(len(self.zbins['sbins'])):
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
-                theta, bf, bf_err = np.loadtxt(path_test + 'mean_boost_factor', unpack=True)
+                theta, bf, bf_err = np.loadtxt(path_test + 'boost_factor', unpack=True)
 
                 bin_pair_inds = np.arange(dv_start, dv_start + self.config['nthbins'])
                 bf_values[bin_pair_inds] = bf
@@ -1079,8 +1196,8 @@ class Measurement(GGL):
             for s in range(len(self.zbins['sbins'])):
 
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
-                if os.path.isfile(path_test + 'mean_gt'):
-                    th, gt, err = np.loadtxt(path_test + 'mean_gt', unpack=True)
+                if os.path.isfile(path_test + 'gt'):
+                    th, gt, err = np.loadtxt(path_test + 'gt', unpack=True)
 
                     mask_neg = gt < 0
                     mask_pos = gt > 0
@@ -1295,7 +1412,7 @@ class Measurement(GGL):
             for s in range(len(self.zbins['sbins'])):
 
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
-                theta, bf, bf_err = np.loadtxt(path_test + 'mean_boost_factor', unpack=True)
+                theta, bf, bf_err = np.loadtxt(path_test + 'boost_factor', unpack=True)
 
                 ax[s][l].axhline(y=1, ls=':', color='k', alpha=1)
                 ax[s][l].errorbar(theta, bf, bf_err, fmt='.', color=c1, mec=c1, capsize=2)
@@ -1402,7 +1519,7 @@ class Measurement(GGL):
             for s in range(len(self.zbins['sbins'])):
 
                 path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
-                th, gt, err = np.loadtxt(path_test + 'mean_randoms', unpack=True)
+                th, gt, err = np.loadtxt(path_test + 'randoms', unpack=True)
 
                 ax[s][l].axhline(y=0, ls=':', color='k')
                 ax[s][l].errorbar(th * (1 + 0.07 * c), gt, err, fmt=markers[c], color=plt.get_cmap(cmap)(cmap_step * s),
@@ -1456,7 +1573,7 @@ class Measurement(GGL):
         l = 0
         s = 0
         path_test = self.get_path_test(self.zbins['lbins'][l], self.zbins['sbins'][s])
-        th, gx, err = np.loadtxt(path_test + 'mean_gx', unpack=True)
+        th, gx, err = np.loadtxt(path_test + 'gx', unpack=True)
         ax[0].axhline(y=0, ls=':', color='k')
         ax[0].errorbar(th * (1 + 0.07 * c), gx * th, err * th, fmt=markers[c], color=colors[c],
                        mec=colors[c], label=labels[c], capsize=1.3)
