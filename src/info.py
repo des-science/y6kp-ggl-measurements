@@ -44,9 +44,10 @@ Then you are done. All this process is only need for the gammat measurements, no
 """
 
 basic = {
-    'mode':'data',
+    'mode':'mice',
+    #'mode':'data',
     'blind': 1,
-    'run': 1,
+    'run': 0,
     'savetwopoint': 1,
     'plot': 0,
     'pool': 1,
@@ -98,10 +99,11 @@ config_mice = {
     'thlims': np.array([2.5,250.]),
     'version': '2',
     'lens_v': 'redmagic',
+    'lens_w': True,  #use LSS weights for the lenses
     'zslim_v': 'som',
     'zs_v': 'v0.40',
-    'zllim_v': 'y3'
-    'source_only_close_to_lens': False
+    'zllim_v': 'y3',
+    'source_only_close_to_lens': True,
     'suffle': False
     }
 
@@ -127,11 +129,12 @@ def path_config_mice(config):
     Function for mice that defines where the measurements are saved based on the parameters defined in the config dictionary.
     '''
     
-    os.path.join('mice', 'v_%s'%config['version'],
+    return os.path.join('mice', 'v_%s'%config['version'],
                  'zslim_%s'%config['zslim_v'],
                  'zs_%s'%config['zs_v'],
                  config['lens_v'],
                  'zllim_%s'%config['zllim_v'],
+                 'lens_w_%s'%config['lens_w'],
                  'njk_%d'%config['njk'],
                  'thbin_%0.2f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
                  'bslop_%0.1g'%config['bslop'],
@@ -160,8 +163,6 @@ paths['plots'] = '../plots/'
 paths['yaml'] = 'cats.yaml' 
 paths['y3'] = '../../ggl_results/'
 paths['y3_exp'] = '../../ggl_data/'
-paths['sim_dv'] =  '../simulated_dvs/%s/'%config['mastercat_v']
-print(paths['sim_dv'])
 
 if basic['computer'] == 'nersc':
     paths['y3_sysmap'] = '/global/project/projectdirs/des/ggl/systematic_maps/'
@@ -169,17 +170,6 @@ if basic['computer'] == 'nersc':
 
 if basic['computer'] == 'midway':
     paths['lens_cats'] = '../cats/'
-
-if 'redmagic' in config['lens_v']:
-    paths['lens_nz'] = paths['sim_dv'] + 'v0.40_fiducial.fits'
-    paths['source_nz'] = paths['sim_dv'] + 'v0.40_fiducial.fits'
-    
-if 'maglim' in config['lens_v']:
-    paths['lens_nz'] = paths['sim_dv'] + 'fiducial_maglim_cov_sourcesv040.fits'
-    paths['source_nz'] = paths['sim_dv'] + 'fiducial_maglim_cov_sourcesv040.fits'
-
-print(paths['lens_nz'])
-print(paths['source_nz'])
 
 if basic['mode'] == 'data':
     paths['lenscats'] = paths['lens_cats'] + '%s/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk']) 
@@ -189,6 +179,18 @@ if basic['mode'] == 'data':
     print ('--------------------------\nUsing randoms file in:\n', paths['randoms'])
     print ('--------------------------')
 
+    paths['sim_dv'] =  '../simulated_dvs/%s/'%config['mastercat_v']
+    print(paths['sim_dv'])
+    if 'redmagic' in config['lens_v']:
+        paths['lens_nz'] = paths['sim_dv'] + 'v0.40_fiducial.fits'
+        paths['source_nz'] = paths['sim_dv'] + 'v0.40_fiducial.fits'
+
+    if 'maglim' in config['lens_v']:
+        paths['lens_nz'] = paths['sim_dv'] + 'fiducial_maglim_cov_sourcesv040.fits'
+        paths['source_nz'] = paths['sim_dv'] + 'fiducial_maglim_cov_sourcesv040.fits'
+    print(paths['lens_nz'])
+    print(paths['source_nz'])
+
     paths['config_data'] = path_config(config_data)
     paths['theory_size_all_covmat'] = paths['runs']+paths['config_data'] + '/size/theory_size_all_covmat.fits'
     paths['hist_n_of_z_lenses_witherr_size'] = paths['runs']+paths['config_data'] +'/size/hist_n_of_z_lenses_witherr_size'
@@ -196,13 +198,27 @@ if basic['mode'] == 'data':
     paths['hist_n_of_z_high_size'] = paths['runs']+paths['config_data']+'/size/hist_n_of_z_high_size'
     
 if basic['mode'] == 'mice':
+
+    # Set blinding to false
+    basic['blind'] = 0 
+
+    
     #paths['mice'] = '/global/project/projectdirs/des/y3-bias/mice2/'
+    # Where Jack magnified redmagic catalogs are
+    paths['mice_redmagic_dir'] = '/global/project/projectdirs/des/jelvinpo/MICE/y3/redmagic/mice2_desy3_v5_1_magnified/combined_sample/'
+    paths['mice_redmagic'] = paths['mice_redmagic_dir'] + 'mice2_desy3_v5_1_magnified_redmagic_combined_hd3_hl2_sample.fits.gz'
+    paths['mice_randoms'] = paths['mice_redmagic_dir'] + 'mice2_desy3_v5_1_magnified_redmagic_combined_hd3_hl2_randoms.fits.gz'
+    paths['lens_nz'] = paths['mice_redmagic_dir'] + 'nz_mice2_desy3_v5_1_magnified_redmagic_combined_hd3_hl2_z_samp.fits'
+    # Where we will put the processed samples with JK patches
+    paths['mice_jk'] = '../cats/mice/v_%s/%s/njk_%d/'%(config['version'], config['lens_v'], config['njk'])
+    paths['lens_mice'] = paths['mice_jk'] + 'lens.fits'
+    paths['randoms_mice'] = paths['mice_jk'] + 'random.fits'
+
+    # Sources
     if config['suffle']:
         paths['sources_mice'] = '/global/cscratch1/sd/mgatti/Mass_Mapping/taka/Mice_WL_shuffle_1024.fits'
     else:
         paths['sources_mice'] = '/global/cscratch1/sd/mgatti/Mass_Mapping/taka/Mice_WL_1024.fits'
-    paths['lens_mice'] = paths['mice'] + 'lens.fits'
-    paths['randoms_mice'] = paths['mice'] + 'random.fits'
     paths['config_mice'] = path_config_mice(config)
     
 # Where we save the runs and plots for one particular configuration:

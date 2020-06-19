@@ -48,18 +48,19 @@ class GGL(object):
 	return zbins, nz 
 
 
-    def load_mice():
+    def load_mice(self):
         """
         Function to load mice sources.
         """
-        hdul = fits.open(self.paths['sources_mice'])
+        hdul = pf.open(self.paths['sources_mice'])
         mice = hdul[1].data
         source = {}
         source['ra'] = mice['ra']
         source['dec'] = mice['dec']
-        source['e1'] = -mice['g1'] #flip sign for MICE
+        source['e1'] = mice['g1'] #no need to flip sign for this MICE, Marco already flipped it. Otherwise the flip goes in e1 for MICE.
         source['e2'] = mice['g2']
-        source['zbin'] = mice['tomo']
+        source['zbin'] = mice['tomo'] - 1
+        source['ztrue'] = mice['z']
         
         return source
         
@@ -791,7 +792,7 @@ class GGL(object):
         if self.basic['mode'] == 'mice':
             lens_all = pf.getdata(self.paths['lens_mice'])
             random_all = pf.getdata(self.paths['randoms_mice'])
-            source_all = self.load_mice()            
+            source_all = self.load_mice()
             return lens_all, random_all, source_all
 
         if self.basic['mode'] == 'buzzard':
@@ -860,9 +861,9 @@ class Measurement(GGL):
         # Randoms run
         if self.basic['mode']  == 'data':
             random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-        if self.basic['mode']  == 'buzzard':
+        if self.basic['mode']  == 'buzzard' or self.basic['mode'] == 'mice':
             random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-        if self.basic['mode']  == 'mice':
+        if self.basic['mode']  == 'mice_old':
             random = random_all[l*len(random_all)/len(self.zbins['lbins']):(l+1)*len(random_all)/len(self.zbins['lbins'])]
         return random
 
@@ -895,7 +896,7 @@ class Measurement(GGL):
 		if self.basic['mode'] == 'data_y1sources':
 		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
 
-    		if self.basic['mode'] == 'mice':
+    		if self.basic['mode'] == 'mice_old':
     		    """
     		    In this case there are no responses, so we set it to one.
     		    """
@@ -904,7 +905,7 @@ class Measurement(GGL):
                     
                     source = pf.getdata(self.paths['mice'] + 'mice2_shear_fullsample_bin%s.fits'%sbin[-1])
  
-		if self.basic['mode'] == 'buzzard':
+		if self.basic['mode'] == 'buzzard' or self.basic['mode'] == 'mice':
     		    """
     		    In this case there are no responses, so we set it to one.
     		    """
@@ -913,7 +914,6 @@ class Measurement(GGL):
 		    for k in source_all.keys():
 			source[k] = source_all[k][(source_all['zbin'] >= self.zbins[sbin][0]) & (source_all['zbin'] <= self.zbins[sbin][1])]
                     print 'Length source', sbin, len(source['ra'])
-
                     print 'np.std(e1)', np.std(source['e1'])
                     print 'np.std(e2)', np.std(source['e2'])
                     
@@ -1052,7 +1052,7 @@ class Measurement(GGL):
                 cov[bin_pair_inds[0]:bin_pair_inds[-1] + 1, bin_pair_inds] = cov_ls
 
         # Preparing N(z) 
-        if self.basic['mode'] == 'data' or self.basic['mode'] == 'mice':
+        if self.basic['mode'] == 'data':
 
             #If it is a TwoPointFile use the code below
             file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
@@ -1074,6 +1074,24 @@ class Measurement(GGL):
             source_nz = twopoint.NumberDensity.from_fits(lensfile[1])
             assert (source_nz.name=='nz_source')
             '''
+
+        if self.basic['mode'] == 'mice':
+
+            lensfile = pf.open(self.paths['lens_nz'])
+            lens_nz = twopoint.NumberDensity.from_fits(lensfile[1])
+            assert (lens_nz.name=='nz_lens')
+            
+            # Sources
+            # zbins
+            zbins = np.loadtxt(self.get_path_test_allzbins() +'nzs/'+ 'zbins')
+            zlow = zbins[:-1]
+            z = zlow + (zbins[1]-zbins[0])/2.
+            zhigh = zbins[1:]
+            nzs = []
+            for sbin in self.zbins['sbins']:
+                nz = np.loadtxt(self.get_path_test_allzbins() +'nzs/'+ 'nz_%s'%sbin)
+                nzs.append(nz)
+            source_nz = twopoint.NumberDensity('nz_source', zlow, z, zhigh, nzs)
 
         if self.basic['mode'] == 'buzzard':
             # zbins
