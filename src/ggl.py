@@ -70,7 +70,7 @@ class GGL(object):
         # Here self.paths['yaml'] will be shearratio/src/buzzard.yaml
         params = yaml.load(open(self.paths['yaml']))
         data = h.File(params['datafile'])
-        data_sompz = h.File(params['sompzfile'])
+        #data_sompz = h.File(params['sompzfile'])
 
         # Dictionary with the unsheared version and selection only:
         index = data['index/select/']
@@ -86,7 +86,8 @@ class GGL(object):
             source['e2'] = -data[params['source_group']]['g2'][:][index]
 	source['zbpz'] = data[params['source_bpz_group']]['zmean_sof'][:][index]
 	source['ztrue'] = data[params['source_bpz_group']]['z'][:][index]
-        source['zbin'] = data_sompz[params['source_sompz_group']]['bhat'][:][index]
+        #source['zbin'] = data_sompz[params['source_sompz_group']]['bhat'][:][index]
+        source['zbin'] = data[params['source_sompz_group']]['bhat'][:][index]
 
         return source
 
@@ -575,8 +576,7 @@ class GGL(object):
 
     def save_runs(self, path_test, theta, gts, gxs, errs, weights, npairs, random_bool):
         """
-        Function to save the measurements in each jk patch.
-        Currently not used, just useful for debugging sometimes.
+        Function to save the measurements in each single jk patch.
         """
         rp = '_rp' if random_bool else ''
         np.savetxt(path_test + 'theta' + rp, theta, header='theta [arcmin]')
@@ -586,6 +586,21 @@ class GGL(object):
         np.savetxt(path_test + 'weights' + rp, weights, header='weights for all jackknife regions')
         np.savetxt(path_test + 'npairs' + rp, npairs, header='npairs for all jackknife regions')
 
+    def load_runs(self, path_test, random_bool):
+        """
+        Function to load the measurements in each single jk patch.
+        """
+        rp = '_rp' if random_bool else ''
+        theta = np.loadtxt(path_test + 'theta' + rp)
+        gts = np.loadtxt(path_test + 'gts' + rp)
+        gxs = np.loadtxt(path_test + 'gxs' + rp)
+        errs = np.loadtxt(path_test + 'errs' + rp)
+        weights = np.loadtxt(path_test + 'weights' + rp)
+        npairs = np.loadtxt(path_test + 'npairs' + rp)
+
+        return theta, gts, gxs, errs, weights, npairs
+
+        
     def compute_boost_factor_jackknife(self, jk_l, jk_r, wnum, wnum_r, w_l):
         """
         Computes the boost factor for a given set of weights for the lenses and randoms.
@@ -715,7 +730,7 @@ class GGL(object):
 
         stats = np.array([chi2_hartlap, ndf])
 
-        np.savetxt(path_test + 'mean_JK_%s' % end, zip(theta, mean, err), header='th, %s, err_%s' % (end, end))
+        #np.savetxt(path_test + 'mean_JK_%s' % end, zip(theta, mean, err), header='th, %s, err_%s' % (end, end))
         np.savetxt(path_test + 'cov_%s' % end, cov)
         np.savetxt(path_test + 'all_%s' % end, all,
                    header='%s (sum of %s from all patches except for one, different each time)' % (end, end))
@@ -882,8 +897,9 @@ class Measurement(GGL):
         for sbin in self.zbins['sbins']:
 
     		print 'Running measurement for source %s.' % sbin
-
+ 
 		if self.basic['mode'] == 'data':
+                    '''
                     print 'Source bin:', self.zbins[sbin][0], self.zbins[sbin][1]
 		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, bin_low=self.zbins[sbin][0], bin_high=self.zbins[sbin][1])
 		    R = source['R_mean']
@@ -892,7 +908,7 @@ class Measurement(GGL):
                     # New!! we need to subtract the mean shear 
                     source, mean_shear = self.subtract_mean_shear(source)
                     mean_shears.append(mean_shear)
-
+                    '''
 		if self.basic['mode'] == 'data_y1sources':
 		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
 
@@ -922,22 +938,25 @@ class Measurement(GGL):
                     np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
 
     		for l, lbin in enumerate(self.zbins['lbins']):
-    		    path_test = self.get_path_test(lbin, sbin)
-                    
+                    path_test = self.get_path_test(lbin, sbin)
+
                     #if os.path.exists(path_test + 'mean_gt_boosted'):
                     if os.path.exists(path_test + 'gt_boosted'):
                         print('Measurements for this bin already exist. SKIPPING!')
 
                     else:
-    		        print 'Running measurement for lens %s.' % lbin
+                        print 'Running measurement for lens %s.' % lbin
                         make_directory(path_test)
-
+ 
                         # Lenses run
                         lens = self.sel_lens_zbin(lens_all, lbin)
                         theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
                         self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, random_bool=False)
+                        theta, gts, gxs, errs, weights, npairs = self.load_runs(path_test, random_bool=False)
                         gtnum_jk, gxnum_jk, wnum_jk = self.numerators_jackknife(gts, gxs, weights)
                         gtnum_ex, gxnum_ex, wnum_ex = self.numerators_exact(gts, gxs, weights)
+                        make_directory(self.get_path_test_allzbins()+'/weights/')
+                        np.savetxt(self.get_path_test_allzbins()+'/weights/'+'w_%s_%s'%(lbin, sbin),wnum_ex,header='weights (sum of all JK regions)')
 
                         # Randoms run
                         random = self.sel_random_zbin(random_all, lbin)

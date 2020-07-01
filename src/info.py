@@ -44,11 +44,11 @@ Then you are done. All this process is only need for the gammat measurements, no
 """
 
 basic = {
-    'mode':'mice',
-    #'mode':'data',
+    #'mode':'mice',
+    'mode':'data',
     'blind': 1,
-    'run': 0,
-    'savetwopoint': 1,
+    'run': 1,
+    'savetwopoint': 0,
     'plot': 0,
     'pool': 1,
     'computer': 'nersc'  #can be 'nersc', 'local', 'midway', etc
@@ -72,7 +72,7 @@ config_mice.
 
 config_data = {
     'njk': 150,
-    'bslop': 0.0,
+    'bslop': 0.1,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_03_31_20.h5',
@@ -104,7 +104,7 @@ config_mice = {
     'zs_v': 'v0.40',
     'zllim_v': 'y3',
     'source_only_close_to_lens': True,
-    'suffle': False
+    'suffle': True
     }
 
 
@@ -120,8 +120,8 @@ def path_config(config):
         'lens_w_%s'%config['lens_w'],
         'njk_%d'%config['njk'],
         'thbin_%0.2f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
-        'bslop_%0.1g'%config['bslop'],
-        'source_only_close_to_lens_%s'%config['source_only_close_to_lens']
+        'bslop_%0.1g'%config['bslop']#,
+        #'source_only_close_to_lens_%s'%config['source_only_close_to_lens']
     ) 
 
 def path_config_mice(config):
