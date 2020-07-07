@@ -44,11 +44,11 @@ Then you are done. All this process is only need for the gammat measurements, no
 """
 
 basic = {
-    #'mode':'mice',
-    'mode':'data',
+    'mode':'mice',
+    #'mode':'data',
     'blind': 1,
-    'run': 1,
-    'savetwopoint': 0,
+    'run': 0,
+    'savetwopoint': 1,
     'plot': 0,
     'pool': 1,
     'computer': 'nersc'  #can be 'nersc', 'local', 'midway', etc
@@ -72,7 +72,7 @@ config_mice.
 
 config_data = {
     'njk': 150,
-    'bslop': 0.1,
+    'bslop': 0.0,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_03_31_20.h5',
@@ -82,7 +82,7 @@ config_data = {
     'zslim_v': 'som',
     'zs_v': 'bpz',
     'zllim_v': 'y3',
-    'source_only_close_to_lens': False
+    'source_only_close_to_lens': True
     }
 
 config_data['mastercat_v'] = config_data['filename_mastercat'][37:-3]
