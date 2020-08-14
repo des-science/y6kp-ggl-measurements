@@ -1,12 +1,11 @@
 from info import basic, paths, config, zbins, plotting, source_nofz_pars, sysmaps
-from ggl import GGL, Measurement, ResponsesScale, ResponsesProjection, TestStars, TestPSF, TestSizeSNR, TestSysMaps
+from ggl import GGL, Measurement, ResponsesScale, TestStars, TestPSF, TestSizeSNR, TestSysMaps
 
 T = True
 F = False
 
 run_measurement = T
 run_responses_nk = F
-run_responses_ng = F
 run_stars = F
 run_psf = F
 run_size_snr = F
@@ -33,10 +32,6 @@ if run_responses_nk:
     responses.plot('lens', mask_scales =True)
     #responses.plot_sigmas('lens', mask_scales =False)
     #responses.plot('random')
-
-if run_responses_ng:
-    responses = ResponsesProjection(basic, config, paths, zbins, plotting)
-    responses.run()
 
 if run_stars:
     stars = TestStars(basic, config, paths, zbins, plotting)

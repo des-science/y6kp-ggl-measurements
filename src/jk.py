@@ -41,7 +41,25 @@ def jk(ra, dec, path):
 	radec[:,0] = ra
 	radec[:,1] = dec
 
+        # split in chuncks
+        n = 10
+	#Filling radec array...
+        step = len(ra)/n
+
+        jk = []
+        for i in range(n+1):
+                jki = kmeans_radec.find_nearest(radec[i*step:(i+1)*step], centers)
+                jk.extend(jki)
+
+        jk = np.array(jk)
+        
+        '''
+	#Filling radec array...
+	radec = np.zeros((len(ra),2))
+	radec[:,0] = ra
+	radec[:,1] = dec
 	jk = kmeans_radec.find_nearest(radec, centers)
+        '''        
 	return jk
 
 
