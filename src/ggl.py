@@ -47,6 +47,13 @@ class GGL(object):
         nz = nz/float(nz.sum())
 	return zbins, nz 
 
+    def get_nz_weighted(self,z,w):
+	zbins = np.linspace(0,2.5,500)	
+	zbinsc = zbins[:-1] + (zbins[1]-zbins[0])/2.
+	nz, _ = np.histogram(z,zbins, weights=w)
+        nz = nz/float(nz.sum())
+	return zbins, nz
+    
 
     def load_mice(self):
         """
@@ -457,7 +464,7 @@ class GGL(object):
                 pixsjk = hp.get_all_neighbours(nside, pixjk)
                 pixsjk = np.append(pixsjk, pixjk)
                 bool_s = np.in1d(pix, pixsjk)
-
+ 
                 cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
                 
                 if type_corr == 'NG' or type_corr == 'NN':
@@ -645,7 +652,10 @@ class GGL(object):
         lens: lens catalog including the single object weights.
         random: random catalog which might include weights or not.
         """
-        n_lens = np.sum(lens['w'])
+        try:
+            n_lens = np.sum(lens['w'])
+        except:
+            n_lens = len(lens['ra'])
 
         try:
             w_r = random['w']
@@ -819,8 +829,7 @@ class GGL(object):
         if self.basic['mode'] == 'mice':
             lens_all = pf.getdata(self.paths['lens_mice'])
             random_all = pf.getdata(self.paths['randoms_mice'])
-            source_all = self.load_mice()
-            return lens_all, random_all, source_all
+            return lens_all, random_all
 
         if self.basic['mode'] == 'buzzard':
             lens_all = pf.getdata(self.paths['lens_buzzard'])
@@ -877,6 +886,10 @@ class Measurement(GGL):
         if self.basic['mode'] == 'buzzard':
             zbins, nz_l = self.get_nz(lens['ztrue'])		    
             np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
+
+        if self.basic['mode'] == 'mice':
+            zbins, nz_l = self.get_nz(lens['z'])		    
+            np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
             
         return lens
  
@@ -903,7 +916,10 @@ class Measurement(GGL):
             lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
             mean_shears = []
 
-        if self.basic['mode'] == 'mice' or self.basic['mode'] == 'buzzard':
+        if self.basic['mode'] == 'mice':
+            lens_all, random_all = self.load_data_or_sims()
+            
+        if self.basic['mode'] == 'buzzard':
             lens_all, random_all, source_all = self.load_data_or_sims()
 
         for sbin in self.zbins['sbins']:
@@ -924,16 +940,40 @@ class Measurement(GGL):
 		if self.basic['mode'] == 'data_y1sources':
 		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
 
-    		if self.basic['mode'] == 'mice_old':
+    		if self.basic['mode'] == 'mice':
     		    """
     		    In this case there are no responses, so we set it to one.
     		    """
     		    R = 1.
                     #source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
-                    
-                    source = pf.getdata(self.paths['mice'] + 'mice2_shear_fullsample_bin%s.fits'%sbin[-1])
+                    hdu = pf.open(self.paths['mice_y1sources'] + 'mice2_shear_fullsample_downsampled025_bins%s.fits'%sbin[-1])
+                    mice = hdu[1].data
  
-		if self.basic['mode'] == 'buzzard' or self.basic['mode'] == 'mice':
+                    if np.isnan(mice['ra']).any():
+                        print 'There is a nan in the source catalog, in ra.'
+                        mask_nan = np.isnan(mice['ra'])==False
+                        print 'There are %d nans.'%(len(mice['ra']) - mask_nan.sum())
+                        
+                    if np.isnan(mice['dec']).any():
+                        print 'There is a nan in the source catalog, in dec.'
+
+
+                    source = {}
+                    source['ra'] = mice['ra']
+                    source['dec'] = mice['dec']
+                    source['e1'] = -mice['e1'] # flip e1 sign
+                    source['e2'] = mice['e2']
+                    source['ztrue'] = mice['ztrue']
+                    source['w'] = mice['w']
+                    
+                    print 'Length source', sbin, len(source['ra'])
+                    print 'np.std(e1)', np.std(source['e1'])
+                    print 'np.std(e2)', np.std(source['e2'])
+                    zbins, nz_s = self.get_nz_weighted(source['ztrue'], source['w'])		    
+                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'zbins',zbins,header='zbin limits')
+                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
+                    
+		if self.basic['mode'] == 'buzzard':
     		    """
     		    In this case there are no responses, so we set it to one.
     		    """
@@ -962,9 +1002,13 @@ class Measurement(GGL):
  
                         # Lenses run
                         lens = self.sel_lens_zbin(lens_all, lbin)
+                        if np.isnan(lens['ra']).any():
+                            print 'There is a nan in the lens catalog, in ra.'
+                        if np.isnan(lens['dec']).any():
+                            print 'There is a nan in the lens catalog, in dec.'
                         theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
                         self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, random_bool=False)
-                        theta, gts, gxs, errs, weights, npairs = self.load_runs(path_test, random_bool=False)
+                        #theta, gts, gxs, errs, weights, npairs = self.load_runs(path_test, random_bool=False)
                         gtnum_jk, gxnum_jk, wnum_jk = self.numerators_jackknife(gts, gxs, weights)
                         gtnum_ex, gxnum_ex, wnum_ex = self.numerators_exact(gts, gxs, weights)
                         make_directory(self.get_path_test_allzbins()+'/weights/')
@@ -980,7 +1024,15 @@ class Measurement(GGL):
                         # Combine final estimator for JK covariance and mean, with and without boost factors
                         gt_all = (gtnum_jk / wnum_jk) / R - (gtnum_jk_r / wnum_jk_r) / R
                         gx_all = (gxnum_jk / wnum_jk) / R - (gxnum_jk_r / wnum_jk_r) / R
-                        bf_all = self.compute_boost_factor_jackknife(lens['jk'], random['jk'], wnum_jk, wnum_jk_r, lens['w'])
+
+                        try:
+                            w_l = lens['w']
+                            print 'Weights found in foreground catalog.'
+                        except:
+                            print 'There are no identified weights for the foreground sample.'
+                            w_l = np.ones(len(lens['ra']))
+
+                        bf_all = self.compute_boost_factor_jackknife(lens['jk'], random['jk'], wnum_jk, wnum_jk_r, w_l)
                         gt_all_boosted = bf_all*(gtnum_jk / wnum_jk)/R - (gtnum_jk_r / wnum_jk_r) / R 
 
                         # Combine final estimator for exact results (as done without JK)
