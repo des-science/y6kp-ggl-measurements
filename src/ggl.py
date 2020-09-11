@@ -1897,10 +1897,11 @@ class ResponsesScale(GGL):
             self.process_run(Rgamma, theta, path_test, 'Rgamma_nk_JK_%s' % lens_or_random)
             self.process_run(Rs, theta, path_test, 'Rs_nk_JK_%s' % lens_or_random)
 
-    def run(self):
+    def run_deprecated(self):
         """
         Runs the NK responses between lenses and sources.
         Runs for lenses and randoms too.
+        Uses old (explicit) functions to compute the selection response.
         """
         lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
         resp = {}
