@@ -56,7 +56,7 @@ basic = {
 
 if basic['pool']:
     basic['num_threads'] = 1
-    basic['Ncores'] = 1
+    basic['Ncores'] = 10
     
 if not basic['pool']: basic['num_threads'] = 10
 
@@ -82,7 +82,7 @@ config_data = {
     'zslim_v': 'som',
     'zs_v': 'bpz',
     'zllim_v': 'y3',
-    'source_only_close_to_lens': True
+    'source_only_close_to_lens': False
     }
 
 config_data['mastercat_v'] = config_data['filename_mastercat'][37:-3]
@@ -98,14 +98,13 @@ config_mice = {
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'version': '2',
-    'lens_v': 'redmagic',
+    'lens_v': 'redmagic_HOD',
     'lens_w': True,  #use LSS weights for the lenses
-    'zslim_v': 'som',
-    'zs_v': 'v0.40',
+    'zslim_v': 'y1',
+    'zs_v': 'bpz',
     'zllim_v': 'y3',
-    'source_only_close_to_lens': True,
-    'suffle': True
-    }
+    'source_only_close_to_lens': True
+}
 
 
 def path_config(config):
@@ -138,8 +137,7 @@ def path_config_mice(config):
                  'njk_%d'%config['njk'],
                  'thbin_%0.2f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
                  'bslop_%0.1g'%config['bslop'],
-                 'source_only_close_to_lens_%s'%config['source_only_close_to_lens'],
-                 'suffle_%s'%config['suffle']
+                 'source_only_close_to_lens_%s'%config['source_only_close_to_lens']
     )
     
 
@@ -201,25 +199,36 @@ if basic['mode'] == 'mice':
 
     # Set blinding to false
     basic['blind'] = 0 
+    paths['config_mice'] = path_config_mice(config)
 
-    
-    #paths['mice'] = '/global/project/projectdirs/des/y3-bias/mice2/'
-    # Where Jack magnified redmagic catalogs are
-    paths['mice_redmagic_dir'] = '/global/project/projectdirs/des/jelvinpo/MICE/y3/redmagic/mice2_desy3_v5_1_magnified/combined_sample/'
-    paths['mice_redmagic'] = paths['mice_redmagic_dir'] + 'mice2_desy3_v5_1_magnified_redmagic_combined_hd3_hl2_sample.fits.gz'
-    paths['mice_randoms'] = paths['mice_redmagic_dir'] + 'mice2_desy3_v5_1_magnified_redmagic_combined_hd3_hl2_randoms.fits.gz'
-    paths['lens_nz'] = paths['mice_redmagic_dir'] + 'nz_mice2_desy3_v5_1_magnified_redmagic_combined_hd3_hl2_z_samp.fits'
+    # LENSES:
+    # -------------
+    # when using the regular y3 sample (magnified, catalogs from Jack above, binned with zredmagic), use file: create_mice_jk_magnified.py
+    # When using HOD sample use file (unmagnified, binned with ztrue): create_mice_jk_HOD.py 
+
     # Where we will put the processed samples with JK patches
     paths['mice_jk'] = '../cats/mice/v_%s/%s/njk_%d/'%(config['version'], config['lens_v'], config['njk'])
     paths['lens_mice'] = paths['mice_jk'] + 'lens.fits'
     paths['randoms_mice'] = paths['mice_jk'] + 'random.fits'
+    
+    # if using create_mice_jk_magnified.py uncomment the following:
+    # ------------------------
+    # Where Jack magnified redmagic catalogs are
+    #paths['mice_redmagic_dir'] = '/global/project/projectdirs/des/jelvinpo/MICE/y3/redmagic/mice2_desy3_v5_1_magnified/combined_sample/'
+    #paths['mice_redmagic'] = paths['mice_redmagic_dir'] + 'mice2_desy3_v5_1_magnified_redmagic_combined_hd3_hl2_sample.fits.gz'
+    #paths['mice_randoms'] = paths['mice_redmagic_dir'] + 'mice2_desy3_v5_1_magnified_redmagic_combined_hd3_hl2_randoms.fits.gz'
+    #paths['lens_nz'] = paths['mice_redmagic_dir'] + 'nz_mice2_desy3_v5_1_magnified_redmagic_combined_hd3_hl2_z_samp.fits'
+    # ------------------------
 
-    # Sources
-    if config['suffle']:
-        paths['sources_mice'] = '/global/cscratch1/sd/mgatti/Mass_Mapping/taka/Mice_WL_shuffle_1024.fits'
-    else:
-        paths['sources_mice'] = '/global/cscratch1/sd/mgatti/Mass_Mapping/taka/Mice_WL_1024.fits'
-    paths['config_mice'] = path_config_mice(config)
+    # SOURCES
+    # -------------
+    paths['mice_y1sources'] = '/global/project/projectdirs/des/y3-bias/mice2/'
+    
+    # if using Marco's catalog for the source clustering test uncomment the following lines
+    # ----------------------------------
+    #if config['suffle']: paths['sources_mice'] = '/global/cscratch1/sd/mgatti/Mass_Mapping/taka/Mice_WL_shuffle_1024.fits'
+    #else: paths['sources_mice'] = '/global/cscratch1/sd/mgatti/Mass_Mapping/taka/Mice_WL_1024.fits'
+    # ----------------------------------
     
 # Where we save the runs and plots for one particular configuration:
 paths['runs_config'] = os.path.join(paths['runs'], paths['config_%s'%basic['mode']]) + '/'
@@ -238,10 +247,13 @@ redshift bins and their limits.
 """
 
 zbins = {}
-if 'redmagic' in config['lens_v'] or basic['mode']=='mice':
+if 'redmagic' in config['lens_v']:
     zbins['lbins'] = ['l1', 'l2', 'l3', 'l4', 'l5']
 if 'maglim' in config['lens_v']:
     zbins['lbins'] = ['l1', 'l2', 'l3','l4', 'l5', 'l6']
+if 'HOD' in config['lens_v']:
+    zbins['lbins'] = ['l1', 'l2', 'l3']
+    
 zbins['sbins'] = ['s1', 's2', 's3', 's4']
 #zbins['sbins'] = ['s3']
 zbins['lsbins'] = [l + '_' + s for l in zbins['lbins'] for s in zbins['sbins']]
