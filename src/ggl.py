@@ -99,7 +99,7 @@ class GGL(object):
         return source
 
 
-    def get_responses(self,calibrator, mask=None):
+    def get_responses(self,calibrator, mask=None, ind_responses=False):
         '''
         Function to deal with responses and make sure all things are good.
         It is a function so we can use it for several samples, for instance,
@@ -157,7 +157,9 @@ class GGL(object):
 
         res = {}
         res['R_mean'] = R_mean
-        #res['R'] = R 
+        if ind_responses:
+            # include the individual responses to perform the scale dependence averaging test
+            res['R'] = R 
         #res['wR'] = wR # would be needed for constructing the N(z) 
         res['w'] = w #weights but for convienence we load them here
         
@@ -274,7 +276,7 @@ class GGL(object):
         return source, source_5sels, source_calibrator
 
 
-    def load_metacal_bin(self, source, source_5sels, calibrator, bin_low, bin_high, reduce_mem = False):
+    def load_metacal_bin(self, source, source_5sels, calibrator, bin_low, bin_high, reduce_mem = False, ind_responses=False):
         """
         source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
         source_5sels: dictionary containing relevant columns for the sources, with the baseline selection applied already,
@@ -302,7 +304,7 @@ class GGL(object):
             source_bin['bpz_zmc'] = source['bpz_zmc'][photoz_masks[0]]
 
         # lets deal with responses, check function above
-        dict_responses, dict_to_file = self.get_responses(calibrator, mask=photoz_masks)
+        dict_responses, dict_to_file = self.get_responses(calibrator, mask=photoz_masks, ind_responses=ind_responses)
 
         # Lets include the responses dictionary into the source dictionary
         source_bin = dict(source_bin, **dict_responses)
@@ -316,7 +318,7 @@ class GGL(object):
         return source_bin
         
     
-    def load_metacal_bin_sels_responses(self, source_5sels, bin_low, bin_high):
+    def load_metacal_bin_sels_responses_deprecated(self, source_5sels, bin_low, bin_high):
         """
         source_5sels: Nested dictionary containing relevant columns for the sources, with the baseline selection applied already,
                    for each of the unsheared and sheared versions and for each selection.
@@ -423,34 +425,76 @@ class GGL(object):
 
             signal.signal(signal.SIGINT, sig_int)
 
-        def run_jki(jk):
+        def run_jki_NG(jk):
             """
             Function we use for mutiprocessing.
             jk: Region we run in each core.
+            For NG correlations.
             """
 
             ra_l_jk = ra_l[jk_l == jk]
             dec_l_jk = dec_l[jk_l == jk]
             w_l_jk = w_l[jk_l == jk]
 
-            if type_corr == 'NG':
-                if jk == 0: print 'Doing NG correlation.'
-                corr = treecorr.NGCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
-                                              max_sep=self.config['thlims'][1], sep_units='arcmin',
-                                              bin_slop=self.config['bslop'], num_threads=self.basic['num_threads'])
+            if jk == 0: print 'Doing NG correlation.'
+            corr = treecorr.NGCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
+                                          max_sep=self.config['thlims'][1], sep_units='arcmin',
+                                          bin_slop=self.config['bslop'], num_threads=self.basic['num_threads'])
 
-            if type_corr == 'NN':
-                if jk == 0: print 'Doing NN correlation.'
-                corr = treecorr.NNCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
-                                              max_sep=self.config['thlims'][1], sep_units='arcmin',
-                                              bin_slop=self.config['bslop'], num_threads=self.basic['num_threads'])
+            if len(ra_l_jk) > 1:
+
+                if len(ra_l_jk)%2 == 0:  # If len array is even, make it odd before computing the median.
+                    pixjk = hp.ang2pix(nside, ((90.0 - np.median(np.append(dec_l_jk, 0)))*np.pi/180.),
+                                       np.median(np.append(ra_l_jk, 0))*np.pi/180.0)
+                if len(ra_l_jk)%2 == 1:  # If len array is odd, keep it odd.
+                    pixjk = hp.ang2pix(nside, ((90.0 - np.median(dec_l_jk))*np.pi/180.),
+                                       np.median(ra_l_jk)*np.pi/180.)
+
+                pixsjk = hp.get_all_neighbours(nside, pixjk)
+                pixsjk = np.append(pixsjk, pixjk)
+                bool_s = np.in1d(pix, pixsjk)
+ 
+                cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
                 
+                if self.config['source_only_close_to_lens']:
+                    cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s],
+                                             w=w[bool_s], ra_units='deg', dec_units='deg')
+                else:
+                    cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, g1=e1, g2=e2, w=w, ra_units='deg', dec_units='deg')
+                            
+                corr.process(cat_l, cat_s)
 
-            if 'NK' in type_corr:
-                if jk == 0: print 'Doing NK correlation with variable %s.' % type_corr[3:]
-                corr = treecorr.NKCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
-                                              max_sep=self.config['thlims'][1], sep_units='arcmin',
-                                              bin_slop=self.config['bslop'], num_threads=self.basic['num_threads'])
+                if jk == 0: theta.append(np.exp(corr.logr))
+                gts[jk].append(corr.xi)
+                gxs[jk].append(corr.xi_im)
+                errs[jk].append(np.sqrt(np.abs(corr.varxi)))
+                weights[jk].append(corr.weight)
+                npairs[jk].append(corr.npairs)
+
+            else:
+                if jk == 0: theta.append(np.exp(corr.logr))
+                zeros = np.zeros(self.config['nthbins'])
+                gts[jk].append(zeros)
+                gxs[jk].append(zeros)
+                errs[jk].append(zeros)
+                weights[jk].append(zeros)
+                npairs[jk].append(zeros)
+
+        def run_jki_NK(jk):
+            """
+            Function we use for mutiprocessing.
+            jk: Region we run in each core.
+            For NK correlations.
+            """
+
+            ra_l_jk = ra_l[jk_l == jk]
+            dec_l_jk = dec_l[jk_l == jk]
+            w_l_jk = w_l[jk_l == jk]
+
+            if jk == 0: print 'Doing NK correlation with variable %s.' % type_corr[3:]
+            corr = treecorr.NKCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
+                                          max_sep=self.config['thlims'][1], sep_units='arcmin',
+                                          bin_slop=self.config['bslop'], num_threads=self.basic['num_threads'])
 
             if len(ra_l_jk) > 1:
 
@@ -467,41 +511,23 @@ class GGL(object):
  
                 cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
                 
-                if type_corr == 'NG' or type_corr == 'NN':
-                    if self.config['source_only_close_to_lens']:
-                        cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s],
-                                                 w=w[bool_s], ra_units='deg', dec_units='deg')
-                    else:
-                        cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, g1=e1, g2=e2, w=w, ra_units='deg', dec_units='deg')
-                            
-                if 'NK' in type_corr:
-                    if self.config['source_only_close_to_lens']:
-                        cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], k=scalar[bool_s], w=w[bool_s],
+                if self.config['source_only_close_to_lens']:
+                    cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], k=scalar[bool_s], w=w[bool_s],
                                                  ra_units='deg', dec_units='deg')
-                    else:
-                        cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, k=scalar, w=w, ra_units='deg', dec_units='deg')
+                else:
+                    cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, k=scalar, w=w, ra_units='deg', dec_units='deg')
 
                 corr.process(cat_l, cat_s)
 
                 if jk == 0: theta.append(np.exp(corr.logr))
-                if type_corr == 'NG':
-                    gts[jk].append(corr.xi)
-                    gxs[jk].append(corr.xi_im)
-                    errs[jk].append(np.sqrt(np.abs(corr.varxi)))
-                if 'NK' in type_corr:
-                    xi_nks[jk].append(corr.xi)
+                xi_nks[jk].append(corr.xi)
                 weights[jk].append(corr.weight)
                 npairs[jk].append(corr.npairs)
 
             else:
                 if jk == 0: theta.append(np.exp(corr.logr))
                 zeros = np.zeros(self.config['nthbins'])
-                if type_corr == 'NG':
-                    gts[jk].append(zeros)
-                    gxs[jk].append(zeros)
-                    errs[jk].append(zeros)
-                if 'NK' in type_corr:
-                    xi_nks[jk].append(corr.xi)
+                xi_nks[jk].append(corr.xi)
                 weights[jk].append(zeros)
                 npairs[jk].append(zeros)
 
@@ -509,40 +535,47 @@ class GGL(object):
         if not self.config['lens_w']:
             print 'Checking weights of lens sample are one:', w_l
         ra_s, dec_s, w = self.get_source(source)
-        if type_corr == 'NG' or type_corr == 'NN':
-            e1 = source['e1']
-            e2 = source['e2']
-            # We still need to define these variables because otherwise 
-            # multiprocessing gives an error (cell is empty), because one has to define
-            # all variables even when they are not needed for correct execution.
-            scalar = np.zeros(len(e1))
-        if 'NK' in type_corr:
-            print type_corr, type_corr[3:]
-            scalar = source['%s' % type_corr[3:]]
-            e1 = np.zeros(len(scalar))
-            e2 = np.zeros(len(scalar))
 
+        # We choose a healpix grid to select sources around each lens patch, to reduce memory
+        # Choose nside for this grid here
         nside = 8
         theta = (90.0 - dec_s) * np.pi / 180.
         phi = ra_s * np.pi / 180.
         pix = hp.ang2pix(nside, theta, phi)
 
+        if type_corr == 'NG':
+            e1 = source['e1']
+            e2 = source['e2']
+        if 'NK' in type_corr:
+            print type_corr, type_corr[3:]
+            scalar = source['%s' % type_corr[3:]]
+
         manager = Manager()
         theta = manager.list()
         weights = [manager.list() for x in range(self.config['njk'])]
         npairs = [manager.list() for x in range(self.config['njk'])]
-        gts = [manager.list() for x in range(self.config['njk'])]
-        gxs = [manager.list() for x in range(self.config['njk'])]
-        errs = [manager.list() for x in range(self.config['njk'])]
-        xi_nks = [manager.list() for x in range(self.config['njk'])]
+        if type_corr == 'NG':
+            gts = [manager.list() for x in range(self.config['njk'])]
+            gxs = [manager.list() for x in range(self.config['njk'])]
+            errs = [manager.list() for x in range(self.config['njk'])]
+            
+        if 'NK' in type_corr:
+            xi_nks = [manager.list() for x in range(self.config['njk'])]
+            
         if self.basic['pool']: 
             p = mp.Pool(self.basic['Ncores'], worker_init)
-            p.map(run_jki, range(self.config['njk']))
+            if type_corr == 'NG':
+                p.map(run_jki_NG, range(self.config['njk']))
+            if 'NK' in type_corr:
+                p.map(run_jki_NK, range(self.config['njk']))
             p.close()
 
         if not self.basic['pool']:
             for jk in range(self.config['njk']):
-		run_jki(jk)
+                if type_corr == 'NG':
+                    run_jki_NG(jk)
+                if 'NK' in type_corr:
+                    run_jki_NK(jk)
 
         def reshape_manager(obj):
             return (np.array(list(obj))).reshape(self.config['njk'], self.config['nthbins'])
@@ -560,10 +593,6 @@ class GGL(object):
             gxs = reshape_manager(gxs)
             errs = reshape_manager(errs)
             return theta, gts, gxs, errs, weights, npairs
-
-        if type_corr == 'NN':
-            print 'returning NN'
-            return theta, weights, npairs
 
         if 'NK' in type_corr:
             print 'returning NK'
@@ -930,7 +959,7 @@ class Measurement(GGL):
 
                     print 'Source bin:', self.zbins[sbin][0], self.zbins[sbin][1]
 		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, bin_low=self.zbins[sbin][0], bin_high=self.zbins[sbin][1], reduce_mem=True)
-		    R = source['R_mean']
+		    R_mean = source['R_mean']
                     print 'Length source', sbin, len(source['ra'])
 
                     # New!! we need to subtract the mean shear 
@@ -944,7 +973,7 @@ class Measurement(GGL):
     		    """
     		    In this case there are no responses, so we set it to one.
     		    """
-    		    R = 1.
+    		    R_mean = 1.
                     #source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
                     hdu = pf.open(self.paths['mice_y1sources'] + 'mice2_shear_fullsample_downsampled025_bins%s.fits'%sbin[-1])
                     mice = hdu[1].data
@@ -977,7 +1006,7 @@ class Measurement(GGL):
     		    """
     		    In this case there are no responses, so we set it to one.
     		    """
-    		    R = 1.
+    		    R_mean = 1.
 		    source = {}
 		    for k in source_all.keys():
 			source[k] = source_all[k][(source_all['zbin'] >= self.zbins[sbin][0]) & (source_all['zbin'] <= self.zbins[sbin][1])]
@@ -1022,8 +1051,8 @@ class Measurement(GGL):
                         gtnum_ex_r, gxnum_ex_r, wnum_ex_r = self.numerators_exact(gts, gxs, weights)
 
                         # Combine final estimator for JK covariance and mean, with and without boost factors
-                        gt_all = (gtnum_jk / wnum_jk) / R - (gtnum_jk_r / wnum_jk_r) / R
-                        gx_all = (gxnum_jk / wnum_jk) / R - (gxnum_jk_r / wnum_jk_r) / R
+                        gt_all = (gtnum_jk / wnum_jk) / R_mean - (gtnum_jk_r / wnum_jk_r) / R_mean
+                        gx_all = (gxnum_jk / wnum_jk) / R_mean - (gxnum_jk_r / wnum_jk_r) / R_mean
 
                         try:
                             w_l = lens['w']
@@ -1033,17 +1062,17 @@ class Measurement(GGL):
                             w_l = np.ones(len(lens['ra']))
 
                         bf_all = self.compute_boost_factor_jackknife(lens['jk'], random['jk'], wnum_jk, wnum_jk_r, w_l)
-                        gt_all_boosted = bf_all*(gtnum_jk / wnum_jk)/R - (gtnum_jk_r / wnum_jk_r) / R 
+                        gt_all_boosted = bf_all*(gtnum_jk / wnum_jk)/R_mean - (gtnum_jk_r / wnum_jk_r) / R_mean 
 
                         # Combine final estimator for exact results (as done without JK)
-                        gt = (gtnum_ex / wnum_ex) / R - (gtnum_ex_r / wnum_ex_r) / R
-                        gx = (gxnum_ex / wnum_ex) / R - (gxnum_ex_r / wnum_ex_r) / R                        
+                        gt = (gtnum_ex / wnum_ex) / R_mean - (gtnum_ex_r / wnum_ex_r) / R_mean
+                        gx = (gxnum_ex / wnum_ex) / R_mean - (gxnum_ex_r / wnum_ex_r) / R_mean                        
                         bf = self.compute_boost_factor_exact(wnum_ex, wnum_ex_r, lens, random)
-                        gt_boosted = bf*(gtnum_ex/wnum_ex)/R - (gtnum_ex_r/wnum_ex_r)/R 
+                        gt_boosted = bf*(gtnum_ex/wnum_ex)/R_mean - (gtnum_ex_r/wnum_ex_r)/R_mean 
 
                         self.process_run(gt, gt_all, theta, path_test, 'gt')
                         self.process_run(gx, gx_all, theta, path_test, 'gx')
-                        self.process_run((gtnum_ex_r/wnum_ex_r)/R, (gtnum_jk_r/wnum_jk_r)/R, theta, path_test, 'randoms')
+                        self.process_run((gtnum_ex_r/wnum_ex_r)/R_mean, (gtnum_jk_r/wnum_jk_r)/R_mean, theta, path_test, 'randoms')
                         self.process_run(bf, bf_all, theta, path_test, 'boost_factor')
                         self.process_run(gt_boosted, gt_all_boosted, theta, path_test, 'gt_boosted')
 
@@ -1730,6 +1759,9 @@ class ResponsesScale(GGL):
     def get_path_test(self, lbin, sbin):
         return os.path.join(self.paths['runs_config'], 'responses_nk', lbin + '_' + sbin) + '/'
 
+    def get_path_fidmeasurement(self, lbin, sbin):
+        return os.path.join(self.paths['runs_config'], 'measurement', lbin + '_' + sbin) + '/'
+    
     def save_responses_nk(self, path_test, responses, end):
         np.savetxt(path_test + 'responses_nk_no_jackknife_%s' % end, responses,
                    header='theta(arcmin), R_nk, Rgamma_nk, Rs_nk')
@@ -1751,6 +1783,90 @@ class ResponsesScale(GGL):
         R_mean, Rgamma, Rs = np.loadtxt(self.get_path_test_allzbins() + 'responses_mean_%s' % end, unpack=True)
         return R_mean
 
+
+    def run(self):
+
+        make_directory(self.get_path_test_allzbins())
+        if self.basic['mode'] == 'data':
+            lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
+        else:
+            raise Exception('It makes no sense to run this test on a simulation. Mode should be data, edit on info.py file.')
+
+        for sbin in self.zbins['sbins']:
+
+    		print 'Running measurement for source %s.' % sbin
+                
+                print 'Source bin:', self.zbins[sbin][0], self.zbins[sbin][1]
+                source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, bin_low=self.zbins[sbin][0], bin_high=self.zbins[sbin][1], reduce_mem=True, ind_responses=True)
+                # R_mean = source['R_mean'] # average for the tomographic bin
+                # R = source['R'] # total R for each individual galaxy
+                print 'Length source', sbin, len(source['ra'])
+
+                # New!! we need to subtract the mean shear # not really needed here but leave it just in case
+                source, mean_shear = self.subtract_mean_shear(source)
+
+    		for l, lbin in enumerate(self.zbins['lbins']):
+                    path_test = self.get_path_test(lbin, sbin)
+                    path_fid = self.get_path_fidmeasurement(lbin, sbin) # where the fiducial measurements are
+
+                    if os.path.exists(path_test + 'gt_boosted'):
+                        print('Measurements for this bin already exist. SKIPPING!')
+
+                    else:
+                        print 'Running measurement for lens %s.' % lbin
+                        make_directory(path_test)
+ 
+                        # Lenses run
+                        # ----------------
+                        lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
+                        print 'Length lens', lbin, len(lens['ra']), self.zbins[lbin][0], self.zbins[lbin][1]
+                        theta, R_nk, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NK_R')
+                        theta_fid, gts, gxs, errs, weights_fid, npairs_fid = self.load_runs(path_fid, random_bool=False) # Load from fiducial run
+                        assert np.allclose(theta,theta_fid)
+                        assert np.allclose(weights, weights_fid)
+                        
+                        R_jk, _, wnum_jk = self.numerators_jackknife(R_nk, R_nk, weights)
+                        Rnum_ex, _, wnum_ex = self.numerators_exact(R_nk, R_nk, weights)
+
+                        # Do this too for the loaded fiducial run to be able to combine here
+                        gtnum_jk, gxnum_jk, wnum_jk = self.numerators_jackknife(gts, gxs, weights)
+                        gtnum_ex, gxnum_ex, wnum_ex = self.numerators_exact(gts, gxs, weights)
+                        
+                        # Randoms run
+                        # ----------------
+                        random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+                        theta, R_nk_r, weights, npairs = self.run_treecorr_jackknife(random, source, 'NK_R')
+                        theta_fid, gts, gxs, errs, weights_fid, npairs_fid = self.load_runs(path_fid, random_bool=True) # Load from fiducial run
+                        assert np.allclose(theta,theta_fid)
+                        assert np.allclose(weights, weights_fid)
+                        
+                        R_jk_r, _, wnum_jk_r = self.numerators_jackknife(R_nk_r, R_nk_r, weights)
+                        R_ex_r, _, wnum_ex_r = self.numerators_exact(R_nk_r, R_nk_r, weights)
+                        
+                        gtnum_jk_r, gxnum_jk_r, wnum_jk_r = self.numerators_jackknife(gts, gxs, weights)
+                        gtnum_ex_r, gxnum_ex_r, wnum_ex_r = self.numerators_exact(gts, gxs, weights)
+
+                        # Combine final estimator for JK covariance and mean, with and without boost factors
+                        # ----------------
+                        bf_all = self.compute_boost_factor_jackknife(lens['jk'], random['jk'], wnum_jk, wnum_jk_r, lens['w'])
+                        gt_all_boosted = bf_all*gtnum_jk/R_jk - gtnum_jk_r/R_jk_r
+                        gx_all = gxnum_jk/R_jk - gxnum_jk_r/R_jk_r
+
+                        # Combine final estimator for exact results (as if done without JK)
+                        # ----------------
+                        bf = self.compute_boost_factor_exact(wnum_ex, wnum_ex_r, lens, random)
+                        gt_boosted = bf*gtnum_ex/Rnum_ex - gtnum_ex_r/R_ex_r 
+                        gx = gxnum_ex/Rnum_ex - gxnum_ex_r/R_ex_r
+
+                        # Get the mean and standard deviation of all these quantities and save them in files
+                        # ---------------
+                        self.process_run(gtnum_ex_r/R_ex_r, gtnum_jk_r/R_jk_r, theta, path_test, 'randoms')
+                        self.process_run(bf, bf_all, theta, path_test, 'boost_factor')
+                        self.process_run(gt_boosted, gt_all_boosted, theta, path_test, 'gt_boosted')
+                        self.process_run(gx, gx_all, theta, path_test, 'gx')
+                        self.process_run(Rnum_ex/wnum_ex, R_jk/wnum_jk, theta, path_test, 'R_nk')
+
+    
     def compute_Rs(self, e_ix, delta_gamma):
         """
         Computes R_s.
