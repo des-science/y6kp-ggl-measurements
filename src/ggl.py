@@ -451,7 +451,6 @@ class GGL(object):
                 pixsjk = hp.get_all_neighbours(nside, pixjk)
                 pixsjk = np.append(pixsjk, pixjk)
                 bool_s = np.in1d(pix, pixsjk)
- 
                 cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
                 
                 if self.config['source_only_close_to_lens']:
@@ -837,255 +836,12 @@ class GGL(object):
         err_A = np.sqrt(COV_A)
         return ratioA_mean, err_A
 
-    def load_data_or_sims(self):
-        '''
-        Loads and returns lens, randoms and sources, either from data or from simulations.
-        '''
-
-        if self.basic['mode'] == 'data':
-            lens_all = pf.getdata(self.paths['lens'])
-            random_all = pf.getdata(self.paths['randoms'])
-            source_all, source_all_5sels, calibrator = self.load_metacal(reduce_mem=True)
-            return lens_all, random_all, source_all, source_all_5sels, calibrator
-
-        if self.basic['mode'] == 'data_y1sources':
-            lens_all = pf.getdata(self.paths['lens'])
-            random_all = pf.getdata(self.paths['randoms'])
-            return lens_all, random_all
-
-        if self.basic['mode'] == 'mice':
-            lens_all = pf.getdata(self.paths['lens_mice'])
-            random_all = pf.getdata(self.paths['randoms_mice'])
-            return lens_all, random_all
-
-        if self.basic['mode'] == 'buzzard':
-            lens_all = pf.getdata(self.paths['lens_buzzard'])
-            random_all = pf.getdata(self.paths['randoms_buzzard'])
-            source_all = self.load_buzzard()
-            return lens_all, random_all, source_all
-
-
-
-class Measurement(GGL):
-    """
-    Subclass that runs the gglensing measurement for all the lens-source bin combinations.
-    Includes:
-    - Mean response calculation.
-    - Random points subtraction.
-    - Jackknife covariance calculation.
-    - Boost factors calculation.
-    """
-
-    def __init__(self, basic, config, paths, zbins, plotting):
-        GGL.__init__(self, basic, config, paths)
-        self.zbins = zbins
-        self.plotting = plotting
-
-    def get_path_test(self, lbin, sbin):
-        return os.path.join(self.paths['runs_config'], 'measurement', lbin + '_' + sbin) + '/'
-
-    def get_path_test_allzbins(self):
-        return os.path.join(self.paths['runs_config'], 'measurement') + '/'
-
-    def get_twopointfile_name(self, string):
-        return os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits' % string)
-
-    def sel_lens_zbin(self, lens_all, lbin):
-        """
-        Select lens bins depending on whether its data or sims.
-        Input: 
-        - Lens_all: object including all redshifts bins, with all the lens information (ra, dec, w, z).
-        - lbin: which lens bin to select, e.g., 'l1'. Redshift edges defined in info.py file.
-        Returns:
-        - Lens: Selected reshift bin object with the same info.
-
-        """
-        # Decide how to bin the lenses
-        if 'ztrue' in self.config['zllim_v']:
-            print 'Using ztrue to bin the lenses.'
-            lens = lens_all[(lens_all['ztrue'] > self.zbins[lbin][0]) & (lens_all['ztrue'] < self.zbins[lbin][1])]
-        else:
-            print 'Using z to bin the lenses.'
-            lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
-
-        print 'Length lens', lbin, len(lens['ra']), self.zbins[lbin][0], self.zbins[lbin][1]
-
-        if self.basic['mode'] == 'buzzard':
-            zbins, nz_l = self.get_nz(lens['ztrue'])		    
-            np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
-
-        if self.basic['mode'] == 'mice':
-            zbins, nz_l = self.get_nz(lens['z'])		    
-            np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
-            
-        return lens
- 
-
-    def sel_random_zbin(self, random_all, lbin):
-        """
-        Similar function as sel_lens_zbin for random points.
-        """
-        # Randoms run
-        if self.basic['mode']  == 'data':
-            random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-        if self.basic['mode']  == 'buzzard' or self.basic['mode'] == 'mice':
-            random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-        if self.basic['mode']  == 'mice_old':
-            random = random_all[l*len(random_all)/len(self.zbins['lbins']):(l+1)*len(random_all)/len(self.zbins['lbins'])]
-        return random
-
-    
-    def run(self):
-
-	make_directory(self.get_path_test_allzbins()+'/nzs/')
-
-        if self.basic['mode'] == 'data':
-            lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
-            mean_shears = []
-
-        if self.basic['mode'] == 'mice':
-            lens_all, random_all = self.load_data_or_sims()
-            
-        if self.basic['mode'] == 'buzzard':
-            lens_all, random_all, source_all = self.load_data_or_sims()
-
-        for sbin in self.zbins['sbins']:
-
-    		print 'Running measurement for source %s.' % sbin
- 
-		if self.basic['mode'] == 'data':
-
-                    print 'Source bin:', self.zbins[sbin][0], self.zbins[sbin][1]
-		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, bin_low=self.zbins[sbin][0], bin_high=self.zbins[sbin][1], reduce_mem=True)
-		    R_mean = source['R_mean']
-                    print 'Length source', sbin, len(source['ra'])
-
-                    # New!! we need to subtract the mean shear 
-                    source, mean_shear = self.subtract_mean_shear(source)
-                    mean_shears.append(mean_shear)
-
-		if self.basic['mode'] == 'data_y1sources':
-		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
-
-    		if self.basic['mode'] == 'mice':
-    		    """
-    		    In this case there are no responses, so we set it to one.
-    		    """
-    		    R_mean = 1.
-                    #source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
-                    hdu = pf.open(self.paths['mice_y1sources'] + 'mice2_shear_fullsample_downsampled025_bins%s.fits'%sbin[-1])
-                    mice = hdu[1].data
- 
-                    if np.isnan(mice['ra']).any():
-                        print 'There is a nan in the source catalog, in ra.'
-                        mask_nan = np.isnan(mice['ra'])==False
-                        print 'There are %d nans.'%(len(mice['ra']) - mask_nan.sum())
-                        
-                    if np.isnan(mice['dec']).any():
-                        print 'There is a nan in the source catalog, in dec.'
-
-
-                    source = {}
-                    source['ra'] = mice['ra']
-                    source['dec'] = mice['dec']
-                    source['e1'] = -mice['e1'] # flip e1 sign
-                    source['e2'] = mice['e2']
-                    source['ztrue'] = mice['ztrue']
-                    source['w'] = mice['w']
-                    
-                    print 'Length source', sbin, len(source['ra'])
-                    print 'np.std(e1)', np.std(source['e1'])
-                    print 'np.std(e2)', np.std(source['e2'])
-                    zbins, nz_s = self.get_nz_weighted(source['ztrue'], source['w'])		    
-                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'zbins',zbins,header='zbin limits')
-                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
-                    
-		if self.basic['mode'] == 'buzzard':
-    		    """
-    		    In this case there are no responses, so we set it to one.
-    		    """
-    		    R_mean = 1.
-		    source = {}
-		    for k in source_all.keys():
-			source[k] = source_all[k][(source_all['zbin'] >= self.zbins[sbin][0]) & (source_all['zbin'] <= self.zbins[sbin][1])]
-                    print 'Length source', sbin, len(source['ra'])
-                    print 'np.std(e1)', np.std(source['e1'])
-                    print 'np.std(e2)', np.std(source['e2'])
-                    
-                    zbins, nz_s = self.get_nz(source['ztrue'])		    
-                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'zbins',zbins,header='zbin limits')
-                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
-
-    		for l, lbin in enumerate(self.zbins['lbins']):
-                    path_test = self.get_path_test(lbin, sbin)
-
-                    #if os.path.exists(path_test + 'mean_gt_boosted'):
-                    if os.path.exists(path_test + 'gt_boosted'):
-                        print('Measurements for this bin already exist. SKIPPING!')
-
-                    else:
-                        print 'Running measurement for lens %s.' % lbin
-                        make_directory(path_test)
- 
-                        # Lenses run
-                        lens = self.sel_lens_zbin(lens_all, lbin)
-                        if np.isnan(lens['ra']).any():
-                            print 'There is a nan in the lens catalog, in ra.'
-                        if np.isnan(lens['dec']).any():
-                            print 'There is a nan in the lens catalog, in dec.'
-                        theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
-                        self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, random_bool=False)
-                        #theta, gts, gxs, errs, weights, npairs = self.load_runs(path_test, random_bool=False)
-                        gtnum_jk, gxnum_jk, wnum_jk = self.numerators_jackknife(gts, gxs, weights)
-                        gtnum_ex, gxnum_ex, wnum_ex = self.numerators_exact(gts, gxs, weights)
-                        make_directory(self.get_path_test_allzbins()+'/weights/')
-                        np.savetxt(self.get_path_test_allzbins()+'/weights/'+'w_%s_%s'%(lbin, sbin),wnum_ex,header='weights (sum of all JK regions)')
-
-                        # Randoms run
-                        random = self.sel_random_zbin(random_all, lbin)
-                        theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
-                        self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, random_bool=True)
-                        gtnum_jk_r, gxnum_jk_r, wnum_jk_r = self.numerators_jackknife(gts, gxs, weights)
-                        gtnum_ex_r, gxnum_ex_r, wnum_ex_r = self.numerators_exact(gts, gxs, weights)
-
-                        # Combine final estimator for JK covariance and mean, with and without boost factors
-                        gt_all = (gtnum_jk / wnum_jk) / R_mean - (gtnum_jk_r / wnum_jk_r) / R_mean
-                        gx_all = (gxnum_jk / wnum_jk) / R_mean - (gxnum_jk_r / wnum_jk_r) / R_mean
-
-                        try:
-                            w_l = lens['w']
-                            print 'Weights found in foreground catalog.'
-                        except:
-                            print 'There are no identified weights for the foreground sample.'
-                            w_l = np.ones(len(lens['ra']))
-
-                        bf_all = self.compute_boost_factor_jackknife(lens['jk'], random['jk'], wnum_jk, wnum_jk_r, w_l)
-                        gt_all_boosted = bf_all*(gtnum_jk / wnum_jk)/R_mean - (gtnum_jk_r / wnum_jk_r) / R_mean 
-
-                        # Combine final estimator for exact results (as done without JK)
-                        gt = (gtnum_ex / wnum_ex) / R_mean - (gtnum_ex_r / wnum_ex_r) / R_mean
-                        gx = (gxnum_ex / wnum_ex) / R_mean - (gxnum_ex_r / wnum_ex_r) / R_mean                        
-                        bf = self.compute_boost_factor_exact(wnum_ex, wnum_ex_r, lens, random)
-                        gt_boosted = bf*(gtnum_ex/wnum_ex)/R_mean - (gtnum_ex_r/wnum_ex_r)/R_mean 
-
-                        self.process_run(gt, gt_all, theta, path_test, 'gt')
-                        self.process_run(gx, gx_all, theta, path_test, 'gx')
-                        self.process_run((gtnum_ex_r/wnum_ex_r)/R_mean, (gtnum_jk_r/wnum_jk_r)/R_mean, theta, path_test, 'randoms')
-                        self.process_run(bf, bf_all, theta, path_test, 'boost_factor')
-                        self.process_run(gt_boosted, gt_all_boosted, theta, path_test, 'gt_boosted')
-
-                        
-        if self.basic['mode'] == 'data':
-            np.savetxt(self.get_path_test_allzbins()+'mean_shears', mean_shears, header = 'Mean_e1 Mean_e2 (for each redshift bin)')
-
-
-                    
     def save_2pointfile(self, string):
         """
         Save the correlation function measurements (i.e. gammat, boost factors, etc),
         N(z)'s and jackknife covariance into the 2point format file.
         Creates a:
-        - SpectrumMeasurement obejct: In which the 2PCF measurements are saved. 
+        - SpectrumMeasurement object: In which the 2PCF measurements are saved. 
         - Kernel object: The N(z)'s are here. 
         - CovarianceMatrixInfo object: In which the jackknife covariance is saved.
 
@@ -1262,6 +1018,265 @@ class Measurement(GGL):
                 os.system('rm %s' % (save_path))
 
             boost_factor_twopoint.to_fits(save_path)
+
+    
+    def load_data_or_sims(self):
+        '''
+        Loads and returns lens, randoms and sources, either from data or from simulations.
+        '''
+
+        if self.basic['mode'] == 'data':
+            source_all, source_all_5sels, calibrator = self.load_metacal(reduce_mem=True)
+            return source_all, source_all_5sels, calibrator
+
+        if self.basic['mode'] == 'data_y1sources':
+            lens_all = pf.getdata(self.paths['lens'])
+            random_all = pf.getdata(self.paths['randoms'])
+            return lens_all, random_all
+
+        if self.basic['mode'] == 'mice':
+            lens_all = pf.getdata(self.paths['lens_mice'])
+            random_all = pf.getdata(self.paths['randoms_mice'])
+            return lens_all, random_all
+
+        if self.basic['mode'] == 'buzzard':
+            lens_all = pf.getdata(self.paths['lens_buzzard'])
+            random_all = pf.getdata(self.paths['randoms_buzzard'])
+            source_all = self.load_buzzard()
+            return lens_all, random_all, source_all
+
+
+
+class Measurement(GGL):
+    """
+    Subclass that runs the gglensing measurement for all the lens-source bin combinations.
+    Includes:
+    - Mean response calculation.
+    - Random points subtraction.
+    - Jackknife covariance calculation.
+    - Boost factors calculation.
+    """
+
+    def __init__(self, basic, config, paths, zbins, plotting):
+        GGL.__init__(self, basic, config, paths)
+        self.zbins = zbins
+        self.plotting = plotting
+
+    def get_path_test(self, lbin, sbin):
+        return os.path.join(self.paths['runs_config'], 'measurement', lbin + '_' + sbin) + '/'
+
+    def get_path_test_allzbins(self):
+        return os.path.join(self.paths['runs_config'], 'measurement') + '/'
+
+    def get_twopointfile_name(self, string):
+        return os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits' % string)
+
+    def sel_lens_zbin(self, lens_all, lbin):
+        """
+        Select lens bins depending on whether its data or sims.
+        Input: 
+        - lens_all: dictionary with all the relevant columns of the lenses: ra, dec, z, w, jk.
+        - lbin: which lens bin to select, e.g., 'l1'. Redshift edges defined in info.py file.
+        Returns:
+        - Lens: Selected reshift bin object with the same info.
+
+        """
+        # Decide how to bin the lenses
+        if 'ztrue' in self.config['zllim_v']:
+            print 'Using ztrue to bin the lenses.'
+            lens = lens_all[(lens_all['ztrue'] > self.zbins[lbin][0]) & (lens_all['ztrue'] < self.zbins[lbin][1])]
+        else:
+            print 'Using z to bin the lenses.'
+            lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
+
+        print 'Length lens', lbin, len(lens['ra']), self.zbins[lbin][0], self.zbins[lbin][1]
+
+        if self.basic['mode'] == 'buzzard':
+            zbins, nz_l = self.get_nz(lens['ztrue'])		    
+            np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
+
+        if self.basic['mode'] == 'mice':
+            zbins, nz_l = self.get_nz(lens['z'])		    
+            np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%lbin,nz_l)
+
+        return lens
+ 
+
+    def sel_random_zbin(self, random_all, lbin):
+        """
+        Similar function as sel_lens_zbin for random points.
+        """
+
+        if self.basic['mode']  == 'data':
+            random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+        if self.basic['mode']  == 'buzzard' or self.basic['mode'] == 'mice':
+            random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+        if self.basic['mode']  == 'mice_old':
+            random = random_all[l*len(random_all)/len(self.zbins['lbins']):(l+1)*len(random_all)/len(self.zbins['lbins'])]
+        return random
+
+    
+    def run(self):
+
+	make_directory(self.get_path_test_allzbins()+'/nzs/')
+ 
+	if self.basic['mode'] == 'data':
+            mean_shears = []
+            
+        if self.basic['mode'] == 'mice':
+            lens_all, random_all = self.load_data_or_sims()
+            
+        if self.basic['mode'] == 'buzzard':
+            lens_all, random_all, source_all = self.load_data_or_sims()
+
+        for sbin in self.zbins['sbins']:
+
+    		print 'Running measurement for source %s.' % sbin
+ 
+		if self.basic['mode'] == 'data':
+                    source_all, source_all_5sels, calibrator = self.load_data_or_sims()
+                    print 'Source bin:', self.zbins[sbin][0], self.zbins[sbin][1]
+		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, bin_low=self.zbins[sbin][0], bin_high=self.zbins[sbin][1], reduce_mem=True)
+		    R_mean = source['R_mean']
+                    print 'Length source', sbin, len(source['ra'])
+
+                    # New!! we need to subtract the mean shear 
+                    source, mean_shear = self.subtract_mean_shear(source)
+                    mean_shears.append(mean_shear)
+
+                    # Delete these huge dictionaries to save memory while running treecorr (otherwise crashes, giving bus error)
+                    del source_all
+                    del source_all_5sels
+                    del calibrator
+
+		if self.basic['mode'] == 'data_y1sources':
+		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
+
+    		if self.basic['mode'] == 'mice':
+    		    """
+    		    In this case there are no responses, so we set it to one.
+    		    """
+    		    R_mean = 1.
+                    #source = source_all[(source_all['z'] > self.zbins[sbin][0]) & (source_all['z'] < self.zbins[sbin][1])]
+                    hdu = pf.open(self.paths['mice_y1sources'] + 'mice2_shear_fullsample_downsampled025_bins%s.fits'%sbin[-1])
+                    mice = hdu[1].data
+ 
+                    if np.isnan(mice['ra']).any():
+                        print 'There is a nan in the source catalog, in ra.'
+                        mask_nan = np.isnan(mice['ra'])==False
+                        print 'There are %d nans.'%(len(mice['ra']) - mask_nan.sum())
+                        
+                    if np.isnan(mice['dec']).any():
+                        print 'There is a nan in the source catalog, in dec.'
+
+                    source = {}
+                    source['ra'] = mice['ra']
+                    source['dec'] = mice['dec']
+                    source['e1'] = -mice['e1'] # flip e1 sign
+                    source['e2'] = mice['e2']
+                    source['ztrue'] = mice['ztrue']
+                    source['w'] = mice['w']
+                    
+                    print 'Length source', sbin, len(source['ra'])
+                    print 'np.std(e1)', np.std(source['e1'])
+                    print 'np.std(e2)', np.std(source['e2'])
+                    zbins, nz_s = self.get_nz_weighted(source['ztrue'], source['w'])		    
+                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'zbins',zbins,header='zbin limits')
+                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
+                    
+		if self.basic['mode'] == 'buzzard':
+    		    """
+    		    In this case there are no responses, so we set it to one.
+    		    """
+    		    R_mean = 1.
+		    source = {}
+		    for k in source_all.keys():
+			source[k] = source_all[k][(source_all['zbin'] >= self.zbins[sbin][0]) & (source_all['zbin'] <= self.zbins[sbin][1])]
+                    print 'Length source', sbin, len(source['ra'])
+                    print 'np.std(e1)', np.std(source['e1'])
+                    print 'np.std(e2)', np.std(source['e2'])
+                    
+                    zbins, nz_s = self.get_nz(source['ztrue'])		    
+                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'zbins',zbins,header='zbin limits')
+                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
+
+    		for l, lbin in enumerate(self.zbins['lbins']):
+                    path_test = self.get_path_test(lbin, sbin)
+
+                    #if os.path.exists(path_test + 'mean_gt_boosted'):
+                    if os.path.exists(path_test + 'gt_boosted'):
+                        print('Measurements for this bin already exist. SKIPPING!')
+
+                    else:
+                        print 'Running measurement for lens %s.' % lbin
+                        make_directory(path_test)
+ 
+                        # Lenses run
+		        if self.basic['mode'] == 'data':
+                            lens_all = pf.getdata(self.paths['lens'])
+                        lens = self.sel_lens_zbin(lens_all, lbin)
+                        if self.basic['mode'] == 'data':
+                            # remove this object to save memory before calling Treecorr.
+                            del lens_all
+                            print source
+                        if np.isnan(lens['ra']).any():
+                            print 'There is a nan in the lens catalog, in ra.'
+                        if np.isnan(lens['dec']).any():
+                            print 'There is a nan in the lens catalog, in dec.'
+                        theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
+                        self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, random_bool=False)
+                        #theta, gts, gxs, errs, weights, npairs = self.load_runs(path_test, random_bool=False)
+                        gtnum_jk, gxnum_jk, wnum_jk = self.numerators_jackknife(gts, gxs, weights)
+                        gtnum_ex, gxnum_ex, wnum_ex = self.numerators_exact(gts, gxs, weights)
+                        make_directory(self.get_path_test_allzbins()+'/weights/')
+                        np.savetxt(self.get_path_test_allzbins()+'/weights/'+'w_%s_%s'%(lbin, sbin),wnum_ex,header='weights (sum of all JK regions)')
+                        
+                        # Randoms run
+                        if self.basic['mode'] == 'data':
+                            # Randoms run
+                            random_all = pf.getdata(self.paths['randoms'])
+                        random = self.sel_random_zbin(random_all, lbin)
+                        if self.basic['mode'] == 'data':
+                            # remove this object to save memory before calling Treecorr.
+                            del random_all
+                            del lens
+                        theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
+                        self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, random_bool=True)
+                        gtnum_jk_r, gxnum_jk_r, wnum_jk_r = self.numerators_jackknife(gts, gxs, weights)
+                        gtnum_ex_r, gxnum_ex_r, wnum_ex_r = self.numerators_exact(gts, gxs, weights)
+
+                        # Combine final estimator for JK covariance and mean, with and without boost factors
+                        gt_all = (gtnum_jk / wnum_jk) / R_mean - (gtnum_jk_r / wnum_jk_r) / R_mean
+                        gx_all = (gxnum_jk / wnum_jk) / R_mean - (gxnum_jk_r / wnum_jk_r) / R_mean
+
+                        try:
+                            w_l = lens['w']
+                            print 'Weights found in foreground catalog.'
+                        except:
+                            print 'There are no identified weights for the foreground sample.'
+                            w_l = np.ones(len(lens['ra']))
+
+                        bf_all = self.compute_boost_factor_jackknife(lens['jk'], random['jk'], wnum_jk, wnum_jk_r, w_l)
+                        gt_all_boosted = bf_all*(gtnum_jk / wnum_jk)/R_mean - (gtnum_jk_r / wnum_jk_r) / R_mean 
+
+                        # Combine final estimator for exact results (as done without JK)
+                        gt = (gtnum_ex / wnum_ex) / R_mean - (gtnum_ex_r / wnum_ex_r) / R_mean
+                        gx = (gxnum_ex / wnum_ex) / R_mean - (gxnum_ex_r / wnum_ex_r) / R_mean                        
+                        bf = self.compute_boost_factor_exact(wnum_ex, wnum_ex_r, lens, random)
+                        gt_boosted = bf*(gtnum_ex/wnum_ex)/R_mean - (gtnum_ex_r/wnum_ex_r)/R_mean 
+
+                        self.process_run(gt, gt_all, theta, path_test, 'gt')
+                        self.process_run(gx, gx_all, theta, path_test, 'gx')
+                        self.process_run((gtnum_ex_r/wnum_ex_r)/R_mean, (gtnum_jk_r/wnum_jk_r)/R_mean, theta, path_test, 'randoms')
+                        self.process_run(bf, bf_all, theta, path_test, 'boost_factor')
+                        self.process_run(gt_boosted, gt_all_boosted, theta, path_test, 'gt_boosted')
+
+                        
+        if self.basic['mode'] == 'data':
+            np.savetxt(self.get_path_test_allzbins()+'mean_shears', mean_shears, header = 'Mean_e1 Mean_e2 (for each redshift bin)')
+
+
+                    
 
     def save_spectrum_measurement_file(self):
         """
@@ -1760,6 +1775,9 @@ class ResponsesScale(GGL):
     def get_path_fidmeasurement(self, lbin, sbin):
         return os.path.join(self.paths['runs_config'], 'measurement', lbin + '_' + sbin) + '/'
     
+    def get_twopointfile_name(self, string):
+        return os.path.join(self.get_path_test_allzbins() + '%s_nkresp_twopointfile.fits' % string)
+
     def save_responses_nk(self, path_test, responses, end):
         np.savetxt(path_test + 'responses_nk_no_jackknife_%s' % end, responses,
                    header='theta(arcmin), R_nk, Rgamma_nk, Rs_nk')
@@ -1785,84 +1803,97 @@ class ResponsesScale(GGL):
     def run(self):
 
         make_directory(self.get_path_test_allzbins())
-        if self.basic['mode'] == 'data':
-            lens_all, random_all, source_all, source_all_5sels, calibrator = self.load_data_or_sims()
-        else:
-            raise Exception('It makes no sense to run this test on a simulation. Mode should be data, edit on info.py file.')
-
         for sbin in self.zbins['sbins']:
 
-    		print 'Running measurement for source %s.' % sbin
-                
-                print 'Source bin:', self.zbins[sbin][0], self.zbins[sbin][1]
-                source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, bin_low=self.zbins[sbin][0], bin_high=self.zbins[sbin][1], reduce_mem=True, ind_responses=True)
-                # R_mean = source['R_mean'] # average for the tomographic bin
-                # R = source['R'] # total R for each individual galaxy
-                print 'Length source', sbin, len(source['ra'])
+            if self.basic['mode'] == 'data':
+                source_all, source_all_5sels, calibrator = self.load_data_or_sims()
+            else:
+                raise Exception('It makes no sense to run this test on a simulation. Mode should be data, edit on info.py file.')
 
-                # New!! we need to subtract the mean shear # not really needed here but leave it just in case
-                source, mean_shear = self.subtract_mean_shear(source)
+            print 'Running measurement for source %s.' % sbin
+            print 'Source bin:', self.zbins[sbin][0], self.zbins[sbin][1]
+            
+            source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, bin_low=self.zbins[sbin][0], bin_high=self.zbins[sbin][1], reduce_mem=True, ind_responses=True)
+            # R_mean = source['R_mean'] # average for the tomographic bin
+            # R = source['R'] # total R for each individual galaxy
+            print 'Length source', sbin, len(source['ra'])
 
-    		for l, lbin in enumerate(self.zbins['lbins']):
-                    path_test = self.get_path_test(lbin, sbin)
-                    path_fid = self.get_path_fidmeasurement(lbin, sbin) # where the fiducial measurements are
+            # Deleting arrays we do not need before running Treecorr due to memory issues.
+            del source_all
+            del source_all_5sels
+            del calibrator
 
-                    if os.path.exists(path_test + 'gt_boosted'):
-                        print('Measurements for this bin already exist. SKIPPING!')
+            # New!! we need to subtract the mean shear # not really needed here but leave it just in case
+            source, mean_shear = self.subtract_mean_shear(source)
 
-                    else:
-                        print 'Running measurement for lens %s.' % lbin
-                        make_directory(path_test)
- 
-                        # Lenses run
-                        # ----------------
-                        lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
-                        print 'Length lens', lbin, len(lens['ra']), self.zbins[lbin][0], self.zbins[lbin][1]
-                        theta, R_nk, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NK_R')
-                        theta_fid, gts, gxs, errs, weights_fid, npairs_fid = self.load_runs(path_fid, random_bool=False) # Load from fiducial run
-                        assert np.allclose(theta,theta_fid)
-                        assert np.allclose(weights, weights_fid)
-                        
-                        R_jk, _, wnum_jk = self.numerators_jackknife(R_nk, R_nk, weights)
-                        Rnum_ex, _, wnum_ex = self.numerators_exact(R_nk, R_nk, weights)
+            for l, lbin in enumerate(self.zbins['lbins']):
+                path_test = self.get_path_test(lbin, sbin)
+                path_fid = self.get_path_fidmeasurement(lbin, sbin) # where the fiducial measurements are
 
-                        # Do this too for the loaded fiducial run to be able to combine here
-                        gtnum_jk, gxnum_jk, wnum_jk = self.numerators_jackknife(gts, gxs, weights)
-                        gtnum_ex, gxnum_ex, wnum_ex = self.numerators_exact(gts, gxs, weights)
-                        
-                        # Randoms run
-                        # ----------------
-                        random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
-                        theta, R_nk_r, weights, npairs = self.run_treecorr_jackknife(random, source, 'NK_R')
-                        theta_fid, gts, gxs, errs, weights_fid, npairs_fid = self.load_runs(path_fid, random_bool=True) # Load from fiducial run
-                        assert np.allclose(theta,theta_fid)
-                        assert np.allclose(weights, weights_fid)
-                        
-                        R_jk_r, _, wnum_jk_r = self.numerators_jackknife(R_nk_r, R_nk_r, weights)
-                        R_ex_r, _, wnum_ex_r = self.numerators_exact(R_nk_r, R_nk_r, weights)
-                        
-                        gtnum_jk_r, gxnum_jk_r, wnum_jk_r = self.numerators_jackknife(gts, gxs, weights)
-                        gtnum_ex_r, gxnum_ex_r, wnum_ex_r = self.numerators_exact(gts, gxs, weights)
+                if os.path.exists(path_test + 'gt_boosted'):
+                    print('Measurements for this bin already exist. SKIPPING!')
 
-                        # Combine final estimator for JK covariance and mean, with and without boost factors
-                        # ----------------
-                        bf_all = self.compute_boost_factor_jackknife(lens['jk'], random['jk'], wnum_jk, wnum_jk_r, lens['w'])
-                        gt_all_boosted = bf_all*gtnum_jk/R_jk - gtnum_jk_r/R_jk_r
-                        gx_all = gxnum_jk/R_jk - gxnum_jk_r/R_jk_r
+                else:
+                    print 'Running measurement for lens %s.' % lbin
+                    make_directory(path_test)
 
-                        # Combine final estimator for exact results (as if done without JK)
-                        # ----------------
-                        bf = self.compute_boost_factor_exact(wnum_ex, wnum_ex_r, lens, random)
-                        gt_boosted = bf*gtnum_ex/Rnum_ex - gtnum_ex_r/R_ex_r 
-                        gx = gxnum_ex/Rnum_ex - gxnum_ex_r/R_ex_r
+                    # Preparing arrays for lenses and randoms
+                    # ---------------------------------------------
+                    lens_all = pf.getdata(self.paths['lens'])
+                    random_all = pf.getdata(self.paths['randoms'])
+                    lens = lens_all[(lens_all['z'] > self.zbins[lbin][0]) & (lens_all['z'] < self.zbins[lbin][1])]
+                    random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
+                    del lens_all
+                    del random_all
+                    print 'Length lens', lbin, len(lens['ra']), self.zbins[lbin][0], self.zbins[lbin][1]
+                    print 'Length randoms', lbin, len(random['ra']), self.zbins[lbin][0], self.zbins[lbin][1]
 
-                        # Get the mean and standard deviation of all these quantities and save them in files
-                        # ---------------
-                        self.process_run(gtnum_ex_r/R_ex_r, gtnum_jk_r/R_jk_r, theta, path_test, 'randoms')
-                        self.process_run(bf, bf_all, theta, path_test, 'boost_factor')
-                        self.process_run(gt_boosted, gt_all_boosted, theta, path_test, 'gt_boosted')
-                        self.process_run(gx, gx_all, theta, path_test, 'gx')
-                        self.process_run(Rnum_ex/wnum_ex, R_jk/wnum_jk, theta, path_test, 'R_nk')
+                    # Lenses run
+                    # ----------------
+                    theta, R_nk, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NK_R')
+                    theta_fid, gts, gxs, errs, weights_fid, npairs_fid = self.load_runs(path_fid, random_bool=False) # Load from fiducial run
+                    assert np.allclose(theta,theta_fid)
+                    assert np.allclose(weights, weights_fid)
+
+                    R_jk, _, wnum_jk = self.numerators_jackknife(R_nk, R_nk, weights)
+                    Rnum_ex, _, wnum_ex = self.numerators_exact(R_nk, R_nk, weights)
+
+                    # Do this too for the loaded fiducial run to be able to combine here
+                    gtnum_jk, gxnum_jk, wnum_jk = self.numerators_jackknife(gts, gxs, weights)
+                    gtnum_ex, gxnum_ex, wnum_ex = self.numerators_exact(gts, gxs, weights)
+
+                    # Randoms run
+                    # ----------------
+                    theta, R_nk_r, weights, npairs = self.run_treecorr_jackknife(random, source, 'NK_R')
+                    theta_fid, gts, gxs, errs, weights_fid, npairs_fid = self.load_runs(path_fid, random_bool=True) # Load from fiducial run
+                    assert np.allclose(theta,theta_fid)
+                    assert np.allclose(weights, weights_fid)
+
+                    R_jk_r, _, wnum_jk_r = self.numerators_jackknife(R_nk_r, R_nk_r, weights)
+                    R_ex_r, _, wnum_ex_r = self.numerators_exact(R_nk_r, R_nk_r, weights)
+
+                    gtnum_jk_r, gxnum_jk_r, wnum_jk_r = self.numerators_jackknife(gts, gxs, weights)
+                    gtnum_ex_r, gxnum_ex_r, wnum_ex_r = self.numerators_exact(gts, gxs, weights)
+
+                    # Combine final estimator for JK covariance and mean, with and without boost factors
+                    # ----------------
+                    bf_all = self.compute_boost_factor_jackknife(lens['jk'], random['jk'], wnum_jk, wnum_jk_r, lens['w'])
+                    gt_all_boosted = bf_all*gtnum_jk/R_jk - gtnum_jk_r/R_jk_r
+                    gx_all = gxnum_jk/R_jk - gxnum_jk_r/R_jk_r
+
+                    # Combine final estimator for exact results (as if done without JK)
+                    # ----------------
+                    bf = self.compute_boost_factor_exact(wnum_ex, wnum_ex_r, lens, random)
+                    gt_boosted = bf*gtnum_ex/Rnum_ex - gtnum_ex_r/R_ex_r 
+                    gx = gxnum_ex/Rnum_ex - gxnum_ex_r/R_ex_r
+
+                    # Get the mean and standard deviation of all these quantities and save them in files
+                    # ---------------
+                    self.process_run(gtnum_ex_r/R_ex_r, gtnum_jk_r/R_jk_r, theta, path_test, 'randoms')
+                    self.process_run(bf, bf_all, theta, path_test, 'boost_factor')
+                    self.process_run(gt_boosted, gt_all_boosted, theta, path_test, 'gt_boosted')
+                    self.process_run(gx, gx_all, theta, path_test, 'gx')
+                    self.process_run(Rnum_ex/wnum_ex, R_jk/wnum_jk, theta, path_test, 'R_nk')
 
     
     def compute_Rs(self, e_ix, delta_gamma):
