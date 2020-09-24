@@ -1,7 +1,8 @@
 import yaml
 import sys
-sys.path.append('../../destest/')
-import destest
+#sys.path.append('../../destest/')
+#import destest
+from destest import destest
 import treecorr
 from info import config
 
