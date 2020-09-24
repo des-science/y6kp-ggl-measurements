@@ -12,7 +12,7 @@ import os
 import jk
 import ipdb
 import h5py
-print config
+print(config)
 
 def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, path_save, sample):
 
@@ -28,8 +28,8 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
         path_save: where the files are saved.
         sample: string, can be 'redmagic' or 'maglim'.
         """
-        print 'Sample:', sample
-        print 'Saving lens sample here:', path_save
+        print ('Sample:', sample)
+        print ('Saving lens sample here:', path_save)
 
         ra_l  = lens_selector.get_col('ra')[0]
         dec_l = lens_selector.get_col('dec')[0]
@@ -45,7 +45,7 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
 
         # Select galaxies that belong to some lens z-bin
         zbins = zbins['lims']
-        print 'zbins:', zbins
+        print ('zbins:', zbins)
         maskzl = ((z_l>zbins[0])&(z_l<zbins[-1]))
         ra_l = ra_l[maskzl]
         dec_l = dec_l[maskzl]
@@ -54,16 +54,16 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
         ids = ids[maskzl]
         w_l = w_l[maskzl]
 
-        print 'Weights lenses:', w_l
+        print ('Weights lenses:', w_l)
         assert len(ra_l)==len(ids), 'Something is wrong.'
-        print 'Range of lens weights:', np.min(w_l), np.max(w_l)
-        print 'Mean of lens weights:', np.mean(w_l)
-        print 'Len zero lens weights:', len(w_l[w_l==0])
+        print ('Range of lens weights:', np.min(w_l), np.max(w_l))
+        print ('Mean of lens weights:', np.mean(w_l))
+        print ('Len zero lens weights:', len(w_l[w_l==0]))
 
         if sample == 'redmagic':
                 f = h5py.File(config['filename_mastercat'],'r')
                 path_randoms = 'randoms/redmagic/combined_sample_fid/'
-                print 'Loadingt the randoms directly from catalog here:', path_randoms
+                print ('Loading the randoms directly from catalog here:', path_randoms)
                 ra_r = f['%sra'%path_randoms][:]  
                 dec_r = f['%sdec'%path_randoms][:]  
                 z_r = f['%sz'%path_randoms][:]
@@ -74,10 +74,10 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
                 dec_r = ran_selector.get_col('dec')[0] 
                 z_r = ran_selector.get_col('z')[0] 
                 w_r = ran_selector.get_col('weight')[0] 
-                print 'Original weights randoms:', w_r
+                print ('Original weights randoms:', w_r)
                 w_r = np.ones(len(ra_r))
-                print 'Weights randoms, setting them to one:', w_r
-                print 'Redshift of random points', z_r
+                print ('Weights randoms, setting them to one:', w_r)
+                print ('Redshift of random points', z_r)
         
         # Number of galaxies in each lens bin
         n_lens = np.array([len(ra_l[(z_l<zbins[i+1])&(z_l>zbins[i])]) for i in range(len(zbins)-1)])
@@ -102,8 +102,8 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
 
         print 'd', d
         '''
-        print 'n_lens', len(ra_l), n_lens
-        print 'n_rand', len(ra_r), n_rand
+        print ('n_lens', len(ra_l), n_lens)
+        print ('n_rand', len(ra_r), n_rand)
         # Path to save the lens catalogs already jackknifed
         os.system('mkdir -p %s'%path_save)
 
@@ -113,7 +113,7 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
                 jk.jk_centers(ra_r,dec_r,path_save)
                 jk_l = jk.jk(ra_l,dec_l,path_save)
         jk_r = jk.jk(ra_r,dec_r,path_save)
-
+        
         c1 = fits.Column(name='RA', format='E', array=ra_l)
         c2 = fits.Column(name='DEC', format='E', array=dec_l)
         c3 = fits.Column(name='Z', format='E', array=z_l)
@@ -135,7 +135,7 @@ def create_lens(lens_selector, ran_selector, pz_selector, gold_selector, zbins, 
         t.writeto('%s/random.fits'%path_save, overwrite=True)
 
 
-print zbins
+print (zbins)
 # Read yaml file that defines all the catalog selections used
 params = yaml.load(open(paths['yaml']))
 params['param_file'] = paths['yaml']
