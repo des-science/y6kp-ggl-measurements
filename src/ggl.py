@@ -17,8 +17,9 @@ from scipy import interpolate
 import functions
 import sys
 import yaml
-sys.path.append('../../destest/')
-import destest
+#sys.path.append('../../destest/')
+#import destest
+from destest import destest
 import destest_functions
 import ipdb
 import h5py as h
@@ -535,7 +536,7 @@ class GGL(object):
 
         # We choose a healpix grid to select sources around each lens patch, to reduce memory
         # Choose nside for this grid here
-        nside = 8
+        nside = 4
         theta = (90.0 - dec_s) * np.pi / 180.
         phi = ra_s * np.pi / 180.
         pix = hp.ang2pix(nside, theta, phi)
@@ -1218,7 +1219,6 @@ class Measurement(GGL):
                         if self.basic['mode'] == 'data':
                             # remove this object to save memory before calling Treecorr.
                             del lens_all
-                            print source
                         if np.isnan(lens['ra']).any():
                             print 'There is a nan in the lens catalog, in ra.'
                         if np.isnan(lens['dec']).any():
@@ -1239,7 +1239,6 @@ class Measurement(GGL):
                         if self.basic['mode'] == 'data':
                             # remove this object to save memory before calling Treecorr.
                             del random_all
-                            del lens
                         theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
                         self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, random_bool=True)
                         gtnum_jk_r, gxnum_jk_r, wnum_jk_r = self.numerators_jackknife(gts, gxs, weights)
