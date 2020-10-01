@@ -58,7 +58,7 @@ if basic['pool']:
     basic['num_threads'] = 1
     basic['Ncores'] = 10
     
-if not basic['pool']: basic['num_threads'] = 10
+if not basic['pool']: basic['num_threads'] = 1
 
 
 """
@@ -76,13 +76,14 @@ config_data = {
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_03_31_20.h5',
-    'lens_v': 'redmagic_x40randoms',
-    #'lens_v': 'maglim',
+    #'lens_v': 'redmagic_x40randoms',
+    #'lens_v': 'redmagic',
+    'lens_v': 'maglim_x40randoms',
     'lens_w': True,  #use LSS weights for the lenses
     'zslim_v': 'som',
     'zs_v': 'bpz',
     'zllim_v': 'y3',
-    'source_only_close_to_lens': False
+    'source_only_close_to_lens': True
     }
 
 config_data['mastercat_v'] = config_data['filename_mastercat'][37:-3]
@@ -120,7 +121,8 @@ def path_config(config):
         'njk_%d'%config['njk'],
         'thbin_%0.2f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
         'bslop_%0.1g'%config['bslop'],
-        'source_only_close_to_lens_%s'%config['source_only_close_to_lens']
+        'source_only_close_to_lens_%s_nside4'%config['source_only_close_to_lens']
+        #'source_only_close_to_lens_%s'%config['source_only_close_to_lens']
     ) 
 
 def path_config_mice(config):

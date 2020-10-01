@@ -1,5 +1,5 @@
 from info import basic, paths, config, zbins, plotting, source_nofz_pars, sysmaps
-from ggl import GGL, Measurement, ResponsesScale, ResponsesProjection, TestStars, TestPSF, TestSizeSNR, TestSysMaps
+from ggl import GGL, Measurement, ResponsesScale, TestStars, TestPSF, TestSizeSNR, TestSysMaps
 
 
 print 'Starting measurement class, plotting...'

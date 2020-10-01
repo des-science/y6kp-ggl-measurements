@@ -943,12 +943,13 @@ class GGL(object):
             '''
 
         if self.basic['mode'] == 'mice':
-
+            '''
             lensfile = pf.open(self.paths['lens_nz'])
             lens_nz = twopoint.NumberDensity.from_fits(lensfile[1])
             assert (lens_nz.name=='nz_lens')
+            '''
             
-            # Sources
+            # Lenses and Sources
             # zbins
             zbins = np.loadtxt(self.get_path_test_allzbins() +'nzs/'+ 'zbins')
             zlow = zbins[:-1]
@@ -960,6 +961,13 @@ class GGL(object):
                 nzs.append(nz)
             source_nz = twopoint.NumberDensity('nz_source', zlow, z, zhigh, nzs)
 
+            nzs = []
+            for lbin in self.zbins['lbins']:
+                nz = np.loadtxt(self.get_path_test_allzbins() +'nzs/'+ 'nz_%s'%lbin)
+                nzs.append(nz)
+            lens_nz = twopoint.NumberDensity('nz_lens', zlow, z, zhigh, nzs)
+
+            
         if self.basic['mode'] == 'buzzard':
             # zbins
             zbins = np.loadtxt(self.get_path_test_allzbins() +'nzs/'+ 'zbins')

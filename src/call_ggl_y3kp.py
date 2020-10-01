@@ -27,9 +27,12 @@ if run_measurement:
 
 if run_responses_nk:
     responses = ResponsesScale(basic, config, paths, zbins, plotting)
-    responses.run()
-    responses.plot('lens', mask_scales =False)
-    responses.plot('lens', mask_scales =True)
+    if basic['run']:
+        responses.run()
+    if basic['savetwopoint']:
+        responses.save_2pointfile('gt_boosted')
+    #responses.plot('lens', mask_scales =False)
+    #responses.plot('lens', mask_scales =True)
     #responses.plot_sigmas('lens', mask_scales =False)
     #responses.plot('random')
 
