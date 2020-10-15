@@ -1,11 +1,12 @@
 import numpy as np
 import sys
 import yaml
-sys.path.append('../../destest/')
 sys.path.append('../../kmeans_radec/')
 import destest
 import astropy.io.fits as fits
 from info import zbins, config, paths
+#sys.path.append('../../destest/')
+from destest import destest
 import destest_functions
 import kmeans_radec
 import os
