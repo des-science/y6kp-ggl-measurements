@@ -89,8 +89,16 @@ class GGL(object):
             source['e1'] = data[params['source_group']]['e1_matched_se'][:][index]
             source['e2'] = -data[params['source_group']]['e2_matched_se'][:][index]
         else:
-            source['e1'] = data[params['source_group']]['g1'][:][index]
-            source['e2'] = -data[params['source_group']]['g2'][:][index]
+            if self.config['reduced_shear']:
+                # Use reduced shear quantity for tests
+                kappa = data[params['source_group']]['kappa'][:][index]
+                # divide by 1-kappa to get the reduced shear
+                source['e1'] = data[params['source_group']]['g1'][:][index]/(1-kappa)
+                source['e2'] = -data[params['source_group']]['g2'][:][index]/(1-kappa)
+            else:
+                # using true shears (notation is misleading,see slack conversation with Carles and Joe De Rose)
+                source['e1'] = data[params['source_group']]['g1'][:][index]
+                source['e2'] = -data[params['source_group']]['g2'][:][index]
 	source['zbpz'] = data[params['source_bpz_group']]['zmean_sof'][:][index]
 	source['ztrue'] = data[params['source_bpz_group']]['z'][:][index]
         source['zbin'] = data[params['source_sompz_group']]['bhat'][:][index]
@@ -207,8 +215,8 @@ class GGL(object):
             inherit=source_selector)
 
         # BPZ (or DNF) catalog, depending on paths in cats.yaml file (exchange bpz and dnf)
-        bpz_selector = destest_functions.load_catalog(
-            params, 'bpz', 'mcal', params['bpz_group'], params['bpz_table'], params['bpz_path'], inherit=source_selector)
+        #bpz_selector = destest_functions.load_catalog(
+        #    params, 'bpz', 'mcal', params['bpz_group'], params['bpz_table'], params['bpz_path'], inherit=source_selector)
 
         # SOM PZ to split in bins:
         som_selector = destest_functions.load_catalog(
@@ -536,7 +544,7 @@ class GGL(object):
 
         # We choose a healpix grid to select sources around each lens patch, to reduce memory
         # Choose nside for this grid here
-        nside = 4
+        nside = self.config['nside']
         theta = (90.0 - dec_s) * np.pi / 180.
         phi = ra_s * np.pi / 180.
         pix = hp.ang2pix(nside, theta, phi)
@@ -1149,8 +1157,8 @@ class Measurement(GGL):
 		    R_mean = source['R_mean']
                     print 'Length source', sbin, len(source['ra'])
 
-                    # New!! we need to subtract the mean shear 
                     source, mean_shear = self.subtract_mean_shear(source)
+                    print mean_shear
                     mean_shears.append(mean_shear)
 
                     # Delete these huge dictionaries to save memory while running treecorr (otherwise crashes, giving bus error)
@@ -1212,18 +1220,20 @@ class Measurement(GGL):
     		for l, lbin in enumerate(self.zbins['lbins']):
                     path_test = self.get_path_test(lbin, sbin)
 
-                    #if os.path.exists(path_test + 'mean_gt_boosted'):
                     if os.path.exists(path_test + 'gt_boosted'):
                         print('Measurements for this bin already exist. SKIPPING!')
 
                     else:
                         print 'Running measurement for lens %s.' % lbin
                         make_directory(path_test)
- 
+
                         # Lenses run
-		        if self.basic['mode'] == 'data':
+                        if self.basic['mode'] == 'data':
                             lens_all = pf.getdata(self.paths['lens'])
+
                         lens = self.sel_lens_zbin(lens_all, lbin)
+                        print 'Number of lenses in bin %s'%lbin, len(lens['ra'])
+                        print 'Sum of weights', np.sum(lens['w']) 
                         if self.basic['mode'] == 'data':
                             # remove this object to save memory before calling Treecorr.
                             del lens_all
@@ -1231,6 +1241,7 @@ class Measurement(GGL):
                             print 'There is a nan in the lens catalog, in ra.'
                         if np.isnan(lens['dec']).any():
                             print 'There is a nan in the lens catalog, in dec.'
+
                         theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(lens, source, 'NG')
                         self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, random_bool=False)
                         #theta, gts, gxs, errs, weights, npairs = self.load_runs(path_test, random_bool=False)
@@ -1238,17 +1249,21 @@ class Measurement(GGL):
                         gtnum_ex, gxnum_ex, wnum_ex = self.numerators_exact(gts, gxs, weights)
                         make_directory(self.get_path_test_allzbins()+'/weights/')
                         np.savetxt(self.get_path_test_allzbins()+'/weights/'+'w_%s_%s'%(lbin, sbin),wnum_ex,header='weights (sum of all JK regions)')
-                        
+
                         # Randoms run
                         if self.basic['mode'] == 'data':
                             # Randoms run
                             random_all = pf.getdata(self.paths['randoms'])
                         random = self.sel_random_zbin(random_all, lbin)
+                        print 'Number of randoms in bin %s'%lbin, len(random['ra'])
+
                         if self.basic['mode'] == 'data':
                             # remove this object to save memory before calling Treecorr.
                             del random_all
+
                         theta, gts, gxs, errs, weights, npairs = self.run_treecorr_jackknife(random, source, 'NG')
                         self.save_runs(path_test, theta, gts, gxs, errs, weights, npairs, random_bool=True)
+                        #theta, gts, gxs, errs, weights, npairs = self.load_runs(path_test, random_bool=True)
                         gtnum_jk_r, gxnum_jk_r, wnum_jk_r = self.numerators_jackknife(gts, gxs, weights)
                         gtnum_ex_r, gxnum_ex_r, wnum_ex_r = self.numerators_exact(gts, gxs, weights)
 
@@ -1266,6 +1281,7 @@ class Measurement(GGL):
                         bf_all = self.compute_boost_factor_jackknife(lens['jk'], random['jk'], wnum_jk, wnum_jk_r, w_l)
                         gt_all_boosted = bf_all*(gtnum_jk / wnum_jk)/R_mean - (gtnum_jk_r / wnum_jk_r) / R_mean 
 
+
                         # Combine final estimator for exact results (as done without JK)
                         gt = (gtnum_ex / wnum_ex) / R_mean - (gtnum_ex_r / wnum_ex_r) / R_mean
                         gx = (gxnum_ex / wnum_ex) / R_mean - (gxnum_ex_r / wnum_ex_r) / R_mean                        
@@ -1278,11 +1294,10 @@ class Measurement(GGL):
                         self.process_run(bf, bf_all, theta, path_test, 'boost_factor')
                         self.process_run(gt_boosted, gt_all_boosted, theta, path_test, 'gt_boosted')
 
-                        
         if self.basic['mode'] == 'data':
             np.savetxt(self.get_path_test_allzbins()+'mean_shears', mean_shears, header = 'Mean_e1 Mean_e2 (for each redshift bin)')
 
-
+                        
                     
 
     def save_spectrum_measurement_file(self):
@@ -1655,6 +1670,17 @@ class Measurement(GGL):
         plt.rc('text', usetex=self.plotting['latex'])
         plt.rc('font', family='serif')
 
+        if self.plotting['use_cmap']:
+            cmap = self.plotting['cmap']
+            cmap_step = 0.25
+            colors = []
+            for s in range(len(self.zbins['sbins'])):
+                colors.append(plt.get_cmap(cmap)(cmap_step * s))
+            
+        else:
+            colors = self.plotting['colors']
+
+        
         labels = [self.plotting['catname']]
         c = 0  # If adding im3shape, s=1
         markers = ['o', '^']
@@ -1672,8 +1698,8 @@ class Measurement(GGL):
                 th, gt, err = np.loadtxt(path_test + 'randoms', unpack=True)
 
                 ax[s][l].axhline(y=0, ls=':', color='k')
-                ax[s][l].errorbar(th * (1 + 0.07 * c), gt, err, fmt=markers[c], color=plt.get_cmap(cmap)(cmap_step * s),
-                                  mec=plt.get_cmap(cmap)(cmap_step * s), label=labels[c], capsize=1.3)
+                ax[s][l].errorbar(th * (1 + 0.07 * c), gt, err, fmt=markers[c], color=colors[s],
+                                  mec=colors[s], label=labels[c], capsize=1.3)
 
                 ax[s][l].set_xlim(2.5, 300)
                 ax[s][l].set_ylim(-2.3 * 10 ** (-4), 2.3 * 10 ** (-4))
@@ -1832,7 +1858,6 @@ class ResponsesScale(GGL):
 
             # New!! we need to subtract the mean shear # not really needed here but leave it just in case
             source, mean_shear = self.subtract_mean_shear(source)
-
             for l, lbin in enumerate(self.zbins['lbins']):
                 path_test = self.get_path_test(lbin, sbin)
                 path_fid = self.get_path_fidmeasurement(lbin, sbin) # where the fiducial measurements are

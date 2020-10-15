@@ -47,7 +47,7 @@ basic = {
     #'mode':'mice',
     'mode':'data',
     'blind': 1,
-    'run': 1,
+    'run': 0,
     'savetwopoint': 1,
     'plot': 0,
     'pool': 1,
@@ -75,18 +75,22 @@ config_data = {
     'bslop': 0.0,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
-    'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_03_31_20.h5',
-    #'lens_v': 'redmagic_x40randoms',
+    #'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_03_31_20.h5',
+    'filename_mastercat': '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat___UNBLIND___final_v1.0_DO_NOT_USE_FOR_2PT.h5',
+    'lens_v': 'redmagic_x40randoms',
     #'lens_v': 'redmagic',
-    'lens_v': 'maglim_x40randoms',
+    #'lens_v': 'maglim_x40randoms',
     'lens_w': True,  #use LSS weights for the lenses
     'zslim_v': 'som',
-    'zs_v': 'bpz',
+    'zs_v': 'som',
+    #'zs_v': 'bpz', # for the blinded measurements it was like this
     'zllim_v': 'y3',
-    'source_only_close_to_lens': True
+    'source_only_close_to_lens': True,
+    'nside': 4, 
     }
 
-config_data['mastercat_v'] = config_data['filename_mastercat'][37:-3]
+#config_data['mastercat_v'] = config_data['filename_mastercat'][37:-3] #for the blinded catalog
+config_data['mastercat_v'] = config_data['filename_mastercat'][40:-3]
 
 if basic['computer']=='midway':
     config_data['filename_mastercat'] = '/project2/chihway/data/des_y3_catalogs/y3kp_sample/' + config_data['mastercat_v'] + '.h5'
@@ -121,8 +125,7 @@ def path_config(config):
         'njk_%d'%config['njk'],
         'thbin_%0.2f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
         'bslop_%0.1g'%config['bslop'],
-        'source_only_close_to_lens_%s_nside4'%config['source_only_close_to_lens']
-        #'source_only_close_to_lens_%s'%config['source_only_close_to_lens']
+        'source_only_close_to_lens_%s_nside%d'%(config['source_only_close_to_lens'], config['nside'])
     ) 
 
 def path_config_mice(config):
@@ -179,7 +182,8 @@ if basic['mode'] == 'data':
     print ('--------------------------\nUsing randoms file in:\n', paths['randoms'])
     print ('--------------------------')
 
-    paths['sim_dv'] =  '../simulated_dvs/%s/'%config['mastercat_v']
+    paths['sim_dv'] =  '../simulated_dvs/Y3_mastercat_03_31_20/'
+    #paths['sim_dv'] =  '../simulated_dvs/%s/'%config['mastercat_v']
     print(paths['sim_dv'])
     if 'redmagic' in config['lens_v']:
         paths['lens_nz'] = paths['sim_dv'] + 'v0.40_fiducial.fits'
@@ -310,14 +314,14 @@ accross several plots, to ensure consistency.
 
 plotting = {}
 if basic['mode'] == 'data':
-    plotting['catname'] = r'Metacalibration ' + config['mastercat_v'][0:2] + ' ' + config['lens_v']
+    plotting['catname'] = r'Metacalibration ' + config['mastercat_v'][0:2] + ' ' + config['lens_v'][0:8]
 if basic['mode'] == 'mice':
     plotting['catname'] = r'\textsc{MICE}'
 
 plotting['latex'] = False
 plotting['cmap'] = viridis
 plotting['colors'] = ['teal', 'powderblue', 'orange', 'tomato', 'k']
-plotting['use_cmap'] = True
+plotting['use_cmap'] = False
 plotting['redshift_l'] = [r'$%0.2f < z_l < %0.2f $'%(zbins['lims'][i], zbins['lims'][i+1]) for i in range(len(zbins['lims'])-1)]
 #plotting['th_limit'] = [64.,40.,30., 24., 21.] # 12 Mpc/h 
 #plotting['th_limit'] = [42.67, 26.67 ,20., 16., 14., 12.] # 8 Mpc/h #check values for maglim sample
