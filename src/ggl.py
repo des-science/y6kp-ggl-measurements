@@ -567,7 +567,7 @@ class GGL(object):
             
         if 'NK' in type_corr:
             xi_nks = [manager.list() for x in range(self.config['njk'])]
-            
+
         if self.basic['pool']: 
             p = mp.Pool(self.basic['Ncores'], worker_init)
             if type_corr == 'NG':
@@ -1057,10 +1057,15 @@ class GGL(object):
             return lens_all, random_all
 
         if self.basic['mode'] == 'buzzard':
-            lens_all = pf.getdata(self.paths['lens_buzzard'])
-            random_all = pf.getdata(self.paths['randoms_buzzard'])
-            source_all = self.load_buzzard()
-            return lens_all, random_all, source_all
+            if 'redmagic' in self.config['lens_v']:
+                lens_all = pf.getdata(self.paths['lens_buzzard'])
+                random_all = pf.getdata(self.paths['randoms_buzzard'])
+                source_all = self.load_buzzard()
+                return lens_all, random_all, source_all
+            
+            if 'maglim' in self.config['lens_v']:
+                source_all = self.load_buzzard()
+                return source_all
 
 
 
@@ -1144,7 +1149,11 @@ class Measurement(GGL):
             lens_all, random_all = self.load_data_or_sims()
             
         if self.basic['mode'] == 'buzzard':
-            lens_all, random_all, source_all = self.load_data_or_sims()
+            print('Running on Buzzard..')
+            if 'redmagic' in self.config['lens_v']:
+                lens_all, random_all, source_all = self.load_data_or_sims()
+            if 'maglim' in self.config['lens_v']:
+                source_all = self.load_data_or_sims()
 
         for sbin in self.zbins['sbins']:
 
@@ -1169,7 +1178,8 @@ class Measurement(GGL):
 		if self.basic['mode'] == 'data_y1sources':
 		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
 
-    		if self.basic['mode'] == 'mice':
+
+                if self.basic['mode'] == 'mice_y1sources':
     		    """
     		    In this case there are no responses, so we set it to one.
     		    """
@@ -1200,6 +1210,62 @@ class Measurement(GGL):
                     zbins, nz_s = self.get_nz_weighted(source['ztrue'], source['w'])		    
                     np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'zbins',zbins,header='zbin limits')
                     np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
+
+    		if self.basic['mode'] == 'mice':
+    		    """
+    		    In this case there are no responses, so we set it to one.
+    		    """
+    		    R_mean = 1.
+                    hdu = pf.open(self.paths['mice_y1sources'] + 'new_dnf_sof_mice_Feb3rd_zbin%s_imax23.fits'%sbin[-1])
+                    mice = hdu[1].data
+
+                    if np.isnan(mice['ra_gal']).any():
+                        print 'There is a nan in the source catalog, in ra.'
+                        mask_nan = np.isnan(mice['ra_gal'])==False
+                        print 'There are %d nans.'%(len(mice['ra_gal']) - mask_nan.sum())
+                        
+                    if np.isnan(mice['dec_gal']).any():
+                        print 'There is a nan in the source catalog, in dec.'
+
+                    def add_intrinsic_ellipticity(g1, g2, e1, e2):
+                        # Shear field                                                                                                                                   
+                        g = g1 + 1j*g2
+                        # Intrinsic ellipticity                                                                                                                         
+                        e = e1 + 1j*e2
+                        res = (e+g)/(1.+np.conjugate(g)*e)
+                        return res.real, res.imag
+                    
+                    e1,e2 = add_intrinsic_ellipticity(mice['gamma1'], mice['gamma2'], mice['eps1'], mice['eps2'])
+
+                    if np.isnan(e1).any():
+                        print 'There is a nan in the source catalog, in e1.'
+
+                    mask_nan = np.isnan(e1)==False
+
+                    if np.isnan(e1).any():
+                        print 'There are %d nans.'%(len(e1) - mask_nan.sum())
+                        
+                    
+                    source = {}
+                    source['ra'] = mice['ra_gal'][mask_nan]
+                    source['dec'] = mice['dec_gal'][mask_nan]
+                    source['e1'] = -e1[mask_nan] # flip e1 sign
+                    source['e2'] = e2[mask_nan]
+                    #source['ztrue'] = mice['z_cgal'][mask_nan]
+
+                    
+                    print 'Length source', sbin, len(source['ra'])
+                    print 'np.std(e1)', np.std(source['e1'])
+                    print 'np.std(e2)', np.std(source['e2'])
+                    print 'np.std(ra)', np.std(source['ra'])
+                    print 'np.std(dec)', np.std(source['dec'])
+                    zbins, nz_s = self.get_nz(mice['z_cgal'][mask_nan])		    
+                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'zbins',zbins,header='zbin limits')
+                    np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'nz_%s'%sbin,nz_s)
+
+                    del mice
+                    del hdu
+                    
                     
 		if self.basic['mode'] == 'buzzard':
     		    """
@@ -1231,9 +1297,13 @@ class Measurement(GGL):
                         if self.basic['mode'] == 'data':
                             lens_all = pf.getdata(self.paths['lens'])
 
-                        lens = self.sel_lens_zbin(lens_all, lbin)
+                        if self.basic['mode'] == 'buzzard' and 'maglim' in self.config['lens_v']:
+                            lens = pf.getdata(self.paths['buzzard'] + 'lens_%d.fits'%(l+1))
+                            print 'Loading lenses from:', self.paths['buzzard'] + 'lens_%d.fits'%(l+1)
+                        else:
+                            lens = self.sel_lens_zbin(lens_all, lbin)
                         print 'Number of lenses in bin %s'%lbin, len(lens['ra'])
-                        print 'Sum of weights', np.sum(lens['w']) 
+                        
                         if self.basic['mode'] == 'data':
                             # remove this object to save memory before calling Treecorr.
                             del lens_all
@@ -1254,7 +1324,11 @@ class Measurement(GGL):
                         if self.basic['mode'] == 'data':
                             # Randoms run
                             random_all = pf.getdata(self.paths['randoms'])
-                        random = self.sel_random_zbin(random_all, lbin)
+                        if self.basic['mode'] == 'buzzard' and 'maglim' in self.config['lens_v']:
+                            random = pf.getdata(self.paths['buzzard'] + 'random_%d.fits'%(l+1))
+                            print 'Loading randoms from:', self.paths['buzzard'] + 'random_%d.fits'%(l+1)
+                        else:
+                            random = self.sel_random_zbin(random_all, lbin)
                         print 'Number of randoms in bin %s'%lbin, len(random['ra'])
 
                         if self.basic['mode'] == 'data':

@@ -46,11 +46,11 @@ Then you are done. All this process is only need for the gammat measurements, no
 basic = {
     #'mode':'mice',
     'mode':'data',
-    'blind': 1,
-    'run': 0,
+    'blind': 0,
+    'run': 1,
     'savetwopoint': 1,
-    'plot': 0,
-    'pool': 1,
+    'plot': 1,
+    'pool': 0,
     'computer': 'nersc'  #can be 'nersc', 'local', 'midway', etc
 }
 
@@ -58,7 +58,7 @@ if basic['pool']:
     basic['num_threads'] = 1
     basic['Ncores'] = 10
     
-if not basic['pool']: basic['num_threads'] = 1
+if not basic['pool']: basic['num_threads'] = 2
 
 
 """
@@ -103,12 +103,13 @@ config_mice = {
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
     'version': '2',
-    'lens_v': 'redmagic_HOD',
+    'lens_v': 'redmagic_unmagnified_shivam',
     'lens_w': True,  #use LSS weights for the lenses
     'zslim_v': 'y1',
     'zs_v': 'bpz',
     'zllim_v': 'y3',
-    'source_only_close_to_lens': True
+    'source_only_close_to_lens': True,
+    'nside': 8
 }
 
 
@@ -142,7 +143,7 @@ def path_config_mice(config):
                  'njk_%d'%config['njk'],
                  'thbin_%0.2f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
                  'bslop_%0.1g'%config['bslop'],
-                 'source_only_close_to_lens_%s'%config['source_only_close_to_lens']
+                 'source_only_close_to_lens_%s_nside%d'%(config['source_only_close_to_lens'], config['nside'])
     )
     
 
@@ -186,8 +187,8 @@ if basic['mode'] == 'data':
     #paths['sim_dv'] =  '../simulated_dvs/%s/'%config['mastercat_v']
     print(paths['sim_dv'])
     if 'redmagic' in config['lens_v']:
-        paths['lens_nz'] = paths['sim_dv'] + 'v0.40_fiducial.fits'
-        paths['source_nz'] = paths['sim_dv'] + 'v0.40_fiducial.fits'
+        paths['lens_nz'] = '../final_nzs/2pt_NG_final_2ptblind_10_15_20_wnz.fits'
+        paths['source_nz'] = '../final_nzs/2pt_NG_final_2ptblind_10_15_20_wnz.fits'
 
     if 'maglim' in config['lens_v']:
         paths['lens_nz'] = paths['sim_dv'] + 'fiducial_maglim_cov_sourcesv040.fits'
@@ -228,7 +229,12 @@ if basic['mode'] == 'mice':
 
     # SOURCES
     # -------------
-    paths['mice_y1sources'] = '/global/project/projectdirs/des/y3-bias/mice2/'
+
+    # Lucas catalog which also has IA:
+    paths['mice_y1sources'] = '/global/cscratch1/sd/seccolf/mice/IA/production_run/'
+    
+    # if using Y1 like sources us the following: # used for Georgios HOD project in the last run
+    #paths['mice_y1sources'] = '/global/project/projectdirs/des/y3-bias/mice2/'
     
     # if using Marco's catalog for the source clustering test uncomment the following lines
     # ----------------------------------
