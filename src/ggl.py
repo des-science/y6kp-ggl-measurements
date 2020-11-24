@@ -1036,7 +1036,27 @@ class GGL(object):
 
             boost_factor_twopoint.to_fits(save_path)
 
-    
+        if string == 'randoms':
+            # saves the random points measurements in a fits file
+            random_points = twopoint.SpectrumMeasurement('random_points', (bin1, bin2),
+                                                        (twopoint.Types.galaxy_position_real,
+                                                         twopoint.Types.galaxy_shear_plus_real),
+                                                        ('nz_lens', 'nz_source'), 'SAMPLE', angular_bin, values,
+                                                        angle=angle, angle_unit='arcmin')
+
+            cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['random_points'], [length], cov)
+
+            print 'Saving TwoPointFile'
+            random_points_twopoint = twopoint.TwoPointFile([random_points], [lens_nz, source_nz], windows=None, covmat_info=cov_mat_info)
+            save_path = os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits'%string)
+
+            # Remove file if it exists already because to_fits function doesn't overwrite                                                                                                                                                                                    
+            if os.path.isfile(save_path):
+                os.system('rm %s' % (save_path))
+
+            random_points_twopoint.to_fits(save_path)
+
+            
     def load_data_or_sims(self):
         '''
         Loads and returns lens, randoms and sources, either from data or from simulations.
