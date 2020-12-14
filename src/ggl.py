@@ -323,7 +323,7 @@ class GGL(object):
             file.write(json.dumps(dict_to_file))
         # can be loaded with: json.load(open('test'))
         return source_bin
-        
+
     
     def load_metacal_bin_sels_responses_deprecated(self, source_5sels, bin_low, bin_high):
         """
@@ -438,7 +438,7 @@ class GGL(object):
             jk: Region we run in each core.
             For NG correlations.
             """
-
+            print(jk)
             ra_l_jk = ra_l[jk_l == jk]
             dec_l_jk = dec_l[jk_l == jk]
             w_l_jk = w_l[jk_l == jk]
@@ -927,7 +927,7 @@ class GGL(object):
                 cov[bin_pair_inds[0]:bin_pair_inds[-1] + 1, bin_pair_inds] = cov_ls
 
         # Preparing N(z) 
-        if self.basic['mode'] == 'data':
+        if 'data' in self.basic['mode']:
 
             #If it is a TwoPointFile use the code below
             file_lens_nz = twopoint.TwoPointFile.from_fits(self.paths['lens_nz'])
@@ -1056,6 +1056,27 @@ class GGL(object):
 
             random_points_twopoint.to_fits(save_path)
 
+        if string == 'gx':
+            # saves the random points measurements in a fits file
+            random_points = twopoint.SpectrumMeasurement('gx', (bin1, bin2),
+                                                        (twopoint.Types.galaxy_position_real,
+                                                         twopoint.Types.galaxy_shear_plus_real),
+                                                        ('nz_lens', 'nz_source'), 'SAMPLE', angular_bin, values,
+                                                        angle=angle, angle_unit='arcmin')
+
+            cov_mat_info = twopoint.CovarianceMatrixInfo('COVMAT', ['gx'], [length], cov)
+
+            print 'Saving TwoPointFile'
+            random_points_twopoint = twopoint.TwoPointFile([random_points], [lens_nz, source_nz], windows=None, covmat_info=cov_mat_info)
+            save_path = os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits'%string)
+
+            # Remove file if it exists already because to_fits function doesn't overwrite                                                                                                                                                                                    
+            if os.path.isfile(save_path):
+                os.system('rm %s' % (save_path))
+
+            random_points_twopoint.to_fits(save_path)
+
+            
             
     def load_data_or_sims(self):
         '''
@@ -1063,13 +1084,9 @@ class GGL(object):
         '''
 
         if self.basic['mode'] == 'data':
+            # load Y3 sources here
             source_all, source_all_5sels, calibrator = self.load_metacal(reduce_mem=True)
             return source_all, source_all_5sels, calibrator
-
-        if self.basic['mode'] == 'data_y1sources':
-            lens_all = pf.getdata(self.paths['lens'])
-            random_all = pf.getdata(self.paths['randoms'])
-            return lens_all, random_all
 
         if self.basic['mode'] == 'mice':
             lens_all = pf.getdata(self.paths['lens_mice'])
@@ -1113,6 +1130,18 @@ class Measurement(GGL):
     def get_twopointfile_name(self, string):
         return os.path.join(self.get_path_test_allzbins() + '%s_twopointfile.fits' % string)
 
+    def get_y1_mask(self, ra, dec):
+        hdul = pf.open('/global/project/projectdirs/des/ggl/lens_cats/Y1/' + 'DES_Y1A1_3x2pt_redMaGiC_MASK_HPIX4096RING.fits')
+        y1 = hdul[1].data
+        fracgood = y1['FRACGOOD']
+        hpix = y1['HPIX']
+        map = np.zeros(hp.nside2npix(4096))+hp.UNSEEN
+        map[hpix] = fracgood
+        # convert ra, dec to pix
+        pix_d = hp.ang2pix(4096, ra, dec, lonlat=True,nest=0)
+        mask = map[pix_d]>0.8
+        return mask
+        
     def sel_lens_zbin(self, lens_all, lbin):
         """
         Select lens bins depending on whether its data or sims.
@@ -1149,7 +1178,7 @@ class Measurement(GGL):
         Similar function as sel_lens_zbin for random points.
         """
 
-        if self.basic['mode']  == 'data':
+        if 'data' in self.basic['mode']:
             random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
         if self.basic['mode']  == 'buzzard' or self.basic['mode'] == 'mice':
             random = random_all[(random_all['z'] > self.zbins[lbin][0]) & (random_all['z'] < self.zbins[lbin][1])]
@@ -1182,9 +1211,23 @@ class Measurement(GGL):
 		if self.basic['mode'] == 'data':
                     source_all, source_all_5sels, calibrator = self.load_data_or_sims()
                     print 'Source bin:', self.zbins[sbin][0], self.zbins[sbin][1]
-		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, bin_low=self.zbins[sbin][0], bin_high=self.zbins[sbin][1], reduce_mem=True)
+		    source = self.load_metacal_bin(source_all, source_all_5sels, calibrator, bin_low=self.zbins[sbin][0], bin_high=self.zbins[sbin][1], reduce_mem=True, ind_responses=True)
+
+                    print 'Before..'
+                    print np.average(source['R'],weights=source['w'])
+                    print source['R_mean']
+                    
+                    if self.basic['area'] == 'y1': 
+                        y1mask = self.get_y1_mask(source['ra'], source['dec'])
+                        for key in source:
+                            if key is not 'R_mean':
+                                source[key] = source[key][y1mask]
+
+                        source['R_mean'] = np.average(source['R'],weights=source['w'])
+                                                        
 		    R_mean = source['R_mean']
                     print 'Length source', sbin, len(source['ra'])
+                    print R_mean
 
                     source, mean_shear = self.subtract_mean_shear(source)
                     print mean_shear
@@ -1194,10 +1237,16 @@ class Measurement(GGL):
                     del source_all
                     del source_all_5sels
                     del calibrator
+                    del source['R']
 
 		if self.basic['mode'] == 'data_y1sources':
-		    source = pf.getdata(self.paths['y1'] + 'metacal_sel_sa%s.fits'%sbin[1])
-
+		    source = pf.getdata(self.paths['y1_sources'] + 'metacal_sel_sa%s.fits'%sbin[1])
+                    print 'Length source', sbin, len(source['ra'])
+                    R_s_bins = [0.0072, 0.014, 0.0098, 0.014] # from Y1 gglensing paper
+                    print("Sel response:", R_s_bins[int(sbin[1])-1])
+                    print("Rgamma:", np.average(source['Rgamma']))
+                    R_mean = np.average(source['Rgamma']) + R_s_bins[int(sbin[1])-1]
+                    print("Total response:", R_mean)
 
                 if self.basic['mode'] == 'mice_y1sources':
     		    """
@@ -1314,7 +1363,7 @@ class Measurement(GGL):
                         make_directory(path_test)
 
                         # Lenses run
-                        if self.basic['mode'] == 'data':
+                        if 'data' in self.basic['mode']:
                             lens_all = pf.getdata(self.paths['lens'])
 
                         if self.basic['mode'] == 'buzzard' and 'maglim' in self.config['lens_v']:
@@ -1324,7 +1373,7 @@ class Measurement(GGL):
                             lens = self.sel_lens_zbin(lens_all, lbin)
                         print 'Number of lenses in bin %s'%lbin, len(lens['ra'])
                         
-                        if self.basic['mode'] == 'data':
+                        if 'data' in self.basic['mode']:
                             # remove this object to save memory before calling Treecorr.
                             del lens_all
                         if np.isnan(lens['ra']).any():
@@ -1341,7 +1390,7 @@ class Measurement(GGL):
                         np.savetxt(self.get_path_test_allzbins()+'/weights/'+'w_%s_%s'%(lbin, sbin),wnum_ex,header='weights (sum of all JK regions)')
 
                         # Randoms run
-                        if self.basic['mode'] == 'data':
+                        if 'data' in self.basic['mode']:
                             # Randoms run
                             random_all = pf.getdata(self.paths['randoms'])
                         if self.basic['mode'] == 'buzzard' and 'maglim' in self.config['lens_v']:
@@ -1351,7 +1400,7 @@ class Measurement(GGL):
                             random = self.sel_random_zbin(random_all, lbin)
                         print 'Number of randoms in bin %s'%lbin, len(random['ra'])
 
-                        if self.basic['mode'] == 'data':
+                        if 'data' in self.basic['mode']:
                             # remove this object to save memory before calling Treecorr.
                             del random_all
 

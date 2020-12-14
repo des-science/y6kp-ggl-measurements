@@ -46,11 +46,13 @@ Then you are done. All this process is only need for the gammat measurements, no
 basic = {
     #'mode':'mice',
     'mode':'data',
+    #'mode':'data_y1sources',
+    'area': 'y3',
     'blind': 0,
     'run': 1,
     'savetwopoint': 1,
     'plot': 1,
-    'pool': 0,
+    'pool': 1,
     'computer': 'nersc'  #can be 'nersc', 'local', 'midway', etc
 }
 
@@ -75,27 +77,27 @@ config_data = {
     'bslop': 0.0,
     'nthbins': 20,
     'thlims': np.array([2.5,250.]),
-    #'filename_mastercat': '/project/projectdirs/des/www/y3_cats/Y3_mastercat_03_31_20.h5',
     'filename_mastercat': '/global/cscratch1/sd/troxel/cats_des_y3/Y3_mastercat___UNBLIND___final_v1.0_DO_NOT_USE_FOR_2PT.h5',
-    'lens_v': 'redmagic_x40randoms',
-    #'lens_v': 'redmagic',
-    #'lens_v': 'maglim_x40randoms',
+    #'lens_v': 'redmagic_x40randoms_year1footprint',
+    #'lens_v': 'redmagic_y1',
+    #'lens_v': 'redmagic_x40randoms', # fid y3 redmagic
+    'lens_v': 'maglim_x40randoms', #fid y3 maglim
     'lens_w': True,  #use LSS weights for the lenses
+    #'zslim_v': 'y1',
     'zslim_v': 'som',
+    #'zs_v': 'bpz',
     'zs_v': 'som',
-    #'zs_v': 'bpz', # for the blinded measurements it was like this
+    #'zllim_v': 'y1',
     'zllim_v': 'y3',
     'source_only_close_to_lens': True,
     'nside': 4, 
     }
 
-#config_data['mastercat_v'] = config_data['filename_mastercat'][37:-3] #for the blinded catalog
 config_data['mastercat_v'] = config_data['filename_mastercat'][40:-3]
 
 if basic['computer']=='midway':
     config_data['filename_mastercat'] = '/project2/chihway/data/des_y3_catalogs/y3kp_sample/' + config_data['mastercat_v'] + '.h5'
 
-print(config_data['filename_mastercat'])
 
 config_mice = {
     'njk': 150,
@@ -129,6 +131,55 @@ def path_config(config):
         'source_only_close_to_lens_%s_nside%d'%(config['source_only_close_to_lens'], config['nside'])
     ) 
 
+def path_config_y1sources(config):
+    '''
+    Function that defines where the measurements are saved based on the parameters defined in the config dictionary.
+    '''
+    return os.path.join('y1sources', config['mastercat_v'],
+        'zslim_%s'%config['zslim_v'],
+        'zs_%s'%config['zs_v'],
+        config['lens_v'],
+        'zllim_%s'%config['zllim_v'],
+        'lens_w_%s'%config['lens_w'],
+        'njk_%d'%config['njk'],
+        'thbin_%0.2f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
+        'bslop_%0.1g'%config['bslop'],
+        'source_only_close_to_lens_%s_nside%d'%(config['source_only_close_to_lens'], config['nside'])
+    ) 
+
+def path_config_y1lenses(config):
+    '''
+    Function that defines where the measurements are saved based on the parameters defined in the config dictionary.
+    '''
+    return os.path.join('y1lenses', config['mastercat_v'] + '_y1footprint',
+        'zslim_%s'%config['zslim_v'],
+        'zs_%s'%config['zs_v'],
+        config['lens_v'],
+        'zllim_%s'%config['zllim_v'],
+        'lens_w_%s'%config['lens_w'],
+        'njk_%d'%config['njk'],
+        'thbin_%0.2f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
+        'bslop_%0.1g'%config['bslop'],
+        'source_only_close_to_lens_%s_nside%d'%(config['source_only_close_to_lens'], config['nside'])
+    ) 
+
+def path_config_y3_on_y1footprint(config):
+    '''
+    Function that defines where the measurements are saved based on the parameters defined in the config dictionary.
+    '''
+    return os.path.join(config['mastercat_v'] + '_y1footprint',
+        'zslim_%s'%config['zslim_v'],
+        'zs_%s'%config['zs_v'],
+        config['lens_v'],
+        'zllim_%s'%config['zllim_v'],
+        'lens_w_%s'%config['lens_w'],
+        'njk_%d'%config['njk'],
+        'thbin_%0.2f_%d_%d'%(config['thlims'][0], config['thlims'][1], config['nthbins']),
+        'bslop_%0.1g'%config['bslop'],
+        'source_only_close_to_lens_%s_nside%d'%(config['source_only_close_to_lens'], config['nside'])
+    ) 
+
+
 def path_config_mice(config):
     '''
     Function for mice that defines where the measurements are saved based on the parameters defined in the config dictionary.
@@ -147,12 +198,11 @@ def path_config_mice(config):
     )
     
 
-if basic['mode'] == 'data':
+if 'data' in basic['mode']:
     config = config_data
 if basic['mode'] == 'mice':
     config = config_mice
 
-print('\nChosen configuration:\n--------------------------\n', config)
 
 """
 PATHS
@@ -175,32 +225,49 @@ if basic['computer'] == 'nersc':
 if basic['computer'] == 'midway':
     paths['lens_cats'] = '../cats/'
 
-if basic['mode'] == 'data':
-    paths['lenscats'] = paths['lens_cats'] + '%s/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk']) 
-    paths['lens'] = paths['lenscats'] + 'lens.fits'
-    paths['randoms'] = paths['lenscats'] + 'random.fits'
-    print ('--------------------------\nUsing lens file in:\n', paths['lens'])
-    print ('--------------------------\nUsing randoms file in:\n', paths['randoms'])
-    print ('--------------------------')
+if 'data' in basic['mode']:
+    if 'y1' not in config['lens_v']: # y3 stuff here
+        paths['lenscats'] = paths['lens_cats'] + '%s/%s/njk_%d/'%(config['mastercat_v'], config['lens_v'],config['njk']) 
+        paths['lens'] = paths['lenscats'] + 'lens.fits'
+        paths['randoms'] = paths['lenscats'] + 'random.fits'
+        paths['sim_dv'] =  '../simulated_dvs/Y3_mastercat_03_31_20/'
+        #paths['sim_dv'] =  '../simulated_dvs/%s/'%config['mastercat_v']
+        print(paths['sim_dv'])
 
-    paths['sim_dv'] =  '../simulated_dvs/Y3_mastercat_03_31_20/'
-    #paths['sim_dv'] =  '../simulated_dvs/%s/'%config['mastercat_v']
-    print(paths['sim_dv'])
+        paths['config_data'] = path_config(config_data)
+        
+        paths['theory_size_all_covmat'] = paths['runs']+paths['config_data'] + '/size/theory_size_all_covmat.fits'
+        paths['hist_n_of_z_lenses_witherr_size'] = paths['runs']+paths['config_data'] +'/size/hist_n_of_z_lenses_witherr_size'
+        paths['hist_n_of_z_low_size'] = paths['runs']+paths['config_data']+'/size/hist_n_of_z_low_size'
+        paths['hist_n_of_z_high_size'] = paths['runs']+paths['config_data']+'/size/hist_n_of_z_high_size'
+
     if 'redmagic' in config['lens_v']:
-        paths['lens_nz'] = '../final_nzs/2pt_NG_final_2ptblind_10_15_20_wnz.fits'
-        paths['source_nz'] = '../final_nzs/2pt_NG_final_2ptblind_10_15_20_wnz.fits'
+        paths['lens_nz'] = '../final_nzs/2pt_NG_final_2ptunblind_11_13_20_wnz.fits'
+        paths['source_nz'] = '../final_nzs/2pt_NG_final_2ptunblind_11_13_20_wnz.fits'
 
     if 'maglim' in config['lens_v']:
         paths['lens_nz'] = paths['sim_dv'] + 'fiducial_maglim_cov_sourcesv040.fits'
         paths['source_nz'] = paths['sim_dv'] + 'fiducial_maglim_cov_sourcesv040.fits'
-    print(paths['lens_nz'])
-    print(paths['source_nz'])
 
-    paths['config_data'] = path_config(config_data)
-    paths['theory_size_all_covmat'] = paths['runs']+paths['config_data'] + '/size/theory_size_all_covmat.fits'
-    paths['hist_n_of_z_lenses_witherr_size'] = paths['runs']+paths['config_data'] +'/size/hist_n_of_z_lenses_witherr_size'
-    paths['hist_n_of_z_low_size'] = paths['runs']+paths['config_data']+'/size/hist_n_of_z_low_size'
-    paths['hist_n_of_z_high_size'] = paths['runs']+paths['config_data']+'/size/hist_n_of_z_high_size'
+
+if basic['area'] == 'y1':
+
+    if basic['mode'] == 'data_y1sources':
+        paths['y1_sources'] = '/global/project/projectdirs/des/ggl/source_cats/Y1/'
+        paths['config_data_y1sources'] = path_config_y1sources(config_data)
+        #del paths['config_data']
+        paths['source_nz'] = 'y1_2pt_NG_mcal_1110.fits'
+        
+    if 'y1' in config['lens_v']:  # y1 lenses here
+        paths['lens'] = '/global/project/projectdirs/des/ggl/lens_cats/Y1/' + 'lens.fits'
+        paths['randoms'] = '/global/project/projectdirs/des/ggl/lens_cats/Y1/' + 'random.fits'
+
+        paths['config_data'] = path_config_y1lenses(config_data)
+        paths['source_nz'] = '../final_nzs/2pt_NG_final_2ptunblind_11_13_20_wnz.fits'
+        paths['lens_nz'] = 'y1_2pt_NG_mcal_1110.fits'
+    else:
+        paths['config_data'] = path_config_y3_on_y1footprint(config_data)
+
     
 if basic['mode'] == 'mice':
 
@@ -242,6 +309,12 @@ if basic['mode'] == 'mice':
     #else: paths['sources_mice'] = '/global/cscratch1/sd/mgatti/Mass_Mapping/taka/Mice_WL_1024.fits'
     # ----------------------------------
     
+print(paths['lens_nz'])
+print(paths['source_nz'])
+print ('--------------------------\nUsing lens file in:\n', paths['lens'])
+print ('--------------------------\nUsing randoms file in:\n', paths['randoms'])
+print ('--------------------------')
+
 # Where we save the runs and plots for one particular configuration:
 paths['runs_config'] = os.path.join(paths['runs'], paths['config_%s'%basic['mode']]) + '/'
 paths['plots_config'] = os.path.join(paths['plots'], paths['config_%s'%basic['mode']]) + '/'
@@ -321,6 +394,8 @@ accross several plots, to ensure consistency.
 plotting = {}
 if basic['mode'] == 'data':
     plotting['catname'] = r'Metacalibration ' + config['mastercat_v'][0:2] + ' ' + config['lens_v'][0:8]
+if basic['mode'] == 'data_y1sources':
+    plotting['catname'] = r'Metacalibration Y1' + config['mastercat_v'][0:2] + ' ' + config['lens_v'][0:8]
 if basic['mode'] == 'mice':
     plotting['catname'] = r'\textsc{MICE}'
 
