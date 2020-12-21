@@ -22,8 +22,10 @@ if run_measurement:
 
     if basic['savetwopoint']:
         measurement.save_2pointfile('gt')
+        measurement.save_2pointfile('gx')
         measurement.save_2pointfile('gt_boosted')
         measurement.save_2pointfile('boost_factor')
+        measurement.save_2pointfile('randoms')
 
 if run_responses_nk:
     responses = ResponsesScale(basic, config, paths, zbins, plotting)

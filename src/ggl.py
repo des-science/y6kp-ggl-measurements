@@ -172,7 +172,7 @@ class GGL(object):
         
         return res, save
 
- 
+    @profile
     def load_metacal(self, reduce_mem=False):
         """
         Loads metacal data for Y3 catalog using h5 interface.
@@ -282,7 +282,7 @@ class GGL(object):
          
         return source, source_5sels, source_calibrator
 
-
+    @profile
     def load_metacal_bin(self, source, source_5sels, calibrator, bin_low, bin_high, reduce_mem = False, ind_responses=False):
         """
         source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
@@ -375,7 +375,8 @@ class GGL(object):
             print 'Weights found in foreground catalog.'
         except:
             print 'There are no identified weights for the foreground sample.'
-            w_l = np.ones(len(ra_l))
+            #w_l = np.ones(len(ra_l))
+            w_l = None
 
 
         if not self.config['lens_w']:
@@ -400,6 +401,7 @@ class GGL(object):
 
         return ra_s, dec_s, w
 
+    @profile
     def run_treecorr_jackknife(self, lens, source, type_corr):
         """
         Function that runs treecorr for a given lens and source sample,
@@ -431,7 +433,7 @@ class GGL(object):
                 psutil.Process(os.getpid()).kill()
 
             signal.signal(signal.SIGINT, sig_int)
-
+        @profile
         def run_jki_NG(jk):
             """
             Function we use for mutiprocessing.
@@ -439,9 +441,11 @@ class GGL(object):
             For NG correlations.
             """
             print(jk)
-            ra_l_jk = ra_l[jk_l == jk]
-            dec_l_jk = dec_l[jk_l == jk]
-            w_l_jk = w_l[jk_l == jk]
+            ra_l_jk = ra_l[jk_l==jk]
+            dec_l_jk = dec_l[jk_l==jk]
+            if w_l is not None:
+                print 'There are weights inside NG'
+                w_l_jk = w_l[jk_l==jk]
 
             if jk == 0: print 'Doing NG correlation.'
             corr = treecorr.NGCorrelation(nbins=self.config['nthbins'], min_sep=self.config['thlims'][0],
@@ -460,7 +464,15 @@ class GGL(object):
                 pixsjk = hp.get_all_neighbours(nside, pixjk)
                 pixsjk = np.append(pixsjk, pixjk)
                 bool_s = np.in1d(pix, pixsjk)
-                cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
+                #del pixsjk
+                #del pixjk
+
+                if w_l is not None:
+                    print 'a) Using weights'
+                    cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, w=w_l_jk, ra_units='deg', dec_units='deg')
+                else:
+                    print 'b) Not using weights'
+                    cat_l = treecorr.Catalog(ra=ra_l_jk, dec=dec_l_jk, ra_units='deg', dec_units='deg')
                 
                 if self.config['source_only_close_to_lens']:
                     cat_s = treecorr.Catalog(ra=ra_s[bool_s], dec=dec_s[bool_s], g1=e1[bool_s], g2=e2[bool_s],
@@ -1186,7 +1198,7 @@ class Measurement(GGL):
             random = random_all[l*len(random_all)/len(self.zbins['lbins']):(l+1)*len(random_all)/len(self.zbins['lbins'])]
         return random
 
-    
+    @profile
     def run(self):
 
 	make_directory(self.get_path_test_allzbins()+'/nzs/')
