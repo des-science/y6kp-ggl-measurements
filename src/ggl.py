@@ -1354,10 +1354,10 @@ class Measurement(GGL):
                 R_mean = 1.
                 source = {}
                 for k in source_all.keys():
-                source[k] = source_all[k][(source_all['zbin'] >= self.zbins[sbin][0]) & (source_all['zbin'] <= self.zbins[sbin][1])]
-                print('Length source', sbin, len(source['ra']))
-                print('np.std(e1)', np.std(source['e1']))
-                print('np.std(e2)', np.std(source['e2']))
+                    source[k] = source_all[k][(source_all['zbin'] >= self.zbins[sbin][0]) & (source_all['zbin'] <= self.zbins[sbin][1])]
+                    print('Length source', sbin, len(source['ra']))
+                    print('np.std(e1)', np.std(source['e1']))
+                    print('np.std(e2)', np.std(source['e2']))
                     
                 zbins, nz_s = self.get_nz(source['ztrue'])		    
                 np.savetxt(self.get_path_test_allzbins()+'/nzs/'+'zbins',zbins,header='zbin limits')
