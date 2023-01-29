@@ -25,7 +25,7 @@ import ipdb
 import h5py as h
 
 
-def make_directory(directory):
+def make_directory(directory)make_directory(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
@@ -283,7 +283,7 @@ class GGL(object):
         return source, source_5sels, source_calibrator
 
     @profile
-    def load_metacal_bin(self, source, source_5sels, calibrator, bin_low, bin_high, reduce_mem = False, ind_responses=False):
+    def load_metacal_bin(self, source, source_5sels, calibrator, bin_low, CalCa, reduce_mem = False, ind_responses=False):
         """
         source: dictionary containing relevant columns for the sources, with the baseline selection applied already.
         source_5sels: dictionary containing relevant columns for the sources, with the baseline selection applied already,
