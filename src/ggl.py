@@ -25,7 +25,7 @@ import ipdb
 import h5py as h
 
 
-def make_directory(directory)make_directory(directory):
+def make_directory(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
@@ -828,18 +828,18 @@ class GGL(object):
 
     def load_sims(self):
         """
-	Loads the simulation measurements and covariance used to fit an amplitude to the data measurements.
+	    Loads the simulation measurements and covariance used to fit an amplitude to the data measurements.
         Function used in TestSizeSNR and TestSysMaps.
-	"""
+	    """
         sims = np.loadtxt(self.paths['sims'], unpack=True, usecols=(1,))
         cov_sims = np.loadtxt(self.paths['cov_sims'])
         return sims, cov_sims
 
     def ratio_from_sims(self, theta, gtl_all, gth_all, sims, cov_sims):
         """
-	Computes the ratio of measurements of the splits (high/low) by computing the ratio of the corresponding amplitudes with respect to the simulation measurements.
+	    Computes the ratio of measurements of the splits (high/low) by computing the ratio of the corresponding amplitudes with respect to the simulation measurements.
         Function used in TestSizeSNR and TestSysMaps.
-	"""
+	    """
         ratioA_all = np.zeros(len(gth_all))
         chi2fit_h = np.zeros(len(gth_all))
         chi2fit_l = np.zeros(len(gth_all))
