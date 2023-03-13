@@ -9,6 +9,7 @@ import yaml
 import catalog_utils
 import healpy as hp
 import treecorr
+import astropy.io.fits as pf
 
 class GGL_setup(object):
 

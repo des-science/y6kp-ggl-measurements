@@ -11,7 +11,7 @@ class GGL(object):
 
     def __init__(self, input_dir=None):
 
-        " setup the parameters file "
+        " load the parameters/settings file "
         if input_dir is not None:
             if os.path.exists(input_dir):
                 sys.path.append(input_dir)
@@ -21,45 +21,34 @@ class GGL(object):
         else:
             errmsg = '!!!Error: Please provide the path to the input directory'
             raise Exception(errmsg)
-        
+
         import params as par
         self.par = par
 
-        # import the main Class
+        " import the setup class "
         import setup
         self.ggl_setup = setup.GGL_setup(input_dir=input_dir)
 
         return
     
     def setup_run(self, lens_file=None, lens_dir=None, source_file=None, 
-                    lens_bin=None, mstar_bin=None, source_bin=None, 
-                    zl_lims=None, zs_lims=None,
-                    ra_jk=None, dec_jk=None,
-                    verbose=False, load_sources=True):
+                  lens_bin=None, source_bin=None, 
+                  zl_lims=None, zs_lims=None,
+                  ra_jk=None, dec_jk=None,
+                  load_sources=True):
         """
         Setup the parameters to run code by reading files
         """
         print( "Setting up things to run code:" )
 
         # load lens data
-        print("Reading lens data for zbin=%d, mbin=%d..."%(lens_bin+1, mstar_bin+1))
+        print("Reading lens data for zbin=%d, mbin=%d..."%(lens_bin+1))
 
         # read lens galaxy data
-        if self.par.lens_in_batches:
-            self.ra_l, self.dec_l, self.z_l = self.self.ggl_setup.read_data_lens_batches(lens_file, self.par.batch_dir)
-        else:
-            self.ra_l, self.dec_l, self.z_l = self.self.ggl_setup.read_data_lens(lens_dir+'/'+lens_file)
+        self.ra_l, self.dec_l, self.z_l = self.self.ggl_setup.read_data_lens(lens_dir+'/'+lens_file)
 
         # mask lenses
         self.ra_l, self.dec_l = self.self.ggl_setup.mask_lens(self.ra_l, self.dec_l, self.z_l, zl_lims=zl_lims, mask_file=self.par.lens_mask_file, NSIDE=self.par.nside, nest=self.par.lens_mask_nested)
-
-        # mask for random point generation
-        if self.par.randoms_mask_file is not None:
-            self.lens_bin_key = 'l{}m{}'.format(lens_bin+1, mstar_bin+1)
-            self.RPmask = self.self.ggl_setup.get_RP_mask(mask_file=self.par.randoms_mask_file, NSIDE=self.par.nside, 
-                                                nest=self.par.randoms_mask_nested, key=self.lens_bin_key)
-        else:
-            self.RPmask = self.self.ggl_setup.make_RP_mask_from_radec(self.ra_l, self.dec_l, NSIDE=self.par.nside, nest=self.par.randoms_mask_nested)
 
         # LSS weights
         if self.par.use_LSSweight:
@@ -169,7 +158,7 @@ class GGL(object):
                 zs_min, zs_max = self.par.zs_bins[szind]
 
                 # give feedback on progress
-                print( "  Doing: lens bin l%d [%.2f,%.2f] x source bin %d [%.2f,%.2f] x mass bin m%d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max,mstarind+1,mstar_min,mstar_max) )
+                print( "  Doing: lens bin l%d [%.2f,%.2f] x source bin %d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max) )
                 # gamma_t output directory
                 gammat_out        = path_out_gt+'/gammat_l{0}_s{2}.txt'.format(lzind+1,szind+1)
                 gammax_out        = path_out_gx+'/gammax_l{0}_s{2}.txt'.format(lzind+1,szind+1)
@@ -364,7 +353,7 @@ class GGL(object):
                 zs_min, zs_max = self.par.zs_bins[szind]
 
                 # give feedback on progress
-                print( "  Doing: lens bin l%d [%.2f,%.2f] x source bin %d [%.2f,%.2f] x mass bin m%d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max,mstarind+1,mstar_min,mstar_max) )
+                print( "  Doing: lens bin l%d [%.2f,%.2f] x source bin %d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max) )
                 # gamma_t output directory
                 gammat_out        = path_out_gt+'/gammat_l{0}_s{2}.txt'.format(lzind+1,szind+1)
                 gammax_out        = path_out_gx+'/gammax_l{0}_s{2}.txt'.format(lzind+1,szind+1)
