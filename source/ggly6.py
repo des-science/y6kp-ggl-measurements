@@ -34,7 +34,6 @@ class GGL(object):
     def setup_run(self, lens_file=None, lens_dir=None, source_file=None, 
                   lens_bin=None, source_bin=None, 
                   zl_lims=None, zs_lims=None,
-                  ra_jk=None, dec_jk=None,
                   load_sources=True):
         """
         Setup the parameters to run code by reading files
@@ -64,7 +63,7 @@ class GGL(object):
              self.e1_s, self.e2_s, 
              self.R_g, self.w_g) = self.self.ggl_setup.mask_source_metacal_5sels(source['ra'], source['dec'], source['e1'], source['e2'], 
                                                                                  source_5sels, source_calibrator, 
-                                                                                 zs_bin=source_bin, ra_jk=ra_jk, dec_jk=dec_jk)
+                                                                                 zs_bin=source_bin)
         else:
             print("No need to load source data, skipping this part...")
 
@@ -155,8 +154,7 @@ class GGL(object):
                 # load data and setup current bin
                 self.setup_run(lens_file=self.par.data_lens[lzind], lens_dir=self.par.lens_dir, source_file=self.par.data_source[szind], 
                                 lens_bin=lzind, source_bin=szind, 
-                                zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max],
-                                ra_jk=None, dec_jk=None)
+                                zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
 
                 print('Number of lenses=',len(self.ra_l))
                 # generate random points
@@ -347,8 +345,7 @@ class GGL(object):
                 # load data and setup current bin
                 self.setup_run(lens_file=self.par.data_lens[lzind], lens_dir=self.par.lens_dir, source_file=self.par.data_source[szind], 
                                 lens_bin=lzind, source_bin=szind, 
-                                zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max],
-                                ra_jk=None, dec_jk=None)
+                                zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
 
                 print('Number of lenses=',len(self.ra_l))
                 # generate random points
