@@ -344,8 +344,8 @@ class GGL(object):
                 
                 # load data and setup current bin
                 self.setup_run(lens_file=self.par.data_lens[lzind], lens_dir=self.par.lens_dir, source_file=self.par.data_source[szind], 
-                                lens_bin=lzind, source_bin=szind, 
-                                zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
+                               lens_bin=lzind, source_bin=szind, 
+                               zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
 
                 print('Number of lenses=',len(self.ra_l))
                 # generate random points
