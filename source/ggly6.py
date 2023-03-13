@@ -165,99 +165,92 @@ class GGL(object):
                 boosts_out        = path_out_boost+'/boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 shot_gammat_out   = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 
-                if ( (not os.path.isfile(gammat_out)) or (not os.path.isfile(extra_out)) or 
-                        (not os.path.isfile(randoms_gt_out)) or (not os.path.isfile(extra_rand_out)) or
-                        (not os.path.isfile(gammax_out)) or (not os.path.isfile(boosts_out)) ):
-                    # load data and setup current bin
-                    self.setup_run(lens_file=self.par.data_lens[lzind], lens_dir=self.par.lens_dir, source_file=self.par.data_source[szind], 
-                                    lens_bin=lzind, source_bin=szind, 
-                                    zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max],
-                                    ra_jk=None, dec_jk=None)
+                # load data and setup current bin
+                self.setup_run(lens_file=self.par.data_lens[lzind], lens_dir=self.par.lens_dir, source_file=self.par.data_source[szind], 
+                                lens_bin=lzind, source_bin=szind, 
+                                zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max],
+                                ra_jk=None, dec_jk=None)
 
-                    print('Number of lenses=',len(self.ra_l))
-                    # generate random points
-                    if not os.path.exists(randoms_radec_out):
-                        print("Generating random points...")
-                        ra_rand, dec_rand = self.ggl_setup.make_random(np.asarray(self.ra_l).min(), np.asarray(self.ra_l).max(), np.asarray(self.dec_l).min(), np.asarray(self.dec_l).max(), 
-                                                                    mask=self.RPmask, N=self.par.rand_fact*len(self.ra_l), NSIDE=self.par.nside, nest=self.par.randoms_mask_nested, 
-                                                                    seed=self.par.seed, tol=self.par.tol_randoms, maxiter=self.par.maxiter_randoms)
-                        np.savetxt(randoms_radec_out, np.c_[ra_rand, dec_rand], header='ra, dec')
-                    else:
-                        print("Loading random points from %s..."%randoms_radec_out)
-                        ra_rand, dec_rand = np.loadtxt(randoms_radec_out, unpack=True)
-                    print('Number of randoms=',len(ra_rand))
-
-                    # parameters to parse to treecorr
-                    params = [self.e1_s,self.e2_s,self.R_g,self.w_g]
-                    # get gamma_t for defined parameters
-                    (theta_res, gammat_total, gammat_res, gammat_rand, 
-                        shot_noise_gammat,
-                        xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
-                        Rg, sum_w_l, sum_w_r, 
-                        boosts) = self.ggl_setup.get_gammat(self.ra_l, self.dec_l, ra_rand, dec_rand, self.ra_s, self.dec_s, 
-                                                    params=params, low_mem=self.par.treecorr_low_mem, weights=self.weight_lens, 
-                                                    use_randoms=self.par.use_randoms, use_boosts=self.par.use_boosts)
-                    # save gamma_x
-                    np.savetxt(gammax_out, np.c_[theta_res,xi_im/Rg], header='theta, gamma_x')
-
-                    # save shot noise
-                    np.savetxt(shot_gammat_out, np.c_[theta_res,shot_noise_gammat], header='theta, gammat_shot_noise')
-                    
-                    # save results in file
-                    np.savetxt(randoms_gt_out, np.c_[theta_res,gammat_rand], header='theta, gamma_t')
-                    np.savetxt(randoms_gx_out, np.c_[theta_res,xi_im_rand/Rg], header='theta, gamma_x')
-                    np.savetxt(extra_rand_out, np.c_[xi_im_rand,xi_npairs_rand,xi_weight_rand,
-                                                        Rg*np.ones(len(theta_res)),sum_w_l*np.ones(len(theta_res)),sum_w_r*np.ones(len(theta_res))], header='xi_im, xi_npair, xi_weight, Rg, sum_w_l, sum_w_r')
-
-                    # save results in file
-                    np.savetxt(gammat_out, np.c_[theta_res,gammat_res], header='theta, gamma_t')
-                    np.savetxt(extra_out, np.c_[xi_im,xi_npairs,xi_weight,Rg*np.ones(len(theta_res))], header='xi_im, xi_npair, xi_weight, Rg')
-                    np.savetxt(boosts_out, np.c_[theta_res,boosts], header='theta, boost')
-
-                    # piece together components to get gamma_t with RP subtraction and/or boost factors applied
-                    if path_out_gt[-1]=='/':
-                        path_out_gt_final = path_out_gt[:-1]
-                    else:
-                        path_out_gt_final = path_out_gt
-                    if self.par.use_boosts:
-                        path_out_gt_final += '_bf'
-                    if self.par.use_randoms:
-                        path_out_gt_final += '_RP'
-                    path_out_gt_final += '/'
-                    gammat_total_out = path_out_gt_final+'gammat_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                    # setup output path
-                    if not os.path.exists(path_out_gt_final):
-                        os.makedirs(path_out_gt_final)
-                    np.savetxt(gammat_total_out, np.c_[theta_res,gammat_total], header='theta, gamma_t')
-
-                    # piece together components to get gamma_x with RP subtraction and/or boost factors applied
-                    gammax_total = xi_im/Rg - xi_im_rand/Rg
-                    if path_out_gx[-1]=='/':
-                        path_out_gx_final = path_out_gx[:-1]
-                    else:
-                        path_out_gx_final = path_out_gx
-                    if self.par.use_randoms:
-                        path_out_gx_final += '_RP'
-                    path_out_gx_final += '/'
-                    gammax_total_out = path_out_gx_final+'gammax_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                    # setup output path
-                    if not os.path.exists(path_out_gx_final):
-                        os.makedirs(path_out_gx_final)
-                    np.savetxt(gammax_total_out, np.c_[theta_res,gammax_total], header='theta, gamma_x')
-
-                    # give feedback on progress
-                    print( "  Results saved in: %s"%gammat_out )
-                    print( "--Done\n" )
-
-                    # clear up memory to avoid out-of-memory issues
-                    del self.ra_l, self.dec_l, self.ra_s, self.dec_s
-                    del ra_rand, dec_rand
-                    del self.e1_s,self.e2_s,self.R_g,self.w_g
-                    del self.weight_lens
+                print('Number of lenses=',len(self.ra_l))
+                # generate random points
+                if not os.path.exists(randoms_radec_out):
+                    print("Generating random points...")
+                    ra_rand, dec_rand = self.ggl_setup.make_random(np.asarray(self.ra_l).min(), np.asarray(self.ra_l).max(), np.asarray(self.dec_l).min(), np.asarray(self.dec_l).max(), 
+                                                                mask=self.RPmask, N=self.par.rand_fact*len(self.ra_l), NSIDE=self.par.nside, nest=self.par.randoms_mask_nested, 
+                                                                seed=self.par.seed, tol=self.par.tol_randoms, maxiter=self.par.maxiter_randoms)
+                    np.savetxt(randoms_radec_out, np.c_[ra_rand, dec_rand], header='ra, dec')
                 else:
-                    # give feedback on progress
-                    print( "  Results found in: %s"%gammat_out )
-                    print( "--Done\n" )
+                    print("Loading random points from %s..."%randoms_radec_out)
+                    ra_rand, dec_rand = np.loadtxt(randoms_radec_out, unpack=True)
+                print('Number of randoms=',len(ra_rand))
+
+                # parameters to parse to treecorr
+                params = [self.e1_s,self.e2_s,self.R_g,self.w_g]
+                # get gamma_t for defined parameters
+                (theta_res, gammat_total, gammat_res, gammat_rand, 
+                    shot_noise_gammat,
+                    xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
+                    Rg, sum_w_l, sum_w_r, 
+                    boosts) = self.ggl_setup.get_gammat(self.ra_l, self.dec_l, ra_rand, dec_rand, self.ra_s, self.dec_s, 
+                                                params=params, low_mem=self.par.treecorr_low_mem, weights=self.weight_lens, 
+                                                use_randoms=self.par.use_randoms, use_boosts=self.par.use_boosts)
+                # save gamma_x
+                np.savetxt(gammax_out, np.c_[theta_res,xi_im/Rg], header='theta, gamma_x')
+
+                # save shot noise
+                np.savetxt(shot_gammat_out, np.c_[theta_res,shot_noise_gammat], header='theta, gammat_shot_noise')
+                
+                # save results in file
+                np.savetxt(randoms_gt_out, np.c_[theta_res,gammat_rand], header='theta, gamma_t')
+                np.savetxt(randoms_gx_out, np.c_[theta_res,xi_im_rand/Rg], header='theta, gamma_x')
+                np.savetxt(extra_rand_out, np.c_[xi_im_rand,xi_npairs_rand,xi_weight_rand,
+                                                    Rg*np.ones(len(theta_res)),sum_w_l*np.ones(len(theta_res)),sum_w_r*np.ones(len(theta_res))], header='xi_im, xi_npair, xi_weight, Rg, sum_w_l, sum_w_r')
+
+                # save results in file
+                np.savetxt(gammat_out, np.c_[theta_res,gammat_res], header='theta, gamma_t')
+                np.savetxt(extra_out, np.c_[xi_im,xi_npairs,xi_weight,Rg*np.ones(len(theta_res))], header='xi_im, xi_npair, xi_weight, Rg')
+                np.savetxt(boosts_out, np.c_[theta_res,boosts], header='theta, boost')
+
+                # piece together components to get gamma_t with RP subtraction and/or boost factors applied
+                if path_out_gt[-1]=='/':
+                    path_out_gt_final = path_out_gt[:-1]
+                else:
+                    path_out_gt_final = path_out_gt
+                if self.par.use_boosts:
+                    path_out_gt_final += '_bf'
+                if self.par.use_randoms:
+                    path_out_gt_final += '_RP'
+                path_out_gt_final += '/'
+                gammat_total_out = path_out_gt_final+'gammat_l{0}_s{2}.txt'.format(lzind+1,szind+1)
+                # setup output path
+                if not os.path.exists(path_out_gt_final):
+                    os.makedirs(path_out_gt_final)
+                np.savetxt(gammat_total_out, np.c_[theta_res,gammat_total], header='theta, gamma_t')
+
+                # piece together components to get gamma_x with RP subtraction and/or boost factors applied
+                gammax_total = xi_im/Rg - xi_im_rand/Rg
+                if path_out_gx[-1]=='/':
+                    path_out_gx_final = path_out_gx[:-1]
+                else:
+                    path_out_gx_final = path_out_gx
+                if self.par.use_randoms:
+                    path_out_gx_final += '_RP'
+                path_out_gx_final += '/'
+                gammax_total_out = path_out_gx_final+'gammax_l{0}_s{2}.txt'.format(lzind+1,szind+1)
+                # setup output path
+                if not os.path.exists(path_out_gx_final):
+                    os.makedirs(path_out_gx_final)
+                np.savetxt(gammax_total_out, np.c_[theta_res,gammax_total], header='theta, gamma_x')
+
+                # give feedback on progress
+                print( "  Results saved in: %s"%gammat_out )
+                print( "--Done\n" )
+
+                # clear up memory to avoid out-of-memory issues
+                del self.ra_l, self.dec_l, self.ra_s, self.dec_s
+                del ra_rand, dec_rand
+                del self.e1_s,self.e2_s,self.R_g,self.w_g
+                del self.weight_lens
 
         print( "Done calculating gamma_t \n" )
         return
@@ -364,111 +357,104 @@ class GGL(object):
                 err_gammat_out    = path_JK_cov_gt+'/err_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 shot_gammat_out   = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 
-                if ( (not os.path.isfile(gammat_out)) or (not os.path.isfile(extra_out)) or 
-                        (not os.path.isfile(randoms_gt_out)) or (not os.path.isfile(extra_rand_out)) or
-                        (not os.path.isfile(gammax_out)) or (not os.path.isfile(boosts_out)) ):
-                    # load data and setup current bin
-                    self.setup_run(lens_file=self.par.data_lens[lzind], lens_dir=self.par.lens_dir, source_file=self.par.data_source[szind], 
-                                    lens_bin=lzind, source_bin=szind, 
-                                    zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max],
-                                    ra_jk=None, dec_jk=None)
+                # load data and setup current bin
+                self.setup_run(lens_file=self.par.data_lens[lzind], lens_dir=self.par.lens_dir, source_file=self.par.data_source[szind], 
+                                lens_bin=lzind, source_bin=szind, 
+                                zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max],
+                                ra_jk=None, dec_jk=None)
 
-                    print('Number of lenses=',len(self.ra_l))
-                    # generate random points
-                    if not os.path.exists(randoms_radec_out):
-                        print("Generating random points...")
-                        ra_rand, dec_rand = self.ggl_setup.make_random(np.asarray(self.ra_l).min(), np.asarray(self.ra_l).max(), np.asarray(self.dec_l).min(), np.asarray(self.dec_l).max(), 
-                                                                    mask=self.RPmask, N=self.par.rand_fact*len(self.ra_l), NSIDE=self.par.nside, nest=self.par.randoms_mask_nested, 
-                                                                    seed=self.par.seed, tol=self.par.tol_randoms, maxiter=self.par.maxiter_randoms)
-                        np.savetxt(randoms_radec_out, np.c_[ra_rand, dec_rand], header='ra, dec')
-                    else:
-                        print("Loading random points from %s..."%randoms_radec_out)
-                        ra_rand, dec_rand = np.loadtxt(randoms_radec_out, unpack=True)
-                    print('Number of randoms=',len(ra_rand))
-                    # parameters to parse to treecorr
-                    params = [self.e1_s,self.e2_s,self.R_g,self.w_g]
-
-                    # get gamma_t for defined parameters
-                    (theta_res, gammat_res, gammat_total, gammat_rand, gammax_res, gammax_total, gammax_rand, 
-                        cov_gammat, shot_noise_gammat, cov_boost, cov_gammax,
-                        xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
-                        Rg, sum_w_l, sum_w_r, 
-                        boosts) = self.ggl_setup.get_gammat_and_covariance(self.ra_l, self.dec_l, ra_rand, dec_rand, self.ra_s, self.dec_s, 
-                                                                    params=params, low_mem=self.par.treecorr_low_mem, weights=self.weight_lens, 
-                                                                    use_randoms=self.par.use_randoms, use_boosts=self.par.use_boosts)
-                    
-                    # save covariances
-                    #---gamma_t
-                    with open(cov_gammat_out,'wb') as f:
-                        for line in cov_gammat.T:
-                            np.savetxt(f, [line])
-                    gt_err = np.sqrt(np.diag(cov_gammat))
-                    np.savetxt(err_gammat_out, np.c_[theta_res,gt_err], header='theta, gammat_err')
-                    np.savetxt(shot_gammat_out, np.c_[theta_res,shot_noise_gammat], header='theta, gammat_shot_noise')
-                    #---boost factors
-                    with open(cov_boosts_out,'wb') as f:
-                        for line in cov_boost.T:
-                            np.savetxt(f, [line])
-                    #---gamma_x
-                    with open(cov_gammax_out,'wb') as f:
-                        for line in cov_gammax.T:
-                            np.savetxt(f, [line])
-                    
-                    # save results in file
-                    #---gamma_t
-                    np.savetxt(gammat_out, np.c_[theta_res,gammat_res], header='theta, gamma_t')
-                    np.savetxt(randoms_gt_out, np.c_[theta_res,gammat_rand], header='theta, gamma_t')
-                    #---gamma_x
-                    np.savetxt(gammax_out, np.c_[theta_res,gammax_res], header='theta, gamma_x')
-                    np.savetxt(randoms_gx_out, np.c_[theta_res,gammax_rand], header='theta, gamma_x')
-                    #---boost factors
-                    np.savetxt(boosts_out, np.c_[theta_res,boosts], header='theta, boost')
-                    #---extra stuff
-                    np.savetxt(extra_out, np.c_[xi_im,xi_npairs,xi_weight,Rg*np.ones(len(theta_res))], header='xi_im, xi_npair, xi_weight, Rg')
-                    np.savetxt(extra_rand_out, np.c_[xi_im_rand,xi_npairs_rand,xi_weight_rand,
-                                                        Rg*np.ones(len(theta_res)),sum_w_l*np.ones(len(theta_res)),sum_w_r*np.ones(len(theta_res))], header='xi_im, xi_npair, xi_weight, Rg, sum_w_l, sum_w_r,')
-
-                    # save results with RP subtraction and/or boost factors applied
-                    #---gamma_t
-                    if path_out_gt[-1]=='/':
-                        path_out_gt_final = path_out_gt[:-1]
-                    else:
-                        path_out_gt_final = path_out_gt
-                    if self.par.use_boosts:
-                        path_out_gt_final += '_bf'
-                    if self.par.use_randoms:
-                        path_out_gt_final += '_RP'
-                    path_out_gt_final += '/'
-                    gammat_total_out = path_out_gt_final+'gammat_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                    if not os.path.exists(path_out_gt_final):
-                        os.makedirs(path_out_gt_final)
-                    np.savetxt(gammat_total_out, np.c_[theta_res,gammat_total], header='theta, gamma_t')
-                    #---gamma_x
-                    if path_out_gx[-1]=='/':
-                        path_out_gx_final = path_out_gx[:-1]
-                    else:
-                        path_out_gx_final = path_out_gx
-                    if self.par.use_randoms:
-                        path_out_gx_final += '_RP'
-                    path_out_gx_final += '/'
-                    gammax_total_out = path_out_gx_final+'gammax_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                    if not os.path.exists(path_out_gx_final):
-                        os.makedirs(path_out_gx_final)
-                    np.savetxt(gammax_total_out, np.c_[theta_res,gammax_total], header='theta, gamma_x')
-
-                    # give feedback on progress
-                    print( "  Results saved in: %s"%gammat_out )
-                    print( "--Done\n" )
-
-                    # clear up memory to avoid out-of-memory issues
-                    del self.ra_l, self.dec_l, self.ra_s, self.dec_s
-                    del self.e1_s,self.e2_s,self.R_g,self.w_g
-                    del ra_rand, dec_rand
-                    del self.weight_lens
+                print('Number of lenses=',len(self.ra_l))
+                # generate random points
+                if not os.path.exists(randoms_radec_out):
+                    print("Generating random points...")
+                    ra_rand, dec_rand = self.ggl_setup.make_random(np.asarray(self.ra_l).min(), np.asarray(self.ra_l).max(), np.asarray(self.dec_l).min(), np.asarray(self.dec_l).max(), 
+                                                                mask=self.RPmask, N=self.par.rand_fact*len(self.ra_l), NSIDE=self.par.nside, nest=self.par.randoms_mask_nested, 
+                                                                seed=self.par.seed, tol=self.par.tol_randoms, maxiter=self.par.maxiter_randoms)
+                    np.savetxt(randoms_radec_out, np.c_[ra_rand, dec_rand], header='ra, dec')
                 else:
-                    # give feedback on progress
-                    print( "  Results found in: %s"%gammat_out )
-                    print( "--Done\n" )
+                    print("Loading random points from %s..."%randoms_radec_out)
+                    ra_rand, dec_rand = np.loadtxt(randoms_radec_out, unpack=True)
+                print('Number of randoms=',len(ra_rand))
+                # parameters to parse to treecorr
+                params = [self.e1_s,self.e2_s,self.R_g,self.w_g]
+
+                # get gamma_t for defined parameters
+                (theta_res, gammat_res, gammat_total, gammat_rand, gammax_res, gammax_total, gammax_rand, 
+                    cov_gammat, shot_noise_gammat, cov_boost, cov_gammax,
+                    xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
+                    Rg, sum_w_l, sum_w_r, 
+                    boosts) = self.ggl_setup.get_gammat_and_covariance(self.ra_l, self.dec_l, ra_rand, dec_rand, self.ra_s, self.dec_s, 
+                                                                params=params, low_mem=self.par.treecorr_low_mem, weights=self.weight_lens, 
+                                                                use_randoms=self.par.use_randoms, use_boosts=self.par.use_boosts)
+                
+                # save covariances
+                #---gamma_t
+                with open(cov_gammat_out,'wb') as f:
+                    for line in cov_gammat.T:
+                        np.savetxt(f, [line])
+                gt_err = np.sqrt(np.diag(cov_gammat))
+                np.savetxt(err_gammat_out, np.c_[theta_res,gt_err], header='theta, gammat_err')
+                np.savetxt(shot_gammat_out, np.c_[theta_res,shot_noise_gammat], header='theta, gammat_shot_noise')
+                #---boost factors
+                with open(cov_boosts_out,'wb') as f:
+                    for line in cov_boost.T:
+                        np.savetxt(f, [line])
+                #---gamma_x
+                with open(cov_gammax_out,'wb') as f:
+                    for line in cov_gammax.T:
+                        np.savetxt(f, [line])
+                
+                # save results in file
+                #---gamma_t
+                np.savetxt(gammat_out, np.c_[theta_res,gammat_res], header='theta, gamma_t')
+                np.savetxt(randoms_gt_out, np.c_[theta_res,gammat_rand], header='theta, gamma_t')
+                #---gamma_x
+                np.savetxt(gammax_out, np.c_[theta_res,gammax_res], header='theta, gamma_x')
+                np.savetxt(randoms_gx_out, np.c_[theta_res,gammax_rand], header='theta, gamma_x')
+                #---boost factors
+                np.savetxt(boosts_out, np.c_[theta_res,boosts], header='theta, boost')
+                #---extra stuff
+                np.savetxt(extra_out, np.c_[xi_im,xi_npairs,xi_weight,Rg*np.ones(len(theta_res))], header='xi_im, xi_npair, xi_weight, Rg')
+                np.savetxt(extra_rand_out, np.c_[xi_im_rand,xi_npairs_rand,xi_weight_rand,
+                                                    Rg*np.ones(len(theta_res)),sum_w_l*np.ones(len(theta_res)),sum_w_r*np.ones(len(theta_res))], header='xi_im, xi_npair, xi_weight, Rg, sum_w_l, sum_w_r,')
+
+                # save results with RP subtraction and/or boost factors applied
+                #---gamma_t
+                if path_out_gt[-1]=='/':
+                    path_out_gt_final = path_out_gt[:-1]
+                else:
+                    path_out_gt_final = path_out_gt
+                if self.par.use_boosts:
+                    path_out_gt_final += '_bf'
+                if self.par.use_randoms:
+                    path_out_gt_final += '_RP'
+                path_out_gt_final += '/'
+                gammat_total_out = path_out_gt_final+'gammat_l{0}_s{2}.txt'.format(lzind+1,szind+1)
+                if not os.path.exists(path_out_gt_final):
+                    os.makedirs(path_out_gt_final)
+                np.savetxt(gammat_total_out, np.c_[theta_res,gammat_total], header='theta, gamma_t')
+                #---gamma_x
+                if path_out_gx[-1]=='/':
+                    path_out_gx_final = path_out_gx[:-1]
+                else:
+                    path_out_gx_final = path_out_gx
+                if self.par.use_randoms:
+                    path_out_gx_final += '_RP'
+                path_out_gx_final += '/'
+                gammax_total_out = path_out_gx_final+'gammax_l{0}_s{2}.txt'.format(lzind+1,szind+1)
+                if not os.path.exists(path_out_gx_final):
+                    os.makedirs(path_out_gx_final)
+                np.savetxt(gammax_total_out, np.c_[theta_res,gammax_total], header='theta, gamma_x')
+
+                # give feedback on progress
+                print( "  Results saved in: %s"%gammat_out )
+                print( "--Done\n" )
+
+                # clear up memory
+                del self.ra_l, self.dec_l, self.ra_s, self.dec_s
+                del self.e1_s,self.e2_s,self.R_g,self.w_g
+                del ra_rand, dec_rand
+                del self.weight_lens
 
         print( "Done calculating gamma_t \n" )
         return
