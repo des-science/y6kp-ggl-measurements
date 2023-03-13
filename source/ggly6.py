@@ -49,15 +49,8 @@ class GGL(object):
 
         # LSS weights
         if self.par.use_LSSweight:
-            if self.par.weightLSS_map is not None:
-                self.weight_lens = self.self.ggl_setup.get_weightLSS(self.ra_l, self.dec_l, mask_file=self.par.weightLSS_map, 
-                                                                     NSIDE=self.par.nside, nest=self.par.weightLSS_nest, key=self.lens_bin_key)
-            elif self.par.weightLSS_file is not None:
-                weight_lens = np.loadtxt(self.par.weightLSS_file)
-                self.weight_lens = self.self.ggl_setup.mask_weight(weight_lens, self.ra_l, self.dec_l, self.z_l, zl_lims=zl_lims, mask_file=self.par.lens_mask_file, NSIDE=self.par.nside, nest=self.par.lens_mask_nested)
-            else:
-                errmsg = '!!!Error getting LSS weights: Weight map not provided'
-                raise Exception(errmsg)
+            self.weight_lens = self.self.ggl_setup.get_weightLSS(self.ra_l, self.dec_l, mask_file=self.par.weightLSS_file, 
+                                                                 NSIDE=self.par.nside, nest=self.par.weightLSS_nest, key=self.lens_bin_key)
         else:
             self.weight_lens = np.ones(len(self.ra_l))
 
@@ -133,12 +126,6 @@ class GGL(object):
         if not os.path.exists(path_out_shot_gt):
             os.makedirs(path_out_shot_gt)
 
-        # setup output path for gamma_t shot noise variance
-        path_out_shot_gt = self.par.path_out_shot_gt
-        if path_out_shot_gt[-1] is not '/': path_out_shot_gt+='/'
-        if not os.path.exists(path_out_shot_gt):
-            os.makedirs(path_out_shot_gt)
-
         # print feedback
         print( "Working on gamma_t calculation with bin slop=%.3f and resolution=%d:"%(self.par.bin_slop,self.par.nside) )
         print( "Running treecorr with theta=[%.1f,%.1f] over %d angular bins"%(self.par.theta_lims[0],self.par.theta_lims[1],self.par.ang_nbins) )
@@ -188,12 +175,12 @@ class GGL(object):
                 params = [self.e1_s,self.e2_s,self.R_g,self.w_g]
                 # get gamma_t for defined parameters
                 (theta_res, gammat_total, gammat_res, gammat_rand, 
-                    shot_noise_gammat,
-                    xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
-                    Rg, sum_w_l, sum_w_r, 
-                    boosts) = self.ggl_setup.get_gammat(self.ra_l, self.dec_l, ra_rand, dec_rand, self.ra_s, self.dec_s, 
-                                                params=params, low_mem=self.par.treecorr_low_mem, weights=self.weight_lens, 
-                                                use_randoms=self.par.use_randoms, use_boosts=self.par.use_boosts)
+                 shot_noise_gammat,
+                 xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
+                 Rg, sum_w_l, sum_w_r, 
+                 boosts) = self.ggl_setup.get_gammat(self.ra_l, self.dec_l, ra_rand, dec_rand, self.ra_s, self.dec_s, 
+                                                     params=params, low_mem=self.par.treecorr_low_mem, weights=self.weight_lens, 
+                                                     use_randoms=self.par.use_randoms, use_boosts=self.par.use_boosts)
                 # save gamma_x
                 np.savetxt(gammax_out, np.c_[theta_res,xi_im/Rg], header='theta, gamma_x')
 
@@ -221,7 +208,7 @@ class GGL(object):
                 if self.par.use_randoms:
                     path_out_gt_final += '_RP'
                 path_out_gt_final += '/'
-                gammat_total_out = path_out_gt_final+'gammat_l{0}_s{2}.txt'.format(lzind+1,szind+1)
+                gammat_total_out = path_out_gt_final+'gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 # setup output path
                 if not os.path.exists(path_out_gt_final):
                     os.makedirs(path_out_gt_final)
@@ -236,7 +223,7 @@ class GGL(object):
                 if self.par.use_randoms:
                     path_out_gx_final += '_RP'
                 path_out_gx_final += '/'
-                gammax_total_out = path_out_gx_final+'gammax_l{0}_s{2}.txt'.format(lzind+1,szind+1)
+                gammax_total_out = path_out_gx_final+'gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 # setup output path
                 if not os.path.exists(path_out_gx_final):
                     os.makedirs(path_out_gx_final)
@@ -332,11 +319,11 @@ class GGL(object):
         print( "Running treecorr with theta=[%.1f,%.1f] over %d angular bins"%(self.par.theta_lims[0],self.par.theta_lims[1],self.par.ang_nbins) )
 
         # run code to get gamma_t
-        for i, lzind in enumerate(self.par.l_bins):
+        for lzind in self.par.l_bins:
             # lens redshift cuts
             zl_min, zl_max = self.par.zl_bins[lzind]
 
-            for j, szind in enumerate(self.par.s_bins):
+            for szind in self.par.s_bins:
                 # source redshift cuts
                 zs_min, zs_max = self.par.zs_bins[szind]
 
@@ -380,12 +367,12 @@ class GGL(object):
 
                 # get gamma_t for defined parameters
                 (theta_res, gammat_res, gammat_total, gammat_rand, gammax_res, gammax_total, gammax_rand, 
-                    cov_gammat, shot_noise_gammat, cov_boost, cov_gammax,
-                    xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
-                    Rg, sum_w_l, sum_w_r, 
-                    boosts) = self.ggl_setup.get_gammat_and_covariance(self.ra_l, self.dec_l, ra_rand, dec_rand, self.ra_s, self.dec_s, 
-                                                                params=params, low_mem=self.par.treecorr_low_mem, weights=self.weight_lens, 
-                                                                use_randoms=self.par.use_randoms, use_boosts=self.par.use_boosts)
+                 cov_gammat, shot_noise_gammat, cov_boost, cov_gammax,
+                 xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
+                 Rg, sum_w_l, sum_w_r, 
+                 boosts) = self.ggl_setup.get_gammat_and_covariance(self.ra_l, self.dec_l, ra_rand, dec_rand, self.ra_s, self.dec_s, 
+                                                                    params=params, low_mem=self.par.treecorr_low_mem, weights=self.weight_lens, 
+                                                                    use_randoms=self.par.use_randoms, use_boosts=self.par.use_boosts)
                 
                 # save covariances
                 #---gamma_t
@@ -414,9 +401,11 @@ class GGL(object):
                 #---boost factors
                 np.savetxt(boosts_out, np.c_[theta_res,boosts], header='theta, boost')
                 #---extra stuff
-                np.savetxt(extra_out, np.c_[xi_im,xi_npairs,xi_weight,Rg*np.ones(len(theta_res))], header='xi_im, xi_npair, xi_weight, Rg')
+                np.savetxt(extra_out, np.c_[xi_im,xi_npairs,xi_weight,Rg*np.ones(len(theta_res))], 
+                                            header='xi_im, xi_npair, xi_weight, Rg')
                 np.savetxt(extra_rand_out, np.c_[xi_im_rand,xi_npairs_rand,xi_weight_rand,
-                                                    Rg*np.ones(len(theta_res)),sum_w_l*np.ones(len(theta_res)),sum_w_r*np.ones(len(theta_res))], header='xi_im, xi_npair, xi_weight, Rg, sum_w_l, sum_w_r,')
+                                                 Rg*np.ones(len(theta_res)),sum_w_l*np.ones(len(theta_res)),sum_w_r*np.ones(len(theta_res))], 
+                                                 header='xi_im, xi_npair, xi_weight, Rg, sum_w_l, sum_w_r,')
 
                 # save results with RP subtraction and/or boost factors applied
                 #---gamma_t
@@ -429,7 +418,7 @@ class GGL(object):
                 if self.par.use_randoms:
                     path_out_gt_final += '_RP'
                 path_out_gt_final += '/'
-                gammat_total_out = path_out_gt_final+'gammat_l{0}_s{2}.txt'.format(lzind+1,szind+1)
+                gammat_total_out = path_out_gt_final+'gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 if not os.path.exists(path_out_gt_final):
                     os.makedirs(path_out_gt_final)
                 np.savetxt(gammat_total_out, np.c_[theta_res,gammat_total], header='theta, gamma_t')
@@ -441,7 +430,7 @@ class GGL(object):
                 if self.par.use_randoms:
                     path_out_gx_final += '_RP'
                 path_out_gx_final += '/'
-                gammax_total_out = path_out_gx_final+'gammax_l{0}_s{2}.txt'.format(lzind+1,szind+1)
+                gammax_total_out = path_out_gx_final+'gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 if not os.path.exists(path_out_gx_final):
                     os.makedirs(path_out_gx_final)
                 np.savetxt(gammax_total_out, np.c_[theta_res,gammax_total], header='theta, gamma_x')
