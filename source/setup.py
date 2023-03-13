@@ -10,6 +10,7 @@ import catalog_utils
 import healpy as hp
 import treecorr
 import astropy.io.fits as pf
+from astropy.io import fits
 
 class GGL_setup(object):
 
@@ -31,19 +32,20 @@ class GGL_setup(object):
 
         return
 
-    def load_lens(self, data_file):
+    def load_lens_Y3_maglim(self, data_file):
         """
-        Loads lens galaxy data from file
+        Loads lens galaxy data from file (.fits file)
 
         Options:
         - Y3 MagLim
-        - Y3 redMaGiC
         """
+        from astropy.io import fits
+
         # read data for lenses
-        _data = np.loadtxt(data_file)
-        ra  = _data[:,0] 
-        dec = _data[:,1]
-        z   = _data[:,2]
+        hdul = fits.open(data_file)
+        ra = hdul[1].data['RA']
+        dec = hdul[1].data['DEC']
+        z = hdul[1].data['DNF_ZMEAN_SOF']
         
         return ra, dec, z
     
@@ -114,7 +116,7 @@ class GGL_setup(object):
 
         return ra_l[goodm], dec_l[goodm]
     
-    def mask_source_metacal_5sels(self, ra_s, dec_s, e1_s, e2_s, source_5sels, calibrator, ra_jk=None, dec_jk=None, zs_bin=None):
+    def mask_source_metacal_5sels(self, ra_s, dec_s, e1_s, e2_s, source_5sels, calibrator, zs_bin=None):
         """
         Define masks to apply to source data sets
         """
@@ -136,16 +138,30 @@ class GGL_setup(object):
         R2,_,w_g = calibrator.calibrate('e_2', mask=photoz_masks)
         R_g = 0.5*(R1+R2)
 
-        # apply additional mask for Jackknife patch
-        if (ra_jk is not None) and (dec_jk is not None):
-            maskzjk = self.get_nearby_mask(ra_s, dec_s, ra_jk, dec_jk,  nside_mask=self.par.nside_nearby)
-            ra_s = ra_s[maskzjk]
-            dec_s = dec_s[maskzjk]
-            e1_s = e1_s[maskzjk]
-            e2_s = e2_s[maskzjk]
-            w_g = w_g[maskzjk]
-
         return ra_s, dec_s, e1_s, e2_s, R_g, w_g
+    
+    def get_weightLSS(self, ra, dec, mask_file=None, NSIDE=None, nest=False):
+        """
+        Reads LSS weight mask to use on lenses and/or randoms
+        and returns the weights corresponding to the given coordinates
+        """
+        hdul = fits.open(mask_file)
+        hpix = hdul[1].data['HPIX']
+        wts = hdul[1].data['VALUE']
+        hmap = np.zeros(hp.nside2npix(4096))
+        hmap[hpix] = wts
+
+        theta = (90.0-dec)*np.pi/180.
+        phi = ra*np.pi/180.
+        pix = hp.ang2pix(NSIDE, theta, phi, nest=nest)
+        ret = hmap[pix]
+
+        # check if weights are positive
+        if len(np.where(ret<0.0)[0])>0:
+            errmsg = '!!!Error: LSS weights have negative or zero values, check input files'
+            raise Exception(errmsg)
+
+        return ret
     
     def get_gammat(self, ra_l, dec_l, ra_rand, dec_rand, ra_s, dec_s, params=None, 
                     units='deg', sep_units='arcmin', low_mem=False, weights=None, 

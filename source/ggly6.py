@@ -42,19 +42,16 @@ class GGL(object):
         print( "Setting up things to run code:" )
 
         # load lens data
-        print("Reading lens data for zbin=%d, mbin=%d..."%(lens_bin+1))
+        print("Reading lens data for redshift bin %d from %s..."%(lens_bin+1,lens_file))
 
         # read lens galaxy data
         self.ra_l, self.dec_l, self.z_l = self.self.ggl_setup.read_data_lens(lens_dir+'/'+lens_file)
-
-        # mask lenses
-        self.ra_l, self.dec_l = self.self.ggl_setup.mask_lens(self.ra_l, self.dec_l, self.z_l, zl_lims=zl_lims, mask_file=self.par.lens_mask_file, NSIDE=self.par.nside, nest=self.par.lens_mask_nested)
 
         # LSS weights
         if self.par.use_LSSweight:
             if self.par.weightLSS_map is not None:
                 self.weight_lens = self.self.ggl_setup.get_weightLSS(self.ra_l, self.dec_l, mask_file=self.par.weightLSS_map, 
-                                                            NSIDE=self.par.nside, nest=self.par.weightLSS_nest, key=self.lens_bin_key)
+                                                                     NSIDE=self.par.nside, nest=self.par.weightLSS_nest, key=self.lens_bin_key)
             elif self.par.weightLSS_file is not None:
                 weight_lens = np.loadtxt(self.par.weightLSS_file)
                 self.weight_lens = self.self.ggl_setup.mask_weight(weight_lens, self.ra_l, self.dec_l, self.z_l, zl_lims=zl_lims, mask_file=self.par.lens_mask_file, NSIDE=self.par.nside, nest=self.par.lens_mask_nested)
@@ -67,16 +64,14 @@ class GGL(object):
         # load source data
         if load_sources:
             print("Reading source data for source bin %d from %s..."%(source_bin+1,self.par.data_source))
-            if self.par.data_source_galaxies=='metacal_5sels':
-                # read source galaxy data
-                source, source_5sels, source_calibrator = self.self.ggl_setup.read_data_source_metacal_5sels(source_file)
-                # mask sources
-                self.ra_s, self.dec_s, self.e1_s, self.e2_s, self.R_g, self.w_g = self.self.ggl_setup.mask_source_metacal_5sels(source['ra'], source['dec'], source['e1'], source['e2'], 
-                                                                                                                        source_5sels, source_calibrator, 
-                                                                                                                        zs_bin=source_bin, ra_jk=ra_jk, dec_jk=dec_jk)
-            else:
-                errmsg = '!!!Error: Source galaxy selection "{}" is not implemented'.format(self.par.data_source_galaxies)
-                raise Exception(errmsg)
+            # read source galaxy data
+            source, source_5sels, source_calibrator = self.self.ggl_setup.read_data_source_metacal_5sels(source_file)
+            # mask sources
+            (self.ra_s, self.dec_s, 
+             self.e1_s, self.e2_s, 
+             self.R_g, self.w_g) = self.self.ggl_setup.mask_source_metacal_5sels(source['ra'], source['dec'], source['e1'], source['e2'], 
+                                                                                 source_5sels, source_calibrator, 
+                                                                                 zs_bin=source_bin, ra_jk=ra_jk, dec_jk=dec_jk)
         else:
             print("No need to load source data, skipping this part...")
 
@@ -160,15 +155,15 @@ class GGL(object):
                 # give feedback on progress
                 print( "  Doing: lens bin l%d [%.2f,%.2f] x source bin %d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max) )
                 # gamma_t output directory
-                gammat_out        = path_out_gt+'/gammat_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                gammax_out        = path_out_gx+'/gammax_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                extra_out         = path_out_extra+'/gammat_extra_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                extra_rand_out    = path_out_extra+'/gammat_rand_extra_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                randoms_gt_out    = path_out_gt_rand+'/gammat_rand_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                randoms_gx_out    = path_out_gx_rand+'/gammax_rand_l{0}_s{2}.txt'.format(lzind+1,szind+1)
+                gammat_out        = path_out_gt+'/gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                gammax_out        = path_out_gx+'/gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                extra_out         = path_out_extra+'/gammat_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                extra_rand_out    = path_out_extra+'/gammat_rand_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                randoms_gt_out    = path_out_gt_rand+'/gammat_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                randoms_gx_out    = path_out_gx_rand+'/gammax_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 randoms_radec_out = path_out_rand+'/radec_rand_l{0}.txt'.format(lzind+1)
-                boosts_out        = path_out_boost+'/boost_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                shot_gammat_out   = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{2}.txt'.format(lzind+1,szind+1)
+                boosts_out        = path_out_boost+'/boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                shot_gammat_out   = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 
                 if ( (not os.path.isfile(gammat_out)) or (not os.path.isfile(extra_out)) or 
                         (not os.path.isfile(randoms_gt_out)) or (not os.path.isfile(extra_rand_out)) or
@@ -355,19 +350,19 @@ class GGL(object):
                 # give feedback on progress
                 print( "  Doing: lens bin l%d [%.2f,%.2f] x source bin %d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max) )
                 # gamma_t output directory
-                gammat_out        = path_out_gt+'/gammat_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                gammax_out        = path_out_gx+'/gammax_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                extra_out         = path_out_extra+'/gammat_extra_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                extra_rand_out    = path_out_extra+'/gammat_rand_extra_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                randoms_gt_out    = path_out_gt_rand+'/gammat_rand_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                randoms_gx_out    = path_out_gx_rand+'/gammax_rand_l{0}_s{2}.txt'.format(lzind+1,szind+1)
+                gammat_out        = path_out_gt+'/gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                gammax_out        = path_out_gx+'/gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                extra_out         = path_out_extra+'/gammat_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                extra_rand_out    = path_out_extra+'/gammat_rand_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                randoms_gt_out    = path_out_gt_rand+'/gammat_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                randoms_gx_out    = path_out_gx_rand+'/gammax_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 randoms_radec_out = path_out_rand+'/radec_rand_l{0}.txt'.format(lzind+1)
-                boosts_out        = path_out_boost+'/boost_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                cov_gammat_out    = path_JK_cov_gt+'/cov_gammat_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                cov_gammax_out    = path_JK_cov_gx+'/cov_gammax_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                cov_boosts_out    = path_JK_cov_bf+'/cov_boost_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                err_gammat_out    = path_JK_cov_gt+'/err_gammat_l{0}_s{2}.txt'.format(lzind+1,szind+1)
-                shot_gammat_out   = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{2}.txt'.format(lzind+1,szind+1)
+                boosts_out        = path_out_boost+'/boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                cov_gammat_out    = path_JK_cov_gt+'/cov_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                cov_gammax_out    = path_JK_cov_gx+'/cov_gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                cov_boosts_out    = path_JK_cov_bf+'/cov_boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                err_gammat_out    = path_JK_cov_gt+'/err_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                shot_gammat_out   = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 
                 if ( (not os.path.isfile(gammat_out)) or (not os.path.isfile(extra_out)) or 
                         (not os.path.isfile(randoms_gt_out)) or (not os.path.isfile(extra_rand_out)) or
