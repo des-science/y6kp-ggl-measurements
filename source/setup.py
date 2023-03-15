@@ -9,7 +9,6 @@ import yaml
 import catalog_utils
 import healpy as hp
 import treecorr
-import astropy.io.fits as pf
 from astropy.io import fits
 
 class GGL_setup(object):
@@ -34,7 +33,7 @@ class GGL_setup(object):
 
     def load_lens_Y3_maglim(self, data_file):
         """
-        Loads lens galaxy data from file (.fits file)
+        Loads lens galaxy data from file
 
         Options:
         - Y3 MagLim
@@ -163,7 +162,27 @@ class GGL_setup(object):
 
         return ret
     
-    def get_gammat(self, ra_l, dec_l, ra_rand, dec_rand, ra_s, dec_s, params=None, 
+    def boost_factor_calculate(self, sum_w_l, sum_w_r, w_LS, w_RS):
+        """
+        Calculates boost factors
+
+        input
+        -----
+        - w_l: weights associated with lenses
+        - w_r: weights associated with randoms
+        - w_LS: weights associated with lens-source pairs
+        - w_RS: weights associated with random-source pairs
+
+        output
+        ------
+        the boost factors as a function of theta
+        """
+        # boost factor calculation
+        boosts = (sum_w_r/sum_w_l) * (w_LS/w_RS)
+
+        return boosts
+    
+    def get_gammat(self, ra_l, dec_l, ra_s, dec_s, ra_rand=None, dec_rand=None, params=None, 
                     units='deg', sep_units='arcmin', low_mem=False, weights=None, 
                     use_randoms=False, use_boosts=False):
         """
@@ -193,9 +212,6 @@ class GGL_setup(object):
         print('Average e2 = ', np.average(e2, weights=wg))
 
         # generate lens catalogs to correlate and process them
-        if weights is None:
-            errmsg = '!!!Error in NG correlations: Weights are "None", need to provide weights or set them to 1 if they do not exist'
-            raise Exception(errmsg)
         ng = treecorr.NGCorrelation(nbins=self.par.ang_nbins, min_sep=theta_min, max_sep=theta_max, sep_units=sep_units, bin_slop=self.par.bin_slop)
         cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights)
         cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, ra_units=units, dec_units=units,
@@ -240,7 +256,7 @@ class GGL_setup(object):
                 ng.xi_im, xi_im_rand, ng.npairs, xi_npairs_rand, ng.weight, xi_weight_rand, 
                 Rg, sum_w_l, sum_w_r, boost)
 
-    def get_gammat_and_covariance(self, ra_l, dec_l, ra_rand, dec_rand, ra_s, dec_s, params=None, 
+    def get_gammat_and_covariance(self, ra_l, dec_l, ra_s, dec_s, ra_rand=None, dec_rand=None, params=None, 
                                     units='deg', sep_units='arcmin', low_mem=False, weights=None, 
                                     use_randoms=False, use_boosts=False):
         """
@@ -270,9 +286,6 @@ class GGL_setup(object):
         print('Average e2 = ', np.average(e2, weights=wg))
 
         # generate lens catalogs to correlate and process them
-        if weights is None:
-            errmsg = '!!!Error in NG correlations: Weights are "None", need to provide weights or set them to 1 if they do not exist'
-            raise Exception(errmsg)
         ng = treecorr.NGCorrelation(nbins=self.par.ang_nbins, min_sep=theta_min, max_sep=theta_max, sep_units=sep_units, bin_slop=self.par.bin_slop, var_method='jackknife')
         if os.path.isfile('jk_centers'):
             cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights, patch_centers='jk_centers')

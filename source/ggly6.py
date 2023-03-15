@@ -31,7 +31,9 @@ class GGL(object):
 
         return
     
-    def setup_run(self, lens_file=None, lens_dir=None, source_file=None, 
+    def setup_run(self, lens_file=None, lens_dir=None, 
+                  source_file=None,
+                  randoms_file=None, randoms_dir=None, 
                   lens_bin=None, source_bin=None, 
                   zl_lims=None, zs_lims=None,
                   load_sources=True):
@@ -44,7 +46,7 @@ class GGL(object):
         print("Reading lens data for redshift bin %d from %s..."%(lens_bin+1,lens_file))
 
         # read lens galaxy data
-        self.ra_l, self.dec_l, self.z_l = self.self.ggl_setup.read_data_lens(lens_dir+'/'+lens_file)
+        self.ra_l, self.dec_l, self.z_l = self.self.ggl_setup.load_lens_Y3_maglim(lens_dir+'/'+lens_file)
 
         # LSS weights
         if self.par.use_LSSweight:
@@ -57,13 +59,17 @@ class GGL(object):
         if load_sources:
             print("Reading source data for source bin %d from %s..."%(source_bin+1,self.par.data_source))
             # read source galaxy data
-            source, source_5sels, source_calibrator = self.self.ggl_setup.read_data_source_metacal_5sels(source_file)
+            source, source_5sels, source_calibrator = self.self.ggl_setup.load_source_metacal_5sels(source_file)
             # mask sources
             (self.ra_s, self.dec_s, 
              self.e1_s, self.e2_s, 
              self.R_g, self.w_g) = self.self.ggl_setup.mask_source_metacal_5sels(source['ra'], source['dec'], source['e1'], source['e2'], 
                                                                                  source_5sels, source_calibrator, 
                                                                                  zs_bin=source_bin)
+            
+        # load random points data
+        if self.par.use_randoms or self.par.use_boosts:
+            self.ra_rand, self.dec_rand = self.self.ggl_setup.load_randoms_Y3_maglim(randoms_dir+'/'+randoms_file)
         else:
             print("No need to load source data, skipping this part...")
 
@@ -141,42 +147,39 @@ class GGL(object):
                 # give feedback on progress
                 print( "  Doing: lens bin l%d [%.2f,%.2f] x source bin %d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max) )
                 # gamma_t output directory
-                gammat_out        = path_out_gt+'/gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                gammax_out        = path_out_gx+'/gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                extra_out         = path_out_extra+'/gammat_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                extra_rand_out    = path_out_extra+'/gammat_rand_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                randoms_gt_out    = path_out_gt_rand+'/gammat_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                randoms_gx_out    = path_out_gx_rand+'/gammax_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                randoms_radec_out = path_out_rand+'/radec_rand_l{0}.txt'.format(lzind+1)
-                boosts_out        = path_out_boost+'/boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                shot_gammat_out   = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                gammat_out = path_out_gt+'/gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                gammax_out = path_out_gx+'/gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                extra_out = path_out_extra+'/gammat_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                extra_rand_out = path_out_extra+'/gammat_rand_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                randoms_gt_out = path_out_gt_rand+'/gammat_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                randoms_gx_out = path_out_gx_rand+'/gammax_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                boosts_out = path_out_boost+'/boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                shot_gammat_out = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 
                 # load data and setup current bin
-                self.setup_run(lens_file=self.par.data_lens[lzind], lens_dir=self.par.lens_dir, source_file=self.par.data_source[szind], 
-                                lens_bin=lzind, source_bin=szind, 
-                                zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
+                self.setup_run(lens_file=self.par.data_lens[lzind], lens_dir=self.par.lens_dir, 
+                               randoms_file=self.par.data_randoms[lzind], randoms_dir=self.par.randoms_dir, 
+                               source_file=self.par.data_source[szind], 
+                               lens_bin=lzind, source_bin=szind, zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
 
                 print('Number of lenses=',len(self.ra_l))
-                # generate random points
-                if not os.path.exists(randoms_radec_out):
-                    print("Generating random points...")
-                    ra_rand, dec_rand = self.ggl_setup.make_random(np.asarray(self.ra_l).min(), np.asarray(self.ra_l).max(), np.asarray(self.dec_l).min(), np.asarray(self.dec_l).max(), 
-                                                                mask=self.RPmask, N=self.par.rand_fact*len(self.ra_l), NSIDE=self.par.nside, nest=self.par.randoms_mask_nested, 
-                                                                seed=self.par.seed, tol=self.par.tol_randoms, maxiter=self.par.maxiter_randoms)
-                    np.savetxt(randoms_radec_out, np.c_[ra_rand, dec_rand], header='ra, dec')
+
+                # random points
+                if self.par.use_randoms or self.par.use_boosts:
+                    print('Number of randoms=',len(self.ra_rand))
                 else:
-                    print("Loading random points from %s..."%randoms_radec_out)
-                    ra_rand, dec_rand = np.loadtxt(randoms_radec_out, unpack=True)
-                print('Number of randoms=',len(ra_rand))
+                    print('Will not use random points')
 
                 # parameters to parse to treecorr
                 params = [self.e1_s,self.e2_s,self.R_g,self.w_g]
+                
                 # get gamma_t for defined parameters
                 (theta_res, gammat_total, gammat_res, gammat_rand, 
                  shot_noise_gammat,
                  xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
                  Rg, sum_w_l, sum_w_r, 
-                 boosts) = self.ggl_setup.get_gammat(self.ra_l, self.dec_l, ra_rand, dec_rand, self.ra_s, self.dec_s, 
+                 boosts) = self.ggl_setup.get_gammat(self.ra_l, self.dec_l, self.ra_s, self.dec_s,
+                                                     ra_rand=self.ra_rand, dec_rand=self.dec_rand, 
                                                      params=params, low_mem=self.par.treecorr_low_mem, weights=self.weight_lens, 
                                                      use_randoms=self.par.use_randoms, use_boosts=self.par.use_boosts)
                 # save gamma_x
@@ -328,37 +331,34 @@ class GGL(object):
                 # give feedback on progress
                 print( "  Doing: lens bin l%d [%.2f,%.2f] x source bin %d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max) )
                 # gamma_t output directory
-                gammat_out        = path_out_gt+'/gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                gammax_out        = path_out_gx+'/gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                extra_out         = path_out_extra+'/gammat_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                extra_rand_out    = path_out_extra+'/gammat_rand_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                randoms_gt_out    = path_out_gt_rand+'/gammat_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                randoms_gx_out    = path_out_gx_rand+'/gammax_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                randoms_radec_out = path_out_rand+'/radec_rand_l{0}.txt'.format(lzind+1)
-                boosts_out        = path_out_boost+'/boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                cov_gammat_out    = path_JK_cov_gt+'/cov_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                cov_gammax_out    = path_JK_cov_gx+'/cov_gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                cov_boosts_out    = path_JK_cov_bf+'/cov_boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                err_gammat_out    = path_JK_cov_gt+'/err_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                shot_gammat_out   = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                gammat_out = path_out_gt+'/gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                gammax_out = path_out_gx+'/gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                extra_out = path_out_extra+'/gammat_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                extra_rand_out = path_out_extra+'/gammat_rand_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                randoms_gt_out = path_out_gt_rand+'/gammat_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                randoms_gx_out = path_out_gx_rand+'/gammax_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                boosts_out = path_out_boost+'/boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                cov_gammat_out = path_JK_cov_gt+'/cov_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                cov_gammax_out = path_JK_cov_gx+'/cov_gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                cov_boosts_out = path_JK_cov_bf+'/cov_boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                err_gammat_out = path_JK_cov_gt+'/err_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                shot_gammat_out = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 
                 # load data and setup current bin
-                self.setup_run(lens_file=self.par.data_lens[lzind], lens_dir=self.par.lens_dir, source_file=self.par.data_source[szind], 
+                self.setup_run(lens_file=self.par.data_lens[lzind], lens_dir=self.par.lens_dir,
+                               randoms_file=self.par.data_randoms[lzind], randoms_dir=self.par.randoms_dir, 
+                               source_file=self.par.data_source[szind], 
                                lens_bin=lzind, source_bin=szind, 
                                zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
 
                 print('Number of lenses=',len(self.ra_l))
-                # generate random points
-                if not os.path.exists(randoms_radec_out):
-                    print("Generating random points...")
-                    ra_rand, dec_rand = self.ggl_setup.make_random(np.asarray(self.ra_l).min(), np.asarray(self.ra_l).max(), np.asarray(self.dec_l).min(), np.asarray(self.dec_l).max(), 
-                                                                mask=self.RPmask, N=self.par.rand_fact*len(self.ra_l), NSIDE=self.par.nside, nest=self.par.randoms_mask_nested, 
-                                                                seed=self.par.seed, tol=self.par.tol_randoms, maxiter=self.par.maxiter_randoms)
-                    np.savetxt(randoms_radec_out, np.c_[ra_rand, dec_rand], header='ra, dec')
+
+                # random points
+                if self.par.use_randoms or self.par.use_boosts:
+                    print('Number of randoms=',len(self.ra_rand))
                 else:
-                    print("Loading random points from %s..."%randoms_radec_out)
-                    ra_rand, dec_rand = np.loadtxt(randoms_radec_out, unpack=True)
-                print('Number of randoms=',len(ra_rand))
+                    print('Will not use random points')
+                
                 # parameters to parse to treecorr
                 params = [self.e1_s,self.e2_s,self.R_g,self.w_g]
 
@@ -368,6 +368,7 @@ class GGL(object):
                  xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
                  Rg, sum_w_l, sum_w_r, 
                  boosts) = self.ggl_setup.get_gammat_and_covariance(self.ra_l, self.dec_l, ra_rand, dec_rand, self.ra_s, self.dec_s, 
+                                                                    ra_rand=self.ra_rand, dec_rand=self.dec_rand, 
                                                                     params=params, low_mem=self.par.treecorr_low_mem, weights=self.weight_lens, 
                                                                     use_randoms=self.par.use_randoms, use_boosts=self.par.use_boosts)
                 
