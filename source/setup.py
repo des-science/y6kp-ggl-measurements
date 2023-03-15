@@ -188,9 +188,9 @@ class GGL_setup(object):
         ng = treecorr.NGCorrelation(nbins=self.par.ang_nbins, min_sep=theta_min, max_sep=theta_max, sep_units=sep_units, bin_slop=self.par.bin_slop)
         cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights)
         cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, ra_units=units, dec_units=units,
-                                    g1=(e1-np.average(e1, weights=wg)), 
-                                    g2=(e2-np.average(e2, weights=wg)), 
-                                    w=wg)
+                                 g1=(e1-np.average(e1, weights=wg)), 
+                                 g2=(e2-np.average(e2, weights=wg)), 
+                                 w=wg)
         ng.process(cat_l, cat_s, low_mem=low_mem)
 
         # get the theta, gammat and covariance
