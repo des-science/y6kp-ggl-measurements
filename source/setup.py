@@ -7,9 +7,9 @@ import numpy as np
 import os
 import yaml
 import catalog_utils
-import healpy as hp
 import treecorr
 from astropy.io import fits
+from destest import destest
 
 class GGL_setup(object):
 
@@ -31,7 +31,7 @@ class GGL_setup(object):
 
         return
 
-    def load_lens_Y3_maglim(self, data_file):
+    def load_lens_Y3_maglim(self, data_file, zl_lims=None):
         """
         Loads lens galaxy data from file
 
@@ -43,10 +43,14 @@ class GGL_setup(object):
         ra = hdul[1].data['RA']
         dec = hdul[1].data['DEC']
         z = hdul[1].data['Z']
+        w = hdul[1].data['W']
+
+        # mask in redshift
+        goodm = np.where( (z>zl_lims[0]) * (z<zl_lims[1]) )[0]
         
-        return ra, dec, z
+        return ra[goodm], dec[goodm], w[goodm]
     
-    def load_randoms_Y3_maglim(self,data_file):
+    def load_randoms_Y3_maglim(self, data_file, zl_lims=None):
         """
         Loads random points data from file
 
@@ -58,10 +62,13 @@ class GGL_setup(object):
         ra = hdul[1].data['RA']
         dec = hdul[1].data['DEC']
         z = hdul[1].data['Z']
+
+        # mask in redshift
+        goodm = np.where( (z>zl_lims[0]) * (z<zl_lims[1]) )[0]
         
-        return ra, dec, z
+        return ra[goodm], dec[goodm]
     
-    def load_source_metacal_5sels(self, data_file):
+    def load_source_metacal_5sels(self, data_file, zs_bin=None):
         """
         Loads source galaxy data
 
@@ -109,46 +116,6 @@ class GGL_setup(object):
         source['e2'] = source_5sels['unsheared']['e2'][0]
         source['som_bin'] = source_5sels['sheared']['som_bin'][0]
 
-        return source, source_5sels, source_calibrator
-    
-    def mask_lens_Y3_maglim(self, ra_l, dec_l, z_l, zl_lims=None, mask_file=None, NSIDE=None, nest=False):
-        """
-        Masks lens galaxies
-        """
-        if mask_file is not None:
-            # read mask
-            mask = np.load(mask_file)
-
-            theta = (90.0-dec_l)*np.pi/180.
-            phi   = ra_l*np.pi/180.
-            pix   = hp.ang2pix(NSIDE, theta, phi, nest=nest)
-            goodm = np.where( (mask[pix]==1) * (z_l>zl_lims[0]) * (z_l<zl_lims[1]) )[0]
-        else:
-            goodm = np.where( (z_l>zl_lims[0]) * (z_l<zl_lims[1]) )[0]
-
-        return ra_l[goodm], dec_l[goodm]
-    
-    def mask_randoms_Y3_maglim(self, ra_rand, dec_rand, z_rand, zl_lims=None, mask_file=None, NSIDE=None, nest=False):
-        """
-        Masks random points
-        """
-        if mask_file is not None:
-            # read mask
-            mask = np.load(mask_file)
-
-            theta = (90.0-dec_rand)*np.pi/180.
-            phi   = ra_rand*np.pi/180.
-            pix   = hp.ang2pix(NSIDE, theta, phi, nest=nest)
-            goodm = np.where( (mask[pix]==1) * (z_rand>zl_lims[0]) * (z_rand<zl_lims[1]) )[0]
-        else:
-            goodm = np.where( (z_rand>zl_lims[0]) * (z_rand<zl_lims[1]) )[0]
-
-        return ra_rand[goodm], dec_rand[goodm]
-    
-    def mask_source_metacal_5sels(self, ra_s, dec_s, e1_s, e2_s, source_5sels, calibrator, zs_bin=None):
-        """
-        Define masks to apply to source data sets
-        """
         # masks from redshifts
         photoz_masks = [
                         (source_5sels['sheared']['som_bin'][i] >= zs_bin) & \
@@ -156,29 +123,17 @@ class GGL_setup(object):
                        ]
         maskz = photoz_masks[0]
 
-        # apply just the redshift mask
-        ra_s = ra_s[maskz]
-        dec_s = dec_s[maskz]
-        e1_s = e1_s[maskz]
-        e2_s = e2_s[maskz]
+        ra_s = source['ra_s'][maskz]
+        dec_s = source['dec_s'][maskz]
+        e1_s = source['e1_s'][maskz]
+        e2_s = source['e2_s'][maskz]
 
         # calibration given the photoz bin
-        R1,_,w_g = calibrator.calibrate('e_1', mask=photoz_masks)
-        R2,_,w_g = calibrator.calibrate('e_2', mask=photoz_masks)
+        R1,_,w_g = source_calibrator.calibrate('e_1', mask=photoz_masks)
+        R2,_,w_g = source_calibrator.calibrate('e_2', mask=photoz_masks)
         R_g = 0.5*(R1+R2)
 
         return ra_s, dec_s, e1_s, e2_s, R_g, w_g
-    
-    def load_LSS_weight_Y3_maglim(self, data_file, zl_lims=None):
-        """
-        Loads LSS weights for lens galaxies
-        """
-        hdul = fits.open(data_file)
-        w = hdul[1].data['W']
-        z = hdul[1].data['Z']
-        goodm = np.where( (z>zl_lims[0]) * (z<zl_lims[1]) )[0]
-
-        return w[goodm]
     
     def boost_factor_calculate(self, sum_w_l, sum_w_r, w_LS, w_RS):
         """
