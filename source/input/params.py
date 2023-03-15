@@ -31,30 +31,21 @@ l_bins = [0,1,2,3]
 s_bins = [0,1,2,3]
 
 " Mask file of lenses "
-# dictionary with masks for all lens bins;
-# must be 0's and 1's in ".npy" or ".npz" format
+# masks to apply to lens galaxies
 lens_mask_file = '...path_to_mask...'
 lens_mask_nested = False
 
 " Mask file of randoms "
-# dictionary with masks for all lens bins;
-# must be 0's and 1's in ".npy" or ".npz" format
+# masks to apply to random points
 randoms_mask_file = '...path_to_mask...'
 randoms_mask_nested = False
 
 " LSS weights "
 # mask need to be a dictionary, 
 # with keys "weightLSS_name_zbin_mbin", where zbin and mbins are integers,
-# in ".npz" format
 use_LSSweight = False
 weightLSS_file = '...path_to_file_with_list_of_weights...'
 weightLSS_nest = False
-
-" Current directory "
-here = os.path.dirname(os.path.abspath(__file__))
-
-" Jackknife's source code directory "
-source_dir = './source/'
 
 " Lens and source data files "
 # lens galaxies; structure: [...,[lens file for bin i],...]

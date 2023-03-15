@@ -53,8 +53,7 @@ class GGL(object):
 
         # LSS weights
         if self.par.use_LSSweight:
-            self.weight_lens = self.self.ggl_setup.get_weightLSS(self.ra_l, self.dec_l, mask_file=self.par.weightLSS_file, 
-                                                                 NSIDE=self.par.nside, nest=self.par.weightLSS_nest, key=self.lens_bin_key)
+            self.weight_lens = self.self.ggl_setup.load_LSS_weight_Y3_maglim(lens_file, zl_lims=zl_lims)
         else:
             self.weight_lens = np.ones(len(self.ra_l))
 

@@ -38,8 +38,6 @@ class GGL_setup(object):
         Options:
         - Y3 MagLim
         """
-        from astropy.io import fits
-
         # read data for lenses
         hdul = fits.open(data_file)
         ra = hdul[1].data['RA']
@@ -55,8 +53,6 @@ class GGL_setup(object):
         Options:
         - Y3 MagLim randoms
         """
-        from astropy.io import fits
-
         # read data for lenses
         hdul = fits.open(data_file)
         ra = hdul[1].data['RA']
@@ -173,28 +169,16 @@ class GGL_setup(object):
 
         return ra_s, dec_s, e1_s, e2_s, R_g, w_g
     
-    def get_weightLSS(self, ra, dec, mask_file=None, NSIDE=None, nest=False):
+    def load_LSS_weight_Y3_maglim(self, data_file, zl_lims=None):
         """
-        Reads LSS weight mask to use on lenses and/or randoms
-        and returns the weights corresponding to the given coordinates
+        Loads LSS weights for lens galaxies
         """
-        hdul = fits.open(mask_file)
-        hpix = hdul[1].data['HPIX']
-        wts = hdul[1].data['VALUE']
-        hmap = np.zeros(hp.nside2npix(4096))
-        hmap[hpix] = wts
+        hdul = fits.open(data_file)
+        w = hdul[1].data['W']
+        z = hdul[1].data['Z']
+        goodm = np.where( (z>zl_lims[0]) * (z<zl_lims[1]) )[0]
 
-        theta = (90.0-dec)*np.pi/180.
-        phi = ra*np.pi/180.
-        pix = hp.ang2pix(NSIDE, theta, phi, nest=nest)
-        ret = hmap[pix]
-
-        # check if weights are positive
-        if len(np.where(ret<0.0)[0])>0:
-            errmsg = '!!!Error: LSS weights have negative or zero values, check input files'
-            raise Exception(errmsg)
-
-        return ret
+        return w[goodm]
     
     def boost_factor_calculate(self, sum_w_l, sum_w_r, w_LS, w_RS):
         """
