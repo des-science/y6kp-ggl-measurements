@@ -43,10 +43,13 @@ class GGL(object):
         print( "Setting up things to run code:" )
 
         # load lens data
-        print("Reading lens data for redshift bin %d from %s..."%(lens_bin+1,lens_file))
+        print("Reading lens data for redshift bin [%.2f,%.2f] (index %d) from %s..."%(zl_lims[0],zl_lims[1],lens_bin+1,lens_file))
 
         # read lens galaxy data
-        self.ra_l, self.dec_l, self.z_l = self.self.ggl_setup.load_lens_Y3_maglim(lens_dir+'/'+lens_file)
+        ra_l, dec_l, z_l = self.self.ggl_setup.load_lens_Y3_maglim(lens_file)
+        self.ra_l, self.dec_l = self.ggl_setup.mask_lens_Y3_maglim(ra_l, dec_l, z_l, zl_lims=zl_lims, 
+                                                                   mask_file=self.par.lens_mask_file, NSIDE=self.par.NSIDE, nest=self.par.lens_mask_nested)
+        del ra_l, dec_l, z_l
 
         # LSS weights
         if self.par.use_LSSweight:
@@ -57,7 +60,7 @@ class GGL(object):
 
         # load source data
         if load_sources:
-            print("Reading source data for source bin %d from %s..."%(source_bin+1,self.par.data_source))
+            print("Reading source data for source bin [%.2f,%.2f] (index %d) from %s..."%(zs_lims[0],zs_lims[1],source_bin+1,self.par.data_source))
             # read source galaxy data
             source, source_5sels, source_calibrator = self.self.ggl_setup.load_source_metacal_5sels(source_file)
             # mask sources
@@ -66,12 +69,17 @@ class GGL(object):
              self.R_g, self.w_g) = self.self.ggl_setup.mask_source_metacal_5sels(source['ra'], source['dec'], source['e1'], source['e2'], 
                                                                                  source_5sels, source_calibrator, 
                                                                                  zs_bin=source_bin)
+        else:
+            print("No need to load source data, skipping this part...")
             
         # load random points data
         if self.par.use_randoms or self.par.use_boosts:
-            self.ra_rand, self.dec_rand = self.self.ggl_setup.load_randoms_Y3_maglim(randoms_dir+'/'+randoms_file)
+            ra_rand, dec_rand, z_rand = self.self.ggl_setup.load_randoms_Y3_maglim(randoms_file)
+            self.ra_rand, self.dec_rand = self.ggl_setup.mask_randoms_Y3_maglim(ra_rand, dec_rand, z_rand, zl_lims=zl_lims, 
+                                                                                mask_file=self.par.lens_mask_file, NSIDE=self.par.NSIDE, nest=self.par.lens_mask_nested)
+            del ra_rand, dec_rand, z_rand
         else:
-            print("No need to load source data, skipping this part...")
+            print("Will not load randoms points data, as it is not needed in current run")
 
         print( "Done reading data" )
 

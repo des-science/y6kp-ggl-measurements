@@ -44,7 +44,24 @@ class GGL_setup(object):
         hdul = fits.open(data_file)
         ra = hdul[1].data['RA']
         dec = hdul[1].data['DEC']
-        z = hdul[1].data['DNF_ZMEAN_SOF']
+        z = hdul[1].data['Z']
+        
+        return ra, dec, z
+    
+    def load_randoms_Y3_maglim(self,data_file):
+        """
+        Loads random points data from file
+
+        Options:
+        - Y3 MagLim randoms
+        """
+        from astropy.io import fits
+
+        # read data for lenses
+        hdul = fits.open(data_file)
+        ra = hdul[1].data['RA']
+        dec = hdul[1].data['DEC']
+        z = hdul[1].data['Z']
         
         return ra, dec, z
     
@@ -98,9 +115,9 @@ class GGL_setup(object):
 
         return source, source_5sels, source_calibrator
     
-    def mask_lens(self, ra_l, dec_l, z_l, zl_lims=None, mask_file=None, NSIDE=None, nest=False):
+    def mask_lens_Y3_maglim(self, ra_l, dec_l, z_l, zl_lims=None, mask_file=None, NSIDE=None, nest=False):
         """
-        Define masks to apply to lens data sets
+        Masks lens galaxies
         """
         if mask_file is not None:
             # read mask
@@ -114,6 +131,23 @@ class GGL_setup(object):
             goodm = np.where( (z_l>zl_lims[0]) * (z_l<zl_lims[1]) )[0]
 
         return ra_l[goodm], dec_l[goodm]
+    
+    def mask_randoms_Y3_maglim(self, ra_rand, dec_rand, z_rand, zl_lims=None, mask_file=None, NSIDE=None, nest=False):
+        """
+        Masks random points
+        """
+        if mask_file is not None:
+            # read mask
+            mask = np.load(mask_file)
+
+            theta = (90.0-dec_rand)*np.pi/180.
+            phi   = ra_rand*np.pi/180.
+            pix   = hp.ang2pix(NSIDE, theta, phi, nest=nest)
+            goodm = np.where( (mask[pix]==1) * (z_rand>zl_lims[0]) * (z_rand<zl_lims[1]) )[0]
+        else:
+            goodm = np.where( (z_rand>zl_lims[0]) * (z_rand<zl_lims[1]) )[0]
+
+        return ra_rand[goodm], dec_rand[goodm]
     
     def mask_source_metacal_5sels(self, ra_s, dec_s, e1_s, e2_s, source_5sels, calibrator, zs_bin=None):
         """
