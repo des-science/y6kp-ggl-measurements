@@ -10,6 +10,9 @@ import os
 # parameters file
 import info as info
 
+# folder containing important stuff
+sys.path.append(info.input_dir)
+
 # code to run measurements
 import ggly6 as ggl_run
 run = ggl_run.GGL(input_dir=info.input_dir)
