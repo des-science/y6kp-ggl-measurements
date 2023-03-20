@@ -49,7 +49,7 @@ class GGL(object):
             self.weight_lens = np.ones(len(self.ra_l))
 
         # load source data
-        print("Reading source data for source bin [%.2f,%.2f] (index %d) from %s..."%(zs_lims[0],zs_lims[1],source_bin+1,self.par.data_source))
+        print("Reading source data for source bin [%.2f,%.2f] (index %d) from %s..."%(zs_lims[0],zs_lims[1],source_bin+1,source_file))
         # read source galaxy data
         (self.ra_s, self.dec_s, 
          self.e1_s, self.e2_s, 
@@ -57,6 +57,7 @@ class GGL(object):
         
         # load random points data
         if self.par.use_randoms or self.par.use_boosts:
+            print("Reading random-point data from %s..."%(randoms_file))
             self.ra_rand, self.dec_rand = self.ggl_setup.load_randoms_Y3_maglim(randoms_file, zl_lims=zl_lims)
         else:
             print("Will not load randoms points data, as it is not needed in current run")
