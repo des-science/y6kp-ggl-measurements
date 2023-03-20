@@ -31,8 +31,7 @@ l_bins = [0,1,2,3]
 s_bins = [0,1,2,3]
 
 " LSS weights "
-# mask need to be a dictionary, 
-# with keys "weightLSS_name_zbin_mbin", where zbin and mbins are integers,
+# whether LSS weights will be applied to gamma_t
 use_LSSweight = False
 
 " Lens, source and random-point data files "
