@@ -147,7 +147,7 @@ class GGL(object):
                 shot_gammat_out = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 
                 # load data and setup current bin
-                self.setup_run(lens_file=self.par.data_lens[lzind], lens_dir=self.par.lens_dir, 
+                self.setup_run(lens_file=self.par.data_lens[lzind],
                                randoms_file=self.par.data_randoms[lzind], randoms_dir=self.par.randoms_dir, 
                                source_file=self.par.data_source[szind], 
                                lens_bin=lzind, source_bin=szind, zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
@@ -335,7 +335,7 @@ class GGL(object):
                 shot_gammat_out = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 
                 # load data and setup current bin
-                self.setup_run(lens_file=self.par.data_lens[lzind], lens_dir=self.par.lens_dir,
+                self.setup_run(lens_file=self.par.data_lens[lzind],
                                randoms_file=self.par.data_randoms[lzind], randoms_dir=self.par.randoms_dir, 
                                source_file=self.par.data_source[szind], 
                                lens_bin=lzind, source_bin=szind, 

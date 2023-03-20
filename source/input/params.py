@@ -30,36 +30,18 @@ zs_bins = [
 l_bins = [0,1,2,3]
 s_bins = [0,1,2,3]
 
-" Mask file of lenses "
-# masks to apply to lens galaxies
-lens_mask_file = '...path_to_mask...'
-lens_mask_nested = False
-
-" Mask file of randoms "
-# masks to apply to random points
-randoms_mask_file = '...path_to_mask...'
-randoms_mask_nested = False
-
 " LSS weights "
 # mask need to be a dictionary, 
 # with keys "weightLSS_name_zbin_mbin", where zbin and mbins are integers,
 use_LSSweight = False
-weightLSS_file = '...path_to_file_with_list_of_weights...'
-weightLSS_nest = False
 
 " Lens and source data files "
 # lens galaxies; structure: [...,[lens file for bin i],...]
-lens_dir = '...path_to_folder_with_lens_data_files...'
+data_lens = []
 
 # source galaxies
-# note: 'data_source_galaxies' can be one of ['metacal_5sels', 'mice']
-dir_descat = '/project2/chihway/data/des_y3_catalogs/y3kp_sample/Feb2021/'
-file_yaml = 'cats.yaml'
-data_source = [dir_descat+file_yaml,
-               dir_descat+file_yaml,
-               dir_descat+file_yaml,
-               dir_descat+file_yaml]
-data_source_galaxies = 'metacal_5sels'
+# note: 'data_source_galaxies' can be one of [...,[source file for bin i],...]
+data_source = []
 
 " Boost factor "
 use_boosts = True
