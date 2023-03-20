@@ -35,13 +35,15 @@ s_bins = [0,1,2,3]
 # with keys "weightLSS_name_zbin_mbin", where zbin and mbins are integers,
 use_LSSweight = False
 
-" Lens and source data files "
-# lens galaxies; structure: [...,[lens file for bin i],...]
+" Lens, source and random-point data files "
+# lens galaxies
 data_lens = []
 
 # source galaxies
-# note: 'data_source_galaxies' can be one of [...,[source file for bin i],...]
 data_source = []
+
+# random points
+data_randoms = []
 
 " Boost factor "
 use_boosts = True
