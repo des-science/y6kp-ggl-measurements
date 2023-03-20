@@ -124,10 +124,10 @@ class GGL_setup(object):
                        ]
         maskz = photoz_masks[0]
 
-        ra_s = source['ra_s'][maskz]
-        dec_s = source['dec_s'][maskz]
-        e1_s = source['e1_s'][maskz]
-        e2_s = source['e2_s'][maskz]
+        ra_s = source['ra'][maskz]
+        dec_s = source['dec'][maskz]
+        e1_s = source['e1'][maskz]
+        e2_s = source['e2'][maskz]
 
         # calibration given the photoz bin
         R1,_,w_g = source_calibrator.calibrate('e_1', mask=photoz_masks)
