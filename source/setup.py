@@ -78,7 +78,7 @@ class GGL_setup(object):
         """
         # read yaml file that defines all the catalog selections used
         params = yaml.load(open(data_file), Loader=yaml.FullLoader)
-        params['param_file'] = self.par.file_yaml
+        params['param_file'] = data_file.split('/')[-1]
 
         source_selector, source_calibrator = catalog_utils.load_catalog(params, 'mcal', 'mcal', 
                                                                         params['source_group'], params['source_table'], 
