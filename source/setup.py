@@ -206,7 +206,10 @@ class GGL_setup(object):
 
         # get boost factors
         sum_w_l = np.sum(weights)
-        sum_w_r = len(ra_rand)
+        if ra_rand is not None:
+            sum_w_r = len(ra_rand)
+        else:
+            sum_w_r = 0
         if use_boosts:
             boost = self.boost_factor_calculate(sum_w_l, sum_w_r, ng.weight, rg.weight)
             gamma_t *= boost
@@ -290,7 +293,10 @@ class GGL_setup(object):
 
         # get boost factors
         sum_w_l = np.sum(weights)
-        sum_w_r = len(ra_rand)
+        if ra_rand is not None:
+            sum_w_r = len(ra_rand)
+        else:
+            sum_w_r = 0
         if use_boosts:
             boost = self.boost_factor_calculate(sum_w_l, sum_w_r, ng.weight, rg.weight)
             gammat_tot *= boost
@@ -371,3 +377,4 @@ class GGL_setup(object):
                 cov_jk_gt, ng.varxi, cov_jk_boost, cov_jk_gx,
                 ng.xi_im, xi_im_rand, ng.npairs, xi_npairs_rand, ng.weight, xi_weight_rand, 
                 Rg, sum_w_l, sum_w_r, boost)
+    

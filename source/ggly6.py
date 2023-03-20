@@ -357,7 +357,7 @@ class GGL(object):
                  cov_gammat, shot_noise_gammat, cov_boost, cov_gammax,
                  xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
                  Rg, sum_w_l, sum_w_r, 
-                 boosts) = self.ggl_setup.get_gammat_and_covariance(self.ra_l, self.dec_l, self.ra_rand, self.dec_rand, self.ra_s, self.dec_s, 
+                 boosts) = self.ggl_setup.get_gammat_and_covariance(self.ra_l, self.dec_l, self.ra_s, self.dec_s, 
                                                                     ra_rand=self.ra_rand, dec_rand=self.dec_rand, 
                                                                     params=params, low_mem=self.par.treecorr_low_mem, weights=self.weight_lens, 
                                                                     use_randoms=self.par.use_randoms, use_boosts=self.par.use_boosts)
