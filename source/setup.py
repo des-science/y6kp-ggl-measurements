@@ -5,6 +5,7 @@ Helper functions
 """
 import numpy as np
 import os
+import sys
 import yaml
 import catalog_utils
 import treecorr

@@ -8,30 +8,18 @@ import sys
 import os
 
 # parameters file
-import params as par
-
-# folder with main code
-sys.path.append(par.source_dir)
+import info as info
 
 # code to run measurements
-import jackknife_run_setup as jackk_run
-jack_run = jackk_run.Jack_knife_Run(param_dir=par.here)
+import ggly6 as ggl_run
+run = ggl_run.GGL(input_dir=info.input_dir)
 
-# code with Jackknife functions
-import jackknife as jackk
-jack = jackk.Jack_knife(param_dir=par.here)
-
-# code for plotting
-import jackknife_plots as jackkplt
-jackplt = jackkplt.Jack_knife_Plot(param_dir=par.here)
 #------------------------------------------------#
 
 """
 *******************
 Do the calculations
 *******************
-For info on the Jackknife method see:
-http://people.bu.edu/aimcinto/jackknife.pdf
 """
 if __name__ == "__main__":
 
