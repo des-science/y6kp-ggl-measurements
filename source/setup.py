@@ -157,8 +157,8 @@ class GGL_setup(object):
         return boosts
     
     def get_gammat(self, ra_l, dec_l, ra_s, dec_s, ra_rand=None, dec_rand=None, params=None, 
-                    units='deg', sep_units='arcmin', low_mem=False, weights=None, 
-                    use_randoms=False, use_boosts=False):
+                   units='deg', sep_units='arcmin', low_mem=False, weights=None, 
+                   use_randoms=False, use_boosts=False):
         """
         Calculates gamma_t as a function of theta using Treecorr
 
@@ -231,8 +231,8 @@ class GGL_setup(object):
                 Rg, sum_w_l, sum_w_r, boost)
 
     def get_gammat_and_covariance(self, ra_l, dec_l, ra_s, dec_s, ra_rand=None, dec_rand=None, params=None, 
-                                    units='deg', sep_units='arcmin', low_mem=False, weights=None, 
-                                    use_randoms=False, use_boosts=False):
+                                  units='deg', sep_units='arcmin', low_mem=False, weights=None, 
+                                  use_randoms=False, use_boosts=False):
         """
         Calculates gamma_t as a function of theta and its Jackknife covariance using only Treecorr
 

@@ -43,7 +43,7 @@ class GGL(object):
         print("Reading lens data for redshift bin [%.2f,%.2f] (index %d) from %s..."%(zl_lims[0],zl_lims[1],lens_bin+1,lens_file))
 
         # read lens galaxy data
-        self.ra_l, self.dec_l, self.weight_lens = self.self.ggl_setup.load_lens_Y3_maglim(lens_file, zl_lims=zl_lims)
+        self.ra_l, self.dec_l, self.weight_lens = self.ggl_setup.load_lens_Y3_maglim(lens_file, zl_lims=zl_lims)
         if not self.par.use_LSSweight:
             print("Warning: Will not load LSS weights for lenses, setting them to 1")
             self.weight_lens = np.ones(len(self.ra_l))
