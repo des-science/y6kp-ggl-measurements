@@ -53,11 +53,11 @@ class GGL(object):
         # read source galaxy data
         (self.ra_s, self.dec_s, 
          self.e1_s, self.e2_s, 
-         self.R_g, self.w_g) = self.self.ggl_setup.load_source_metacal_5sels(source_file, zs_bin=source_bin)
+         self.R_g, self.w_g) = self.ggl_setup.load_source_metacal_5sels(source_file, zs_bin=source_bin)
         
         # load random points data
         if self.par.use_randoms or self.par.use_boosts:
-            self.ra_rand, self.dec_rand = self.self.ggl_setup.load_randoms_Y3_maglim(randoms_file, zl_lims=zl_lims)
+            self.ra_rand, self.dec_rand = self.ggl_setup.load_randoms_Y3_maglim(randoms_file, zl_lims=zl_lims)
         else:
             print("Will not load randoms points data, as it is not needed in current run")
             self.ra_rand = None
