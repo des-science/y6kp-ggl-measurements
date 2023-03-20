@@ -148,7 +148,7 @@ class GGL(object):
                 
                 # load data and setup current bin
                 self.setup_run(lens_file=self.par.data_lens[lzind],
-                               randoms_file=self.par.data_randoms[lzind], randoms_dir=self.par.randoms_dir, 
+                               randoms_file=self.par.data_randoms[lzind], 
                                source_file=self.par.data_source[szind], 
                                lens_bin=lzind, source_bin=szind, zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
 
@@ -336,7 +336,7 @@ class GGL(object):
                 
                 # load data and setup current bin
                 self.setup_run(lens_file=self.par.data_lens[lzind],
-                               randoms_file=self.par.data_randoms[lzind], randoms_dir=self.par.randoms_dir, 
+                               randoms_file=self.par.data_randoms[lzind], 
                                source_file=self.par.data_source[szind], 
                                lens_bin=lzind, source_bin=szind, 
                                zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
