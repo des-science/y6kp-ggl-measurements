@@ -9,4 +9,4 @@ input_dir = '...path_to_input_dir...'
 # options:
 # I)  'gt_only': only run the correlation funtions without covariance
 # II) 'gt_and_cov': run gamma_t measurements with its Jackknife covariance
-NG_mode = 'gt_and_corr'
+NG_mode = 'gt_and_cov'
