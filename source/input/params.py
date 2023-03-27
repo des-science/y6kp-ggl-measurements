@@ -27,7 +27,9 @@ zs_bins = [
           ]
 
 " Bins to run "
+# the lens bins to run
 l_bins = [0,1,2,3]
+# the source bins to run
 s_bins = [0,1,2,3]
 
 " LSS weights "
