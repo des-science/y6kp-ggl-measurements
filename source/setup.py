@@ -252,7 +252,7 @@ class GGL_setup(object):
         # minimum and maximum angular separation
         theta_min, theta_max = self.par.theta_lims
 
-        # ellipticity (e1,e2) and R_gamma
+        # ellipticity (e1,e2), R_gamma and weights
         e1, e2, Rg, wg = params
 
         # count-shear two-point correlation function(i.e. galaxy-galaxy lensing)
@@ -269,7 +269,7 @@ class GGL_setup(object):
         else:
             cat_r = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=units, dec_units=units, npatch=self.par.n_jck)
             cat_r.write_patch_centers('jk_centers')
-            cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, patch_centers='jk_centers', w=weights)
+            cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights, patch_centers='jk_centers')
         cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, ra_units=units, dec_units=units,
                                  g1=(e1-np.average(e1, weights=wg)), 
                                  g2=(e2-np.average(e2, weights=wg)), 
@@ -291,7 +291,7 @@ class GGL_setup(object):
             cat_r = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=units, dec_units=units, patch_centers='jk_centers')
             rg.process(cat_r, cat_s, low_mem=low_mem)
 
-        # get boost factors
+        # boost factors for gammat
         sum_w_l = np.sum(weights)
         if ra_rand is not None:
             sum_w_r = len(ra_rand)
@@ -319,7 +319,7 @@ class GGL_setup(object):
         # update correlations with responses to use in Jackknife mode
         ng.Rg = Rg*np.ones(len(theta))
 
-        # get gamma_t and gamma_x
+        # random-point subtraction for gamma_t and gamma_x
         if use_randoms:
             gammat_rand = rg.xi/Rg
             gammax_rand = rg.xi_im/Rg
@@ -372,8 +372,12 @@ class GGL_setup(object):
         else:
             cov_jk_boost = np.zeros((len(theta),len(theta)))
 
+        # get covariance of randoms points
+        corrs = [rg]
+        cov_jk_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func)
+
         return (theta, gamma_t, gammat_tot, gammat_rand, gamma_x, gammax_tot, gammax_rand, 
-                cov_jk_gt, ng.varxi, cov_jk_boost, cov_jk_gx,
+                cov_jk_gt, ng.varxi, cov_jk_boost, cov_jk_gx, cov_jk_rand,
                 ng.xi_im, xi_im_rand, ng.npairs, xi_npairs_rand, ng.weight, xi_weight_rand, 
                 Rg, sum_w_l, sum_w_r, boost)
     

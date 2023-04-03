@@ -183,14 +183,15 @@ class GGL(object):
                 np.savetxt(randoms_gt_out, np.c_[theta_res,gammat_rand], header='theta, gamma_t')
                 np.savetxt(randoms_gx_out, np.c_[theta_res,xi_im_rand/Rg], header='theta, gamma_x')
                 np.savetxt(extra_rand_out, np.c_[xi_im_rand,xi_npairs_rand,xi_weight_rand,
-                                                    Rg*np.ones(len(theta_res)),sum_w_l*np.ones(len(theta_res)),sum_w_r*np.ones(len(theta_res))], header='xi_im, xi_npair, xi_weight, Rg, sum_w_l, sum_w_r')
+                                                 Rg*np.ones(len(theta_res)),sum_w_l*np.ones(len(theta_res)),sum_w_r*np.ones(len(theta_res))], 
+                                                 header='xi_im, xi_npair, xi_weight, Rg, sum_w_l, sum_w_r')
 
                 # save results in file
                 np.savetxt(gammat_out, np.c_[theta_res,gammat_res], header='theta, gamma_t')
                 np.savetxt(extra_out, np.c_[xi_im,xi_npairs,xi_weight,Rg*np.ones(len(theta_res))], header='xi_im, xi_npair, xi_weight, Rg')
                 np.savetxt(boosts_out, np.c_[theta_res,boosts], header='theta, boost')
 
-                # piece together components to get gamma_t with RP subtraction and/or boost factors applied
+                # piece together components to get gamma_t with RP subtraction and boost factors applied
                 if self.par.use_boosts or self.par.use_randoms:
                     if path_out_gt[-1]=='/':
                         path_out_gt_final = path_out_gt[:-1]
@@ -199,7 +200,7 @@ class GGL(object):
                     if self.par.use_boosts:
                         path_out_gt_final += '_bf'
                     if self.par.use_randoms:
-                        path_out_gt_final += '_RP'
+                        path_out_gt_final += '_rp'
                     path_out_gt_final += '/'
                     gammat_total_out = path_out_gt_final+'gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                     # setup output path
@@ -211,14 +212,14 @@ class GGL(object):
                         errmsg = '!!!Something is wrong, no boost or randoms, but final gammat is not equal to the basic gammat measurement'
                         raise Exception(errmsg)
 
-                # piece together components to get gamma_x with RP subtraction and/or boost factors applied
+                # piece together components to get gamma_x with RP subtraction and boost factors applied
                 gammax_total = xi_im/Rg - xi_im_rand/Rg
                 if self.par.use_randoms:
                     if path_out_gx[-1]=='/':
                         path_out_gx_final = path_out_gx[:-1]
                     else:
                         path_out_gx_final = path_out_gx
-                        path_out_gx_final += '_RP'
+                        path_out_gx_final += '_rp'
                     path_out_gx_final += '/'
                     gammax_total_out = path_out_gx_final+'gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                     if not os.path.exists(path_out_gx_final):
@@ -296,6 +297,12 @@ class GGL(object):
         if not os.path.exists(path_JK_cov_gt):
             os.makedirs(path_JK_cov_gt)
 
+        # setup output path for random-point gamma_t Jackknife covariance
+        path_JK_cov_gt_rand = self.par.path_JK_cov_gt_rand
+        if path_JK_cov_gt_rand[-1] is not '/': path_JK_cov_gt_rand+='/'
+        if not os.path.exists(path_JK_cov_gt_rand):
+            os.makedirs(path_JK_cov_gt_rand)
+
         # setup output path for gamma_t Jackknife covariance
         path_JK_cov_gx = self.par.path_JK_cov_gx
         if path_JK_cov_gx[-1] is not '/': path_JK_cov_gx+='/'
@@ -338,6 +345,7 @@ class GGL(object):
                 randoms_gx_out = path_out_gx_rand+'/gammax_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 boosts_out = path_out_boost+'/boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 cov_gammat_out = path_JK_cov_gt+'/cov_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                cov_gammat_rand_out = path_JK_cov_gt_rand+'/cov_gammat_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 cov_gammax_out = path_JK_cov_gx+'/cov_gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 cov_boosts_out = path_JK_cov_bf+'/cov_boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 err_gammat_out = path_JK_cov_gt+'/err_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
@@ -363,7 +371,7 @@ class GGL(object):
 
                 # get gamma_t for defined parameters
                 (theta_res, gammat_res, gammat_total, gammat_rand, gammax_res, gammax_total, gammax_rand, 
-                 cov_gammat, shot_noise_gammat, cov_boost, cov_gammax,
+                 cov_gammat, shot_noise_gammat, cov_boost, cov_gammax, cov_gammat_rand,
                  xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
                  Rg, sum_w_l, sum_w_r, 
                  boosts) = self.ggl_setup.get_gammat_and_covariance(self.ra_l, self.dec_l, self.ra_s, self.dec_s, 
@@ -387,7 +395,11 @@ class GGL(object):
                 with open(cov_gammax_out,'wb') as f:
                     for line in cov_gammax.T:
                         np.savetxt(f, [line])
-                
+                #---randoms points
+                with open(cov_gammat_rand_out,'wb') as f:
+                    for line in cov_gammat_rand.T:
+                        np.savetxt(f, [line])
+
                 # save results in file
                 #---gamma_t
                 np.savetxt(gammat_out, np.c_[theta_res,gammat_res], header='theta, gamma_t')
@@ -404,7 +416,7 @@ class GGL(object):
                                                  Rg*np.ones(len(theta_res)),sum_w_l*np.ones(len(theta_res)),sum_w_r*np.ones(len(theta_res))], 
                                                  header='xi_im, xi_npair, xi_weight, Rg, sum_w_l, sum_w_r,')
 
-                # save results with RP subtraction and/or boost factors applied
+                # save results with RP subtraction and boost factors applied
                 #---gamma_t
                 if self.par.use_boosts or self.par.use_randoms:
                     if path_out_gt[-1]=='/':
@@ -414,7 +426,7 @@ class GGL(object):
                     if self.par.use_boosts:
                         path_out_gt_final += '_bf'
                     if self.par.use_randoms:
-                        path_out_gt_final += '_RP'
+                        path_out_gt_final += '_rp'
                     path_out_gt_final += '/'
                     gammat_total_out = path_out_gt_final+'gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                     # setup output path
@@ -431,7 +443,7 @@ class GGL(object):
                         path_out_gx_final = path_out_gx[:-1]
                     else:
                         path_out_gx_final = path_out_gx
-                        path_out_gx_final += '_RP'
+                        path_out_gx_final += '_rp'
                     path_out_gx_final += '/'
                     gammax_total_out = path_out_gx_final+'gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                     if not os.path.exists(path_out_gx_final):

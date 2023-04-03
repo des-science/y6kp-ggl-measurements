@@ -101,14 +101,5 @@ path_JK_gx = path_out_JK+'/gammax_JK/'
 path_JK_rand = path_out_JK+'/gammat_randoms_JK/'
 path_JK_extra_gt = path_out_JK+'/gammat_extra_JK/'
 path_JK_cov_gt = path_out_JK+'/gammat_covariance/'
+path_JK_cov_gt_rand = path_out_JK+'/gammat_randoms_covariance/'
 path_out_shot_gt = out_main_gt+'/gammat_shot_noise/'
-
-" Output directories for wtheta "
-out_main_wt = out_main
-path_out_wt = out_main_wt+'/wtheta/'
-path_out_extra_wt = out_main_wt+'/wtheta_extra/'
-#
-path_JK_cov_wt = path_out_JK+'/wtheta_covariance/'
-path_JK_wt = path_out_JK+'/wtheta_JK/'
-path_JK_extra_wt = path_out_JK+'/wtheta_extra_JK/'
-path_out_shot_wt = out_main_wt+'/wtheta_shot_noise/'
