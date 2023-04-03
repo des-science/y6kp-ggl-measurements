@@ -3,10 +3,7 @@ File containing the necessary information to setup and
 start running the Y6 GGL measurements pipeline
 """
 import os
-import sys
-
-here = os.path.abspath(__file__)
-sys.path.append(here)
+here = os.getcwd()
 
 # path the the folder containing all the input files
 input_dir = '...path_to_input_dir...'
