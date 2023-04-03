@@ -306,7 +306,7 @@ class GGL_setup(object):
         # generate fake treecorr correlation objects for lenses and randoms 
         # that hold the weights for the boost factor covariance calculations
         if use_boosts:
-            # initialize NN correlations for single point corss lenses and randoms
+            # initialize NN correlations for single point cross lenses and randoms
             nn_lp = treecorr.NNCorrelation(nbins=self.par.ang_nbins, min_sep=1.e-3, max_sep=1.e5, sep_units='arcmin', bin_slop=self.par.bin_slop, var_method='jackknife')
             nn_rp = treecorr.NNCorrelation(nbins=self.par.ang_nbins, min_sep=1.e-3, max_sep=1.e5, sep_units='arcmin', bin_slop=self.par.bin_slop, var_method='jackknife')
             # catalog containing single point
@@ -326,6 +326,7 @@ class GGL_setup(object):
             xi_im_rand = rg.xi_im
             xi_npairs_rand = rg.npairs
             xi_weight_rand = rg.weight
+            rg.Rg = Rg*np.ones(len(theta))
         else:
             gammat_rand = np.zeros(len(theta))
             gammax_rand = np.zeros(len(theta))
