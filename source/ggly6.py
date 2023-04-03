@@ -136,7 +136,7 @@ class GGL(object):
                 zs_min, zs_max = self.par.zs_bins[szind]
 
                 # give feedback on progress
-                print( "  Doing: lens bin l%d [%.2f,%.2f] x source bin %d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max) )
+                print( "  Doing: lens bin %d [%.2f,%.2f] x source bin %d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max) )
                 # gamma_t output directory
                 gammat_out = path_out_gt+'/gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 gammax_out = path_out_gx+'/gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
@@ -191,35 +191,43 @@ class GGL(object):
                 np.savetxt(boosts_out, np.c_[theta_res,boosts], header='theta, boost')
 
                 # piece together components to get gamma_t with RP subtraction and/or boost factors applied
-                if path_out_gt[-1]=='/':
-                    path_out_gt_final = path_out_gt[:-1]
+                if self.par.use_boosts or self.par.use_randoms:
+                    if path_out_gt[-1]=='/':
+                        path_out_gt_final = path_out_gt[:-1]
+                    else:
+                        path_out_gt_final = path_out_gt
+                    if self.par.use_boosts:
+                        path_out_gt_final += '_bf'
+                    if self.par.use_randoms:
+                        path_out_gt_final += '_RP'
+                    path_out_gt_final += '/'
+                    gammat_total_out = path_out_gt_final+'gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                    # setup output path
+                    if not os.path.exists(path_out_gt_final):
+                        os.makedirs(path_out_gt_final)
+                    np.savetxt(gammat_total_out, np.c_[theta_res,gammat_total], header='theta, gamma_t')
                 else:
-                    path_out_gt_final = path_out_gt
-                if self.par.use_boosts:
-                    path_out_gt_final += '_bf'
-                if self.par.use_randoms:
-                    path_out_gt_final += '_RP'
-                path_out_gt_final += '/'
-                gammat_total_out = path_out_gt_final+'gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                # setup output path
-                if not os.path.exists(path_out_gt_final):
-                    os.makedirs(path_out_gt_final)
-                np.savetxt(gammat_total_out, np.c_[theta_res,gammat_total], header='theta, gamma_t')
+                    if not np.all(gammat_total/gammat_res==1.):
+                        errmsg = '!!!Something is wrong, no boost or randoms, but final gammat is not equal to the basic gammat measurement'
+                        raise Exception(errmsg)
 
                 # piece together components to get gamma_x with RP subtraction and/or boost factors applied
                 gammax_total = xi_im/Rg - xi_im_rand/Rg
-                if path_out_gx[-1]=='/':
-                    path_out_gx_final = path_out_gx[:-1]
-                else:
-                    path_out_gx_final = path_out_gx
                 if self.par.use_randoms:
-                    path_out_gx_final += '_RP'
-                path_out_gx_final += '/'
-                gammax_total_out = path_out_gx_final+'gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                # setup output path
-                if not os.path.exists(path_out_gx_final):
-                    os.makedirs(path_out_gx_final)
-                np.savetxt(gammax_total_out, np.c_[theta_res,gammax_total], header='theta, gamma_x')
+                    if path_out_gx[-1]=='/':
+                        path_out_gx_final = path_out_gx[:-1]
+                    else:
+                        path_out_gx_final = path_out_gx
+                        path_out_gx_final += '_RP'
+                    path_out_gx_final += '/'
+                    gammax_total_out = path_out_gx_final+'gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                    if not os.path.exists(path_out_gx_final):
+                        os.makedirs(path_out_gx_final)
+                    np.savetxt(gammax_total_out, np.c_[theta_res,gammax_total], header='theta, gamma_x')
+                else:
+                    if not np.all(gammax_total/(xi_im/Rg)==1.):
+                        errmsg = '!!!Something is wrong, no randoms, but final gammax is not equal to the basic gammax measurement'
+                        raise Exception(errmsg)
 
                 # give feedback on progress
                 print( "  Results saved in: %s"%gammat_out )
@@ -320,7 +328,7 @@ class GGL(object):
                 zs_min, zs_max = self.par.zs_bins[szind]
 
                 # give feedback on progress
-                print( "  Doing: lens bin l%d [%.2f,%.2f] x source bin %d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max) )
+                print( "  Doing: lens bin %d [%.2f,%.2f] x source bin %d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max) )
                 # gamma_t output directory
                 gammat_out = path_out_gt+'/gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 gammax_out = path_out_gx+'/gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
@@ -398,31 +406,41 @@ class GGL(object):
 
                 # save results with RP subtraction and/or boost factors applied
                 #---gamma_t
-                if path_out_gt[-1]=='/':
-                    path_out_gt_final = path_out_gt[:-1]
+                if self.par.use_boosts or self.par.use_randoms:
+                    if path_out_gt[-1]=='/':
+                        path_out_gt_final = path_out_gt[:-1]
+                    else:
+                        path_out_gt_final = path_out_gt
+                    if self.par.use_boosts:
+                        path_out_gt_final += '_bf'
+                    if self.par.use_randoms:
+                        path_out_gt_final += '_RP'
+                    path_out_gt_final += '/'
+                    gammat_total_out = path_out_gt_final+'gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                    # setup output path
+                    if not os.path.exists(path_out_gt_final):
+                        os.makedirs(path_out_gt_final)
+                    np.savetxt(gammat_total_out, np.c_[theta_res,gammat_total], header='theta, gamma_t')
                 else:
-                    path_out_gt_final = path_out_gt
-                if self.par.use_boosts:
-                    path_out_gt_final += '_bf'
-                if self.par.use_randoms:
-                    path_out_gt_final += '_RP'
-                path_out_gt_final += '/'
-                gammat_total_out = path_out_gt_final+'gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                if not os.path.exists(path_out_gt_final):
-                    os.makedirs(path_out_gt_final)
-                np.savetxt(gammat_total_out, np.c_[theta_res,gammat_total], header='theta, gamma_t')
+                    if not np.all(gammat_total/gammat_res==1.):
+                        errmsg = '!!!Something is wrong, no boost or randoms, but final gammat is not equal to the basic gammat measurement'
+                        raise Exception(errmsg)
                 #---gamma_x
-                if path_out_gx[-1]=='/':
-                    path_out_gx_final = path_out_gx[:-1]
-                else:
-                    path_out_gx_final = path_out_gx
                 if self.par.use_randoms:
-                    path_out_gx_final += '_RP'
-                path_out_gx_final += '/'
-                gammax_total_out = path_out_gx_final+'gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-                if not os.path.exists(path_out_gx_final):
-                    os.makedirs(path_out_gx_final)
-                np.savetxt(gammax_total_out, np.c_[theta_res,gammax_total], header='theta, gamma_x')
+                    if path_out_gx[-1]=='/':
+                        path_out_gx_final = path_out_gx[:-1]
+                    else:
+                        path_out_gx_final = path_out_gx
+                        path_out_gx_final += '_RP'
+                    path_out_gx_final += '/'
+                    gammax_total_out = path_out_gx_final+'gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                    if not os.path.exists(path_out_gx_final):
+                        os.makedirs(path_out_gx_final)
+                    np.savetxt(gammax_total_out, np.c_[theta_res,gammax_total], header='theta, gamma_x')
+                else:
+                    if not np.all(gammax_total/(xi_im/Rg)==1.):
+                        errmsg = '!!!Something is wrong, no randoms, but final gammax is not equal to the basic gammax measurement'
+                        raise Exception(errmsg)
 
                 # give feedback on progress
                 print( "  Results saved in: %s"%gammat_out )

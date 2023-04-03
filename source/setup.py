@@ -271,9 +271,9 @@ class GGL_setup(object):
             cat_r.write_patch_centers('jk_centers')
             cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, patch_centers='jk_centers', w=weights)
         cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, ra_units=units, dec_units=units,
-                                    g1=(e1-np.average(e1, weights=wg)), 
-                                    g2=(e2-np.average(e2, weights=wg)), 
-                                    w=wg, patch_centers='jk_centers')
+                                 g1=(e1-np.average(e1, weights=wg)), 
+                                 g2=(e2-np.average(e2, weights=wg)), 
+                                 w=wg, patch_centers='jk_centers')
         ng.process(cat_l, cat_s, low_mem=low_mem)
 
         # get theta, gammat
@@ -299,9 +299,9 @@ class GGL_setup(object):
             sum_w_r = 0
         if use_boosts:
             boost = self.boost_factor_calculate(sum_w_l, sum_w_r, ng.weight, rg.weight)
-            gammat_tot *= boost
         else:
             boost = np.ones(len(theta))
+        gammat_tot *= boost
 
         # generate fake treecorr correlation objects for lenses and randoms 
         # that hold the weights for the boost factor covariance calculations
@@ -318,14 +318,11 @@ class GGL_setup(object):
 
         # update correlations with responses to use in Jackknife mode
         ng.Rg = Rg*np.ones(len(theta))
-        rg.Rg = Rg*np.ones(len(theta))
 
         # get gamma_t and gamma_x
         if use_randoms:
             gammat_rand = rg.xi/Rg
             gammax_rand = rg.xi_im/Rg
-            gammat_tot -= gammat_rand
-            gammax_tot -= gammax_rand
             xi_im_rand = rg.xi_im
             xi_npairs_rand = rg.npairs
             xi_weight_rand = rg.weight
@@ -335,6 +332,8 @@ class GGL_setup(object):
             xi_im_rand = np.zeros(len(theta))
             xi_npairs_rand = np.zeros(len(theta))
             xi_weight_rand = np.zeros(len(theta))
+        gammat_tot -= gammat_rand
+        gammax_tot -= gammax_rand
 
         # get gamma_t gammat covariance
         if use_randoms:
