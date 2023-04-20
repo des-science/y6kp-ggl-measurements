@@ -375,6 +375,7 @@ class GGL_setup(object):
 
         # get covariance of randoms points
         corrs = [rg]
+        func = lambda corrs: corrs[0].xi / corrs[0].Rg
         cov_jk_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func)
 
         return (theta, gamma_t, gammat_tot, gammat_rand, gamma_x, gammax_tot, gammax_rand, 
