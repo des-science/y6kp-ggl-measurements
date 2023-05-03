@@ -6,7 +6,8 @@ import os
 here = os.getcwd()
 
 # path the the folder containing all the input files
-input_dir = '...path_to_input_dir...'
+# input_dir = '...path_to_input_dir...'
+input_dir = './input'
 
 # mode to run NG correlations
 # options:

@@ -9,6 +9,7 @@ import sys
 import yaml
 import catalog_utils
 import treecorr
+import h5py as h5
 from astropy.io import fits
 from destest import destest
 
@@ -39,6 +40,8 @@ class GGL_setup(object):
         Options:
         - Y3 MagLim
         """
+        # print ('HELLOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO')
+
         # read data for lenses
         hdul = fits.open(data_file)
         ra = hdul[1].data['RA']
@@ -48,6 +51,8 @@ class GGL_setup(object):
 
         # mask in redshift
         goodm = np.where( (z>zl_lims[0]) * (z<zl_lims[1]) )[0]
+        
+        hdul.close()
         
         return ra[goodm], dec[goodm], w[goodm]
     
@@ -67,7 +72,222 @@ class GGL_setup(object):
         # mask in redshift
         goodm = np.where( (z>zl_lims[0]) * (z<zl_lims[1]) )[0]
         
+        hdul.close()
+        
         return ra[goodm], dec[goodm]
+    
+
+    
+    def load_source_metadetect(self, data_file, zs_bin=None):
+        """
+        Loads Y6 source galaxy data
+        
+        """
+        print ('zs_bin', zs_bin)
+        # read fits file metadetect tomographic bin
+        met = fits.open(data_file)
+
+        source = {}
+        source['ra']  = np.array(met[1].data['ra_s'])
+        source['dec'] = np.array(met[1].data['dec_s'])
+        source['e1']  = np.array(met[1].data['e1_s'])
+        source['e2']  = np.array(met[1].data['e2_s'])
+        source['g_cov_1_1']  = np.array(met[1].data['g_cov_1_1'])
+        source['g_cov_2_2']  = np.array(met[1].data['g_cov_2_2'])
+        
+        met.close()
+        
+        response = np.loadtxt('/global/cfs/cdirs/des/giannini/ggl/Response_bin{}.txt'.format(zs_bin))
+        R_g = response[0]
+        
+        def get_shear_weights(cols, weights_file, weight_type):
+
+            def _assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
+                from math import log10
+                # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
+
+                logstepx = log10(xmax/xmin)/xsteps
+                logstepy = log10(ymax/ymin)/ysteps
+
+                indexx = (np.log10(x/xmin)/logstepx).astype(int)
+                indexy = (np.log10(y/ymin)/logstepy).astype(int)
+
+                indexx = np.maximum(indexx,0)
+                indexx = np.minimum(indexx, xsteps-1)
+                indexy = np.maximum(indexy,0)
+                indexy = np.minimum(indexy, ysteps-1)
+
+                return indexx,indexy
+
+            def _find_shear_weight(d, wgt_dict, snmin, snmax, sizemin, sizemax, steps):
+
+                if wgt_dict is None:
+                    weights = np.ones(len(d))
+                    return weights
+
+                shear_wgt = wgt_dict['weight']
+                indexx, indexy = _assign_loggrid(d['s2n'], d['T_ratio'], snmin, snmax, steps, sizemin, sizemax, steps)
+                weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
+
+                return weights
+
+            #import pdb ; pdb.set_trace()
+            if weight_type == 's2n_sizer':
+                # pickle file that defines w(S/N, size)
+                with open(weights_file, 'rb') as handle:
+                    wgt_dict = pickle.load(handle)
+                ## TO-DO: make snmin, snmax, sizemin, sizemax available in config file. 
+                shear_wgt = _find_shear_weight(cols, wgt_dict, 10, 1000, 0.5, 5.0, 20)
+            elif weight_type == 'shape_err':
+                shear_wgt = 1/(0.17**2 + 0.5*(cols['g_cov_1_1'] + cols['g_cov_2_2']))
+
+            shear_wgt[np.isnan(shear_wgt)] = 0.
+
+            return shear_wgt
+    
+        weights_file = '/global/cfs/cdirs/des/myamamot/y6_shear_catalogs/Y6A2_METADETECT_V4/inverse_variance_weight_v3_s2n_10-300_Tratio_0.5-5.pickle'
+        weight_type = 'shape_err'
+        
+        
+        source['w'] = get_shear_weights(source, weights_file, weight_type)
+        w_g = source['w']
+        print ('wg', w_g[:10])
+
+        return source['ra'] , source['dec'], source['e1'], source['e2'], R_g, w_g
+    
+    
+    
+    
+    def load_source_metadetect_old(self, data_file, zs_bin=None):
+        """
+        Loads Y6 source galaxy data
+        
+        """
+        print ('zs_bin', zs_bin)
+        # read h5py file 
+        met = h5.File(data_file, 'r')
+
+        # <KeysViewHDF5 ['1m', '1p', '2m', '2p', 'noshear']>
+
+        source = {}
+        source['ra']  = np.array(met['mdet/noshear']['ra'])
+        source['dec'] = np.array(met['mdet/noshear']['dec'])
+        source['e1']  = np.array(met['mdet/noshear']['gauss_g_1'])
+        source['e2']  = np.array(met['mdet/noshear']['gauss_g_2'])
+        source['g_cov_1_1']  = np.array(met['mdet/noshear']['gauss_g_cov_1_1'])
+        source['g_cov_2_2']  = np.array(met['mdet/noshear']['gauss_g_cov_2_2'])
+        
+        #temporary and completely useless tomo bin assignment to check the code works
+        sombin = np.zeros(len(source['ra']))
+        sombin[:37213113] = 0
+        sombin[37213113:74426227] = 1
+        sombin[74426227:111639341] = 2
+        sombin[111639341:] = 3
+        source['som_bin'] = sombin
+
+        maskz = (source['som_bin'] >= zs_bin) & (source['som_bin'] < zs_bin+1)
+
+        ra_s = source['ra'][maskz]
+        dec_s = source['dec'][maskz]
+        e1_s = source['e1'][maskz]
+        e2_s = source['e2'][maskz]
+        print ('e1_s', e1_s[:10])
+
+        sombin1p = np.zeros(len(met['mdet/1p/gauss_g_1']))
+        sombin2p = np.zeros(len(met['mdet/2p/gauss_g_1']))
+        sombin1m = np.zeros(len(met['mdet/1m/gauss_g_1']))
+        sombin2m = np.zeros(len(met['mdet/2m/gauss_g_1']))
+        sombin1p[:37213113] = 0
+        sombin1p[37213113:74426227] = 1
+        sombin1p[74426227:111639341] = 2
+        sombin1p[111639341:] = 3
+        sombin2p[:37213113] = 0
+        sombin2p[37213113:74426227] = 1
+        sombin2p[74426227:111639341] = 2
+        sombin2p[111639341:] = 3
+        sombin1m[:37213113] = 0
+        sombin1m[37213113:74426227] = 1
+        sombin1m[74426227:111639341] = 2
+        sombin1m[111639341:] = 3
+        sombin2m[:37213113] = 0
+        sombin2m[37213113:74426227] = 1
+        sombin2m[74426227:111639341] = 2
+        sombin2m[111639341:] = 3
+
+        maskz1p = (sombin1p >= zs_bin) & (sombin1p < zs_bin+1)
+        maskz2p = (sombin2p >= zs_bin) & (sombin2p < zs_bin+1)
+        maskz1m = (sombin1m >= zs_bin) & (sombin1m < zs_bin+1)
+        maskz2m = (sombin2m >= zs_bin) & (sombin2m < zs_bin+1)
+
+        
+        mean_g1 = np.sum(met['mdet/noshear/gauss_g_1'][maskz])/len(met['mdet/noshear/gauss_g_1'][maskz])
+        mean_g1p = np.sum(met['mdet/1p/gauss_g_1'][maskz1p])/len(met['mdet/1p/gauss_g_1'][maskz1p])
+        mean_g1m = np.sum(met['mdet/1m/gauss_g_1'][maskz1m])/len(met['mdet/1m/gauss_g_1'][maskz1m])
+        R11 = (mean_g1p-mean_g1m)/2/0.01
+
+        mean_g2 = np.sum(met['mdet/noshear/gauss_g_2'][maskz])/len(met['mdet/noshear/gauss_g_2'][maskz])
+        mean_g2p = np.sum(met['mdet/2p/gauss_g_2'][maskz2p])/len(met['mdet/2p/gauss_g_2'][maskz2p])
+        mean_g2m = np.sum(met['mdet/2m/gauss_g_2'][maskz2m])/len(met['mdet/2m/gauss_g_2'][maskz2m])
+        R22 = (mean_g2p-mean_g2m)/2/0.01
+        R_g = (R11 + R22)/2
+        
+        print ('R_g', R_g)
+        
+        
+        def get_shear_weights(cols, weights_file, weight_type):
+
+            def _assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
+                from math import log10
+                # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
+
+                logstepx = log10(xmax/xmin)/xsteps
+                logstepy = log10(ymax/ymin)/ysteps
+
+                indexx = (np.log10(x/xmin)/logstepx).astype(int)
+                indexy = (np.log10(y/ymin)/logstepy).astype(int)
+
+                indexx = np.maximum(indexx,0)
+                indexx = np.minimum(indexx, xsteps-1)
+                indexy = np.maximum(indexy,0)
+                indexy = np.minimum(indexy, ysteps-1)
+
+                return indexx,indexy
+
+            def _find_shear_weight(d, wgt_dict, snmin, snmax, sizemin, sizemax, steps):
+
+                if wgt_dict is None:
+                    weights = np.ones(len(d))
+                    return weights
+
+                shear_wgt = wgt_dict['weight']
+                indexx, indexy = _assign_loggrid(d['s2n'], d['T_ratio'], snmin, snmax, steps, sizemin, sizemax, steps)
+                weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
+
+                return weights
+
+            #import pdb ; pdb.set_trace()
+            if weight_type == 's2n_sizer':
+                # pickle file that defines w(S/N, size)
+                with open(weights_file, 'rb') as handle:
+                    wgt_dict = pickle.load(handle)
+                ## TO-DO: make snmin, snmax, sizemin, sizemax available in config file. 
+                shear_wgt = _find_shear_weight(cols, wgt_dict, 10, 1000, 0.5, 5.0, 20)
+            elif weight_type == 'shape_err':
+                shear_wgt = 1/(0.17**2 + 0.5*(cols['g_cov_1_1'] + cols['g_cov_2_2']))
+
+            shear_wgt[np.isnan(shear_wgt)] = 0.
+
+            return shear_wgt
+    
+        weights_file = '/global/cfs/cdirs/des/myamamot/y6_shear_catalogs/Y6A2_METADETECT_V4/inverse_variance_weight_v3_s2n_10-300_Tratio_0.5-5.pickle'
+        weight_type = 'shape_err'
+        
+        source['w'] = get_shear_weights(source, weights_file, weight_type)
+        w_g = source['w'][maskz]
+        print ('wg', w_g[:10])
+
+        return ra_s, dec_s, e1_s, e2_s, R_g, w_g
+    
     
     def load_source_metacal_5sels(self, data_file, zs_bin=None):
         """
@@ -81,9 +301,10 @@ class GGL_setup(object):
         params['param_file'] = data_file.split('/')[-1]
 
         source_selector, source_calibrator = catalog_utils.load_catalog(params, 'mcal', 'mcal', 
-                                                                        params['source_group'], params['source_table'], 
+                                                                        params['source_group'],
+                                                                        params['source_table'], 
                                                                         params['source_path'], 
-                                                                        return_calibrator=destest.MetaCalib)
+                                                                return_calibrator=destest.MetaCalib)
 
         gold_selector = catalog_utils.load_catalog(params, 'gold', 'mcal', params['gold_group'], params['gold_table'],
                                                     params['gold_path'], inherit=source_selector)
@@ -133,6 +354,7 @@ class GGL_setup(object):
         R1,_,w_g = source_calibrator.calibrate('e_1', mask=photoz_masks)
         R2,_,w_g = source_calibrator.calibrate('e_2', mask=photoz_masks)
         R_g = 0.5*(R1+R2)
+        print ('----> R_g', R_g)
 
         return ra_s, dec_s, e1_s, e2_s, R_g, w_g
     
@@ -339,9 +561,7 @@ class GGL_setup(object):
         # get gamma_t gammat covariance
         if use_randoms:
             if use_boosts:
-                func = lambda corrs: ( (corrs[0].weight/np.sum(corrs[2].weight)) / (corrs[1].weight/np.sum(corrs[3].weight)) 
-                                        * corrs[0].xi/corrs[0].Rg 
-                                        - corrs[1].xi/corrs[1].Rg )
+                func = lambda corrs: ( (corrs[0].weight/np.sum(corrs[2].weight)) / (corrs[1].weight/np.sum(corrs[3].weight)) * corrs[0].xi/corrs[0].Rg - corrs[1].xi/corrs[1].Rg )
                 corrs = [ng,rg,nn_lp,nn_rp]
             else:
                 func = lambda corrs: ( corrs[0].xi/corrs[0].Rg - corrs[1].xi/corrs[1].Rg )
@@ -375,6 +595,7 @@ class GGL_setup(object):
 
         # get covariance of randoms points
         corrs = [rg]
+        func = lambda corrs: corrs[0].xi/corrs[0].Rg
         cov_jk_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func)
 
         return (theta, gamma_t, gammat_tot, gammat_rand, gamma_x, gammax_tot, gammax_rand, 

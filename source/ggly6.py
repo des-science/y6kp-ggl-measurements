@@ -53,7 +53,8 @@ class GGL(object):
         # read source galaxy data
         (self.ra_s, self.dec_s, 
          self.e1_s, self.e2_s, 
-         self.R_g, self.w_g) = self.ggl_setup.load_source_metacal_5sels(source_file, zs_bin=source_bin)
+         # self.R_g, self.w_g) = self.ggl_setup.load_source_metacal_5sels(source_file, zs_bin=source_bin)
+         self.R_g, self.w_g) = self.ggl_setup.load_source_metadetect(source_file, zs_bin=source_bin)
         
         # load random points data
         if self.par.use_randoms or self.par.use_boosts:
@@ -331,8 +332,10 @@ class GGL(object):
             zl_min, zl_max = self.par.zl_bins[lzind]
 
             for szind in self.par.s_bins:
+                print ('SZIND', szind)
                 # source redshift cuts
                 zs_min, zs_max = self.par.zs_bins[szind]
+                print ('self.par.zs_bins[szind]', self.par.zs_bins[szind])
 
                 # give feedback on progress
                 print( "  Doing: lens bin %d [%.2f,%.2f] x source bin %d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max) )
@@ -351,9 +354,13 @@ class GGL(object):
                 err_gammat_out = path_JK_cov_gt+'/err_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 shot_gammat_out = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
                 
+                print ('AAAAAAAAAAAAAAAAAAAAAA self.par.data_source', self.par.data_source)
                 # load data and setup current bin
-                self.setup_run(lens_file=self.par.data_lens[lzind],
-                               randoms_file=self.par.data_randoms[lzind], 
+                self.setup_run(lens_file=self.par.data_lens,
+                # self.setup_run(lens_file=self.par.data_lens[lzind],
+                               randoms_file=self.par.data_randoms, 
+                               # randoms_file=self.par.data_randoms[lzind], 
+                               # source_file=self.par.data_source, 
                                source_file=self.par.data_source[szind], 
                                lens_bin=lzind, source_bin=szind, 
                                zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
@@ -376,8 +383,7 @@ class GGL(object):
                  Rg, sum_w_l, sum_w_r, 
                  boosts) = self.ggl_setup.get_gammat_and_covariance(self.ra_l, self.dec_l, self.ra_s, self.dec_s, 
                                                                     ra_rand=self.ra_rand, dec_rand=self.dec_rand, 
-                                                                    params=params, low_mem=self.par.treecorr_low_mem, weights=self.weight_lens, 
-                                                                    use_randoms=self.par.use_randoms, use_boosts=self.par.use_boosts)
+                                                                    params=params,low_mem=self.par.treecorr_low_mem,                                                                     weights=self.weight_lens,                                                                                           use_randoms=self.par.use_randoms,                                                                                   use_boosts=self.par.use_boosts)
                 
                 # save covariances
                 #---gamma_t
