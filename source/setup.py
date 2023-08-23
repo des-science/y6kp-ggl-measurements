@@ -501,11 +501,11 @@ class GGL_setup(object):
         # get theta, gammat
         theta = np.exp(ng.logr)
         gamma_t = ng.xi/Rg
-        gammat_tot = gamma_t
+        gammat_tot = np.copy(gamma_t)
 
         # get imaginary part of xi and gamma_x
         gamma_x = ng.xi_im/Rg
-        gammax_tot = gamma_x
+        gammax_tot = np.copy(gamma_x)
 
         # generate randoms catalogs to correlate and process them
         if use_randoms or use_boosts:
