@@ -11,7 +11,15 @@ import catalog_utils
 import treecorr
 import h5py as h5
 from astropy.io import fits
+import astropy.io.fits as pf
 from destest import destest
+import healsparse
+import joblib
+import healpy as hp
+from astropy.table import Table
+import pandas as pd
+
+
 
 class GGL_setup(object):
 
@@ -33,7 +41,29 @@ class GGL_setup(object):
 
         return
 
-    def load_lens_Y3_maglim(self, data_file, zl_lims=None):
+    def load_lens_Y6_maglim(self, path, zl_bin=None):
+        """
+        Loads lens galaxy data from file
+
+        Options:
+        - Y6 MagLim
+        """
+        # print ('HELLOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO')
+
+        # read data for lenses
+        hdul = fits.open(path+'/maglim++_bin{}.fits'.format(zl_bin))
+        ra = hdul[1].data['RA']
+        dec = hdul[1].data['DEC']
+        # z = hdul[1].data['Z']
+        w = hdul[1].data['W']
+
+        hdul.close()
+        
+        return ra, dec, w
+    
+    
+    
+    def load_lens_Y3_maglim_orig(self, data_file, zl_lims=None):
         """
         Loads lens galaxy data from file
 
@@ -56,7 +86,29 @@ class GGL_setup(object):
         
         return ra[goodm], dec[goodm], w[goodm]
     
-    def load_randoms_Y3_maglim(self, data_file, zl_lims=None):
+    
+    
+    
+    def load_randoms_Y6_maglim(self, path):
+        """
+        Loads random points data from file
+
+        Options:
+        - Y6 MagLim randoms
+        """
+        # read data for lenses
+        hdul = fits.open(path+'/randoms++.fits')
+        ra = hdul[1].data['RA']
+        dec = hdul[1].data['DEC']
+
+        hdul.close()
+        
+        return ra, dec
+    
+    
+    
+    
+    def load_randoms_Y3_maglim_old(self, data_file, zl_lims=None):
         """
         Loads random points data from file
 
@@ -78,7 +130,287 @@ class GGL_setup(object):
     
 
     
-    def load_source_metadetect(self, data_file, zs_bin=None):
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    
+    
+    
+    def prepare_source_metadetect(self, data_file, zs_bin=None):
+        """
+        Loads Y6 source galaxy data
+        
+        """
+            
+        def convert_to_pix_coord(ra, dec, nside=1024,nest=False):
+            """
+            Converts RA,DEC to hpix coordinates
+            """
+
+            theta = (90.0 - dec) * np.pi / 180.
+            #print theta
+            phi = ra * np.pi / 180.
+            pix = hp.ang2pix(nside, theta, phi, nest=nest)
+
+            return pix
+        
+        print ('zs_bin', zs_bin)
+        # read fits file metadetect tomographic bin
+        met = h5.File(data_file)
+    
+    
+    # met = h5.File('/global/cfs/cdirs/des/y6-shear-catalogs/Y6A2_METADETECT_V5a/metadetect_desdmv5a_cutsv5.h5')
+
+        ra_source = np.array(met['mdet/noshear']['ra'])
+        dec_source = np.array(met['mdet/noshear']['dec'])
+        pix_source = convert_to_pix_coord(ra_source,dec_source, nside=4096)
+
+        # load mask 1
+        hmap = healsparse.HealSparseMap.read('/global/cfs/cdirs/des/y6-shear-catalogs/y6-combined-hleda-gaiafull-des-stars-hsmap16384-nomdet-v3.fits')
+        mask_1 = hmap.get_values_pos(ra_source, dec_source, valid_mask=True)
+
+        # load mask 2
+        lss_mask = pf.open('/global/cfs/projectdirs/des/monroy/Y6A2/maglim/sp_outliers_analysis/maglim_mask/jointmasks_fiducial/Y6LSSBAO_V2_MASK_WITHDEPTH_up_to_22.2_jointmask_3.5iqr_sps_0.01percent_sb_mean_0.5max_val_neb_mean_gcs_bit64_joint_vl05_vl10_vlim_zmax_gaia512_shear_flim0.8_bad_regions_gold20.fits.gz')
+        pix_lens_mask = lss_mask[1].data['HPIX_4096']
+        mask_2 = np.in1d(pix_source,pix_lens_mask)
+
+        joint_pix_mask_source = mask_1 & mask_2 
+
+
+        sompz = h5.File('/global/cfs/cdirs/des/acampos/sompz_output/y6_data_preliminary/sompz_y6_data_preliminary.hdf5')
+        source = {}
+        source['ra']  = np.array(met['mdet/noshear']['ra'][joint_pix_mask_source])
+        source['dec'] = np.array(met['mdet/noshear']['dec'][joint_pix_mask_source])
+        source['e1']  = np.array(met['mdet/noshear']['gauss_g_1'][joint_pix_mask_source])
+        source['e2']  = np.array(met['mdet/noshear']['gauss_g_2'][joint_pix_mask_source])
+        source['g_cov_1_1']  = np.array(met['mdet/noshear']['gauss_g_cov_1_1'][joint_pix_mask_source])
+        source['g_cov_2_2']  = np.array(met['mdet/noshear']['gauss_g_cov_2_2'][joint_pix_mask_source])
+
+
+        source['som_bin'] = np.array(sompz['catalog/sompz/noshear/bhat'][joint_pix_mask_source])
+
+
+        ra_source_1p  = np.array(met['mdet/1p']['ra'])
+        dec_source_1p = np.array(met['mdet/1p']['dec'])
+        ra_source_2p  = np.array(met['mdet/2p']['ra'])
+        dec_source_2p = np.array(met['mdet/2p']['dec'])
+        ra_source_1m  = np.array(met['mdet/1m']['ra'])
+        dec_source_1m = np.array(met['mdet/1m']['dec'])
+        ra_source_2m  = np.array(met['mdet/2m']['ra'])
+        dec_source_2m = np.array(met['mdet/2m']['dec'])
+
+        shear_mask_shape_cat_1p = hmap.get_values_pos(ra_source_1p, dec_source_1p, valid_mask=True)
+        shear_mask_shape_cat_2p = hmap.get_values_pos(ra_source_2p, dec_source_2p, valid_mask=True)
+        shear_mask_shape_cat_1m = hmap.get_values_pos(ra_source_1m, dec_source_1m, valid_mask=True)
+        shear_mask_shape_cat_2m = hmap.get_values_pos(ra_source_2m, dec_source_2m, valid_mask=True)
+        nside = 4096 #16384
+        pix_source_1p = convert_to_pix_coord(ra_source_1p,dec_source_1p, nside=nside)
+        pix_source_2p = convert_to_pix_coord(ra_source_2p,dec_source_2p, nside=nside)
+        pix_source_1m = convert_to_pix_coord(ra_source_1m,dec_source_1m, nside=nside)
+        pix_source_2m = convert_to_pix_coord(ra_source_2m,dec_source_2m, nside=nside)
+
+        mask2_1p = np.in1d(pix_source_1p,pix_lens_mask)
+        mask2_2p = np.in1d(pix_source_2p,pix_lens_mask)
+        mask2_1m = np.in1d(pix_source_1m,pix_lens_mask)
+        mask2_2m = np.in1d(pix_source_2m,pix_lens_mask)
+
+
+        joint_pix_mask_source_1p = shear_mask_shape_cat_1p & mask2_1p
+        joint_pix_mask_source_2p = shear_mask_shape_cat_2p & mask2_2p
+        joint_pix_mask_source_1m = shear_mask_shape_cat_1m & mask2_1m
+        joint_pix_mask_source_2m = shear_mask_shape_cat_2m & mask2_2m
+
+
+        sombin1p = np.array(sompz['catalog/sompz/1p/bhat'][joint_pix_mask_source_1p])
+        sombin2p = np.array(sompz['catalog/sompz/2p/bhat'][joint_pix_mask_source_2p])
+        sombin1m = np.array(sompz['catalog/sompz/1m/bhat'][joint_pix_mask_source_1m])
+        sombin2m = np.array(sompz['catalog/sompz/2m/bhat'][joint_pix_mask_source_2m])
+
+        
+        print (zs_bin)
+        maskz = (source['som_bin'] == zs_bin) 
+
+        ra_s = source['ra'][maskz]
+        dec_s = source['dec'][maskz]
+        e1_s = source['e1'][maskz]
+        e2_s = source['e2'][maskz]
+        g_cov_1_1 = source['g_cov_1_1'][maskz]
+        g_cov_2_2 = source['g_cov_2_2'][maskz]
+
+        maskz1p = (sombin1p == zs_bin) 
+        maskz2p = (sombin2p == zs_bin) 
+        maskz1m = (sombin1m == zs_bin) 
+        maskz2m = (sombin2m == zs_bin) 
+
+        mean_g1 = np.sum(met['mdet/noshear/gauss_g_1'][joint_pix_mask_source][maskz])/len(met['mdet/noshear/gauss_g_1'][joint_pix_mask_source][maskz])
+        mean_g1p = np.sum(met['mdet/1p/gauss_g_1'][joint_pix_mask_source_1p][maskz1p])/len(met['mdet/1p/gauss_g_1'][joint_pix_mask_source_1p][maskz1p])
+        mean_g1m = np.sum(met['mdet/1m/gauss_g_1'][maskz1m])/len(met['mdet/1m/gauss_g_1'][maskz1m])
+        R11 = (mean_g1p-mean_g1m)/2/0.01
+
+        mean_g2 = np.sum(met['mdet/noshear/gauss_g_2'][maskz])/len(met['mdet/noshear/gauss_g_2'][maskz])
+        mean_g2p = np.sum(met['mdet/2p/gauss_g_2'][joint_pix_mask_source_2p][maskz2p])/len(met['mdet/2p/gauss_g_2'][joint_pix_mask_source_2p][maskz2p])
+        mean_g2m = np.sum(met['mdet/2m/gauss_g_2'][joint_pix_mask_source_2m][maskz2m])/len(met['mdet/2m/gauss_g_2'][joint_pix_mask_source_2m][maskz2m])
+        R22 = (mean_g2p-mean_g2m)/2/0.01
+        R_g = (R11 + R22)/2
+        
+       
+        def get_shear_weights(cols, weights_file, weight_type):
+
+            def _assign_loggrid(x, y, xmin, xmax, xsteps, ymin, ymax, ysteps):
+                from math import log10
+                # return x and y indices of data (x,y) on a log-spaced grid that runs from [xy]min to [xy]max in [xy]steps
+
+                logstepx = log10(xmax/xmin)/xsteps
+                logstepy = log10(ymax/ymin)/ysteps
+
+                indexx = (np.log10(x/xmin)/logstepx).astype(int)
+                indexy = (np.log10(y/ymin)/logstepy).astype(int)
+
+                indexx = np.maximum(indexx,0)
+                indexx = np.minimum(indexx, xsteps-1)
+                indexy = np.maximum(indexy,0)
+                indexy = np.minimum(indexy, ysteps-1)
+
+                return indexx,indexy
+
+            def _find_shear_weight(d, wgt_dict, snmin, snmax, sizemin, sizemax, steps):
+
+                if wgt_dict is None:
+                    weights = np.ones(len(d))
+                    return weights
+
+                shear_wgt = wgt_dict['weight']
+                indexx, indexy = _assign_loggrid(d['s2n'], d['T_ratio'], snmin, snmax, steps, sizemin, sizemax, steps)
+                weights = np.array([shear_wgt[x, y] for x, y in zip(indexx, indexy)])
+
+                return weights
+
+            #import pdb ; pdb.set_trace()
+            if weight_type == 's2n_sizer':
+                # pickle file that defines w(S/N, size)
+                with open(weights_file, 'rb') as handle:
+                    wgt_dict = pickle.load(handle)
+                ## TO-DO: make snmin, snmax, sizemin, sizemax available in config file. 
+                shear_wgt = _find_shear_weight(cols, wgt_dict, 10, 1000, 0.5, 5.0, 20)
+            elif weight_type == 'shape_err':
+                shear_wgt = 1/(0.17**2 + 0.5*(cols['g_cov_1_1'] + cols['g_cov_2_2']))
+
+            shear_wgt[np.isnan(shear_wgt)] = 0.
+
+            return shear_wgt
+    
+        weights_file = '/global/cfs/cdirs/des/myamamot/y6_shear_catalogs/Y6A2_METADETECT_V4/inverse_variance_weight_v3_s2n_10-300_Tratio_0.5-5.pickle'
+        weight_type = 'shape_err'
+        
+        source['w'] = get_shear_weights(source, weights_file, weight_type)
+        w_g = source['w'][maskz]
+        print ('wg', w_g[:10])
+        
+
+        mm = pd.DataFrame()
+
+        mm['ra_s'] = ra_s 
+        mm['dec_s'] = dec_s
+        mm['e1_s'] = e1_s 
+        mm['e2_s'] = e2_s 
+        mm['g_cov_1_1'] = g_cov_1_1
+        mm['g_cov_2_2'] = g_cov_2_2
+        mm['w_g'] = w_g
+
+
+        path = '/global/cfs/cdirs/des/giannini/ggl/metad_maglim_fidmask/'
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        meta_table = Table.from_pandas(mm)
+        meta_table.write(path+'/metadetect_bin{}.fits'.format(zs_bin), overwrite = True)
+
+        response = np.array([R_g, R11, R22])
+        np.savetxt(path+'/Response_bin{}.txt'.format(zs_bin), response)
+    
+    
+        # return source['ra'] , source['dec'], source['e1'], source['e2'], R_g, w_g
+        # return ra_s, dec_s, e1_s, e2_s, R_g, w_g
+
+    
+    
+    
+    
+    
+    
+    
+    def load_source_metadetect(self, path, zs_bin=None):
+        """
+        Loads Y6 source galaxy data
+        
+        """
+            
+        resp = np.loadtxt(path+'/Response_bin{}.txt'.format(zs_bin))
+        file = pf.open(path+'/metadetect_bin{}.fits'.format(zs_bin))
+        
+        ra_s = file[1].data['ra_s']
+        dec_s = file[1].data['dec_s']
+        e1_s = file[1].data['e1_s']
+        e2_s = file[1].data['e2_s']
+        w_g = file[1].data['w_g']
+        R_g = resp[0]
+        
+#         mm['ra_s'] = ra_s 
+#         mm['dec_s'] = dec_s
+#         mm['e1_s'] = e1_s 
+#         mm['e2_s'] = e2_s 
+#         mm['g_cov_1_1'] = g_cov_1_1
+#         mm['g_cov_2_2'] = g_cov_2_2
+#         mm['w_g'] = w_g
+
+
+#         # path = '/global/cfs/cdirs/des/giannini/ggl/metad_maglim_fidmask/'
+#         path = par.out_main
+#         if not os.path.exists(path):
+#             os.makedirs(path)
+
+#         meta_table = Table.from_pandas(mm)
+#         meta_table.write(path+'/metadetect_bin{}.fits'.format(zs_bin), overwrite = True)
+
+#         response = np.array([R_g, R11, R22])
+#         np.savetxt(path+'/Response_bin{}.txt'.format(zs_bin), response)
+
+        file.close()
+    
+        # return source['ra'] , source['dec'], source['e1'], source['e2'], R_g, w_g
+        return ra_s, dec_s, e1_s, e2_s, R_g, w_g
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    def load_source_metadetect__(self, data_file, zs_bin=None):
         """
         Loads Y6 source galaxy data
         
@@ -486,16 +818,37 @@ class GGL_setup(object):
 
         # generate lens catalogs to correlate and process them
         ng = treecorr.NGCorrelation(nbins=self.par.ang_nbins, min_sep=theta_min, max_sep=theta_max, sep_units=sep_units, bin_slop=self.par.bin_slop, var_method='jackknife')
+        print ('ng done')
+        
         if os.path.isfile('jk_centers'):
             cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights, patch_centers='jk_centers')
+            print ('prepared catalog - loaded jk centers')
         else:
             cat_r = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=units, dec_units=units, npatch=self.par.n_jck)
+            print ('prepared random cat')
             cat_r.write_patch_centers('jk_centers')
+            print ('wrote jk centers')
             cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights, patch_centers='jk_centers')
+            print ('done lens cat')
+
+
+#         cat_r = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=units, dec_units=units, npatch=self.par.n_jck)
+#         print ('prepared random cat')
+#         # make it save a txt file at the same time. 
+#         np.savetxt('/global/homes/g/giannini/gglensing/y6kp-ggl-measurements/source/test.txt', np.zeros(1))
+        
+#         cat_r.write_patch_centers('jk_centers')
+#         print ('wrote jk centers')
+#         cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights, patch_centers='jk_centers')
+#         print ('done lens cat')
+
+
+        # wg = np.ones(len(dec_s))
         cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, ra_units=units, dec_units=units,
                                  g1=(e1-np.average(e1, weights=wg)), 
                                  g2=(e2-np.average(e2, weights=wg)), 
                                  w=wg, patch_centers='jk_centers')
+        print ('done source cat')
         ng.process(cat_l, cat_s, low_mem=low_mem)
 
         # get theta, gammat
@@ -510,6 +863,7 @@ class GGL_setup(object):
         # generate randoms catalogs to correlate and process them
         if use_randoms or use_boosts:
             rg = treecorr.NGCorrelation(nbins=self.par.ang_nbins, min_sep=theta_min, max_sep=theta_max, sep_units=sep_units, bin_slop=self.par.bin_slop, var_method='jackknife')
+            
             cat_r = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=units, dec_units=units, patch_centers='jk_centers')
             rg.process(cat_r, cat_s, low_mem=low_mem)
 

@@ -9,26 +9,43 @@ import sys
 here = os.path.abspath(__file__)
 sys.path.append(here)
 
+
+" Main output folder "
+out_main = '/global/cfs/cdirs/des/giannini/ggl/metad_maglim_test_parallel/'
+
+
 " Define redshift bins for lens and source galaxies "
 # lens redsift bins
 zl_bins = [
-           [0.20,0.40], 
-           [0.40,0.55], 
-           [0.55,0.70], 
-           [0.70,0.85],
+            [0.20, 0.40], 
+            [0.40, 0.55], 
+            [0.55, 0.70], 
+            [0.70, 0.85],
+            [0.85, 0.95],
+            [0.95, 1.05],
           ]
 
 # source redshift bins
+# zs_bins = [
+#            [0.20,0.43], 
+#            [0.43,0.63], 
+#            [0.63,0.90], 
+#            [0.90,1.30],
+#           ]
 zs_bins = [
-           [0.20,0.43], 
-           [0.43,0.63], 
-           [0.63,0.90], 
-           [0.90,1.30],
+           [0.000, 0.405], 
+           [0.405, 0.665], 
+           [0.665, 0.960], 
+           [0.96, 2.0],
           ]
+# bin_edges =  [0.0, 0.405, 0.665, 0.96, 2.0]  
+# {'bin0': 37687150, 'bin1': 37220369, 'bin2': 37766153, 'bin3': 37420019}
+
 
 " Bins to run "
 # the lens bins to run
-l_bins = [0,1,2,3]
+l_bins = [4,5]
+# l_bins = [0,1,2,3,4,5]
 # the source bins to run
 s_bins = [0,1,2,3]
 
@@ -38,21 +55,23 @@ use_LSSweight = False
 
 " Lens, source and random-point data files "
 # lens galaxies
-data_lens = '/global/cfs/cdirs/des/giannini/mag_lim_lens_sample_combined_jointmask_sample_4ggl.fits'
+data_lens = '/global/cfs/projectdirs/des/nweaverd/des_y6/maglim_plusplus/y6maglim_VIPERS_a18_b4_v2.0_pzcols_wisecols.fits'
+# data_lens = '/global/cfs/cdirs/des/giannini/mag_lim_lens_sample_combined_jointmask_sample_4ggl.fits'
 # data_lens = ['/global/cfs/cdirs/des/giannini/mag_lim_lens_sample_combined_jointmask_sample_4ggl.fits']
 
 # source galaxies
-response = ['/global/cfs/cdirs/des/giannini/ggl/Response_bin0.txt',
-            '/global/cfs/cdirs/des/giannini/ggl/Response_bin1.txt', 
-            '/global/cfs/cdirs/des/giannini/ggl/Response_bin2.txt', 
-            '/global/cfs/cdirs/des/giannini/ggl/Response_bin3.txt']
+response = ['/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/Response_bin0.txt',
+            '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/Response_bin1.txt', 
+            '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/Response_bin2.txt', 
+            '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/Response_bin3.txt']
 
 # source galaxies
 # data_source = ['/global/cfs/cdirs/des/giannini/cats.yaml']
-data_source = ['/global/cfs/cdirs/des/giannini/ggl/metadetect_bin0.fits',
-              '/global/cfs/cdirs/des/giannini/ggl/metadetect_bin1.fits', 
-              '/global/cfs/cdirs/des/giannini/ggl/metadetect_bin2.fits', 
-              '/global/cfs/cdirs/des/giannini/ggl/metadetect_bin3.fits']
+data_source = ['/global/cfs/cdirs/des/y6-shear-catalogs/Y6A2_METADETECT_V5a/metadetect_desdmv5a_cutsv5.h5']
+# data_source = ['/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/metadetect_bin0.fits',
+               # '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/metadetect_bin1.fits', 
+               # '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/metadetect_bin2.fits', 
+               # '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/metadetect_bin3.fits']
 # data_source = ['/global/cfs/cdirs/des/y6-shear-catalogs/Y6A2_METADETECT_V4/jackknife_patches_blinded/metadetect_desdmv4_cutsv3.h5']
 
 # weights_file = '/global/cfs/cdirs/des/myamamot/y6_shear_catalogs/Y6A2_METADETECT_V4/inverse_variance_weight_v3_s2n_10-300_Tratio_0.5-5.pickle'
@@ -80,7 +99,7 @@ n_jck = 150
 nside = 4096
 
 # allowed bin slop for treecorr
-bin_slop = 0.0
+bin_slop = 0.1 # supposed to be 0.0
 
 # limits of theta in arcmins
 theta_lims = [2.5, 250.]
@@ -91,8 +110,6 @@ ang_nbins = 20
 # low memory - reduces memory usage, sacrificing speed
 treecorr_low_mem = False
 
-" Main output folder "
-out_main = '/global/cfs/cdirs/des/giannini/ggl/Output'
 
 " Output directory for randoms and Jackknife patching "
 path_out_rand = out_main+'/randoms_%dxlenses/'%(rand_fact)
