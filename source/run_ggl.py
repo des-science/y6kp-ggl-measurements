@@ -30,6 +30,9 @@ if __name__ == "__main__":
     if info.NG_mode=='gt_only':
         print('Running gamma_t calculations (no Jackknife covariance)...')
         run.run_gammat()
+    elif info.NG_mode=='gt_and_cov_par':
+        print('Running gamma_t and Jackknife covariance calculations...')
+        run.run_gammat_and_cov_parallel()
     elif info.NG_mode=='gt_and_cov':
         print('Running gamma_t and Jackknife covariance calculations...')
         run.run_gammat_and_cov()

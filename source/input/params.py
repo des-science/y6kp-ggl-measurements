@@ -11,7 +11,7 @@ sys.path.append(here)
 
 
 " Main output folder "
-out_main = '/global/cfs/cdirs/des/giannini/ggl/metad_maglim_test_parallel/'
+out_main = '/global/cfs/cdirs/des/giannini/ggl/bfd_maglim_new2/'
 
 
 " Define redshift bins for lens and source galaxies "
@@ -44,10 +44,12 @@ zs_bins = [
 
 " Bins to run "
 # the lens bins to run
-l_bins = [4,5]
+l_bins = [0]
 # l_bins = [0,1,2,3,4,5]
 # the source bins to run
 s_bins = [0,1,2,3]
+
+source_cat = 'bfd'
 
 " LSS weights "
 # whether LSS weights will be applied to gamma_t
@@ -55,9 +57,9 @@ use_LSSweight = False
 
 " Lens, source and random-point data files "
 # lens galaxies
-data_lens = '/global/cfs/projectdirs/des/nweaverd/des_y6/maglim_plusplus/y6maglim_VIPERS_a18_b4_v2.0_pzcols_wisecols.fits'
+# data_lens = '/global/cfs/projectdirs/des/nweaverd/des_y6/maglim_plusplus/y6maglim_VIPERS_a18_b4_v2.0_pzcols_wisecols.fits'
+data_lens = '/global/cfs/cdirs/des/y6kp-cats/maglim_2023-10-16.hdf5'
 # data_lens = '/global/cfs/cdirs/des/giannini/mag_lim_lens_sample_combined_jointmask_sample_4ggl.fits'
-# data_lens = ['/global/cfs/cdirs/des/giannini/mag_lim_lens_sample_combined_jointmask_sample_4ggl.fits']
 
 # source galaxies
 response = ['/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/Response_bin0.txt',
@@ -67,19 +69,21 @@ response = ['/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/Response_bin0.txt',
 
 # source galaxies
 # data_source = ['/global/cfs/cdirs/des/giannini/cats.yaml']
-data_source = ['/global/cfs/cdirs/des/y6-shear-catalogs/Y6A2_METADETECT_V5a/metadetect_desdmv5a_cutsv5.h5']
+data_source = '/global/cfs/cdirs/des/y6kp-cats/metadetect_2023-10-16.hdf5'
+data_source_bfd = ['/global/cfs/cdirs/des/giannini/ggl/v5a_sompz_jointmask/bfd_bin0.fits', 
+                   '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz_jointmask/bfd_bin1.fits',
+                   '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz_jointmask/bfd_bin2.fits',
+                   '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz_jointmask/bfd_bin3.fits']
+
+# data_source = ['/global/cfs/cdirs/des/y6-shear-catalogs/Y6A2_METADETECT_V5a/metadetect_desdmv5a_cutsv5.h5']
 # data_source = ['/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/metadetect_bin0.fits',
                # '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/metadetect_bin1.fits', 
                # '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/metadetect_bin2.fits', 
                # '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/metadetect_bin3.fits']
-# data_source = ['/global/cfs/cdirs/des/y6-shear-catalogs/Y6A2_METADETECT_V4/jackknife_patches_blinded/metadetect_desdmv4_cutsv3.h5']
-
-# weights_file = '/global/cfs/cdirs/des/myamamot/y6_shear_catalogs/Y6A2_METADETECT_V4/inverse_variance_weight_v3_s2n_10-300_Tratio_0.5-5.pickle'
-# weight_type = 'shape_err'
 
 # random points
-# data_randoms = ['/global/cfs/cdirs/des/giannini/mag_lim_lens_sample_combined_jointmask_sample_4ggl.fits']
-data_randoms = '/global/cfs/cdirs/des/giannini/Y3_maglim_randoms.fits'
+# data_randoms = '/global/cfs/cdirs/des/giannini/Y3_maglim_randoms.fits'
+data_randoms = '/global/cfs/cdirs/des/y6kp-cats/randoms_2023-10-16.hdf5'
 
 
 " Boost factor "
