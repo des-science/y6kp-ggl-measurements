@@ -1,2 +1,5 @@
 # y6kp-ggl-measurements
-Pipeline to produce the galaxy-galaxy lensing measurements for DES Y6.
+
+(Tentative) galaxy-galaxy lensing measurements obtained with these notebooks are stored in:
+- BFD - MagLim++: `/global/cfs/cdirs/des/elisa/ggl_y6_bfd/gammat`
+- Metadetect - MagLim++: `/global/cfs/cdirs/des/elisa/ggl_y6_bfd/gammat_mdet`
