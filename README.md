@@ -1,16 +1,9 @@
 # Galaxy-galaxy lensing measurements and tests
 Credit: Giulia Giannini, Georgios Zacharegkas, ... (add your name here)
 
-Steps of the run function (will depend on test, but generally): 
-Describe how pipeline works...
+DES Y6 pipeline to validate galaxy-galaxy lensing datavectors
 
-The way this pipeline is structured is as follows: 
-Descibe structure...
+To execute, run run_ggl.py
+Make sure you specify settings and file paths in input/params.py
 
-The tests included in this pipeline are (in parenthesis the subclass it belongs to):
-Describe tests...
-
-Getting started: 
-Describe how to use the code...
-
-Please contact Giulia Gainnini (ggiannini@ifae.es) or Georgios Zacharegkas (gzacharegkas@uchicago.edu) for comments or questions. 
+Please contact Giulia Giannini (giulia.giannini15@gmail.com) or Georgios Zacharegkas (gzacharegkas@uchicago.edu) for comments or questions. 
