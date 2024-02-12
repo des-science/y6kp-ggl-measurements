@@ -409,76 +409,7 @@ class GGL_setup(object):
     
     
  
-    
-    
-    def load_source_metacal_5sels(self, data_file, zs_bin=None):
-        """
-        Loads source galaxy data
-
-        Options:
-        - Y3 Metacal
-        """
-        # read yaml file that defines all the catalog selections used
-        params = yaml.load(open(data_file), Loader=yaml.FullLoader)
-        params['param_file'] = data_file.split('/')[-1]
-
-        source_selector, source_calibrator = catalog_utils.load_catalog(params, 'mcal', 'mcal', 
-                                                                        params['source_group'],
-                                                                        params['source_table'], 
-                                                                        params['source_path'], 
-                                                                return_calibrator=destest.MetaCalib)
-
-        gold_selector = catalog_utils.load_catalog(params, 'gold', 'mcal', params['gold_group'], params['gold_table'],
-                                                    params['gold_path'], inherit=source_selector)
-
-        pz_selector = catalog_utils.load_catalog(params, 'pz', 'mcal', params['pz_group'], 
-                                                    params['pz_table'], params['pz_path'], inherit=source_selector)
-
-        # dictionary with the unsheared version of each quantity with the 
-        # selections from: unsheared, 1p, 1m, 2p, 2m
-        source_5sels = {}
-        source_5sels['unsheared'] = {}
-        source_5sels['unsheared']['ra'] = [gold_selector.get_col('ra', uncut=True)[0][gold_selector.get_mask()[i]] for i in range(5)]
-        source_5sels['unsheared']['dec'] = [gold_selector.get_col('dec', uncut=True)[0][gold_selector.get_mask()[i]] for i in range(5)]
-        source_5sels['unsheared']['e1'] = [source_selector.get_col('e_1', uncut=True)[0][source_selector.get_mask()[i]] for i in range(5)]
-        source_5sels['unsheared']['e2'] = [source_selector.get_col('e_2', uncut=True)[0][source_selector.get_mask()[i]] for i in range(5)]
-
-        # dictionary with the 5 selections (1p, 1m, 2p, 2m), in which the 
-        # quantities are obtained from sheared images or using fluxes measured
-        # on sheared images
-        source_5sels['sheared'] = {}
-        source_5sels['sheared']['e1'] = source_selector.get_col('e_1')
-        source_5sels['sheared']['e2'] = source_selector.get_col('e_2')
-        # formerly z_g
-        source_5sels['sheared']['som_bin'] = pz_selector.get_col('bhat')
-
-        # dictionary with the unsheared version and selection only
-        source = {}
-        source['ra'] = source_5sels['unsheared']['ra'][0]
-        source['dec'] = source_5sels['unsheared']['dec'][0]
-        source['e1'] = source_5sels['unsheared']['e1'][0]
-        source['e2'] = source_5sels['unsheared']['e2'][0]
-        source['som_bin'] = source_5sels['sheared']['som_bin'][0]
-
-        # masks from redshifts
-        photoz_masks = [
-                        (source_5sels['sheared']['som_bin'][i] >= zs_bin) & \
-                        (source_5sels['sheared']['som_bin'][i] < zs_bin+1) for i in range(5)
-                       ]
-        maskz = photoz_masks[0]
-
-        ra_s = source['ra'][maskz]
-        dec_s = source['dec'][maskz]
-        e1_s = source['e1'][maskz]
-        e2_s = source['e2'][maskz]
-
-        # calibration given the photoz bin
-        R1,_,w_g = source_calibrator.calibrate('e_1', mask=photoz_masks)
-        R2,_,w_g = source_calibrator.calibrate('e_2', mask=photoz_masks)
-        R_g = 0.5*(R1+R2)
-        print ('----> R_g', R_g)
-
-        return ra_s, dec_s, e1_s, e2_s, R_g, w_g
+  
     
     def boost_factor_calculate(self, sum_w_l, sum_w_r, w_LS, w_RS):
         """

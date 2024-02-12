@@ -9,7 +9,6 @@ import sys
 here = os.path.abspath(__file__)
 sys.path.append(here)
 
-
 " Main output folder "
 out_main = '/global/cfs/cdirs/des/giannini/ggl/testtt/'
 

@@ -1,10 +1,7 @@
 """
-File containing the necessary information to setup and 
-start running the Y6 GGL measurements pipeline
+File containing the input directory and mode 
+to start running the Y6 GGL measurements pipeline
 """
-import os
-here = os.getcwd()
-
 # path the the folder containing all the input files
 # input_dir = '...path_to_input_dir...'
 input_dir = './input'
