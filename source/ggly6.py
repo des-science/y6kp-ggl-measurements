@@ -44,7 +44,7 @@ class GGL(object):
 
         # load lens data
         print("Reading lens data for redshift bin [%.2f,%.2f] (index %d) from %s..."%(zl_lims[0],zl_lims[1],lens_bin+1,lens_file))
-
+        print ('lens_file', lens_file)
         # read lens galaxy data
         self.ra_l, self.dec_l, self.weight_lens = self.ggl_setup.load_lens_Y6_maglim(lens_file, zl_bin=lens_bin)
         # self.ra_l, self.dec_l, self.weight_lens = self.ggl_setup.load_lens_Y3_maglim(lens_file, zl_lims=zl_lims)
@@ -56,6 +56,7 @@ class GGL(object):
         # load source data
         if source_cat == 'metadetect':
             print("Reading source data for source bin [%.2f,%.2f] (index %d) from %s..."%(zs_lims[0],zs_lims[1],source_bin+1,source_file))
+            print ('source_file', source_file)
             # read source galaxy data
             (self.ra_s, self.dec_s, 
              self.e1_s, self.e2_s, 
@@ -63,6 +64,7 @@ class GGL(object):
              self.R_g, self.w_g) = self.ggl_setup.load_source_metadetect(source_file, response, zs_bin=source_bin)
                     # file = pf.open(par.out_main+'/metadetect_bin{}.fits'.format(zs_bin))
         elif source_cat == 'bfd':
+            print ('source_file_bfd', source_file_bfd)
             (self.ra_s, self.dec_s, 
              self.e1_s, self.e2_s, 
              self.R_g, self.w_g) = self.ggl_setup.load_source_bfd(source_file_bfd, zs_bin=source_bin)
@@ -665,7 +667,7 @@ class GGL(object):
                                lens_file=self.par.data_lens,
                                randoms_file=self.par.data_randoms, 
                                source_file=self.par.data_source,
-                               source_file_bfd=self.par.data_source_bfd[szind],
+                               source_file_bfd=self.par.data_source_bfd,
                                response=self.par.response[szind],
                                lens_bin=lzind, source_bin=szind, 
                                zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
@@ -674,9 +676,7 @@ class GGL(object):
 
                 # random points
                 if self.par.use_randoms or self.par.use_boosts:
-                    print ('i remember it all too welllll ------------')
                     print('Number of randoms=',len(self.ra_rand))
-                    print ('i remember it all too welllll ------------')
 
                 else:
                     print('Will not use random points')
@@ -684,6 +684,7 @@ class GGL(object):
                 # parameters to parse to treecorr
                 params = [self.e1_s,self.e2_s,self.R_g,self.w_g]
                 print ('-------> params', params)
+                print ('-------> self.R_g', self.R_g)
                 print ('-------> self.w_g', self.w_g)
                 
 

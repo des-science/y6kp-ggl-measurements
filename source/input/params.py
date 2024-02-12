@@ -11,7 +11,19 @@ sys.path.append(here)
 
 
 " Main output folder "
-out_main = '/global/cfs/cdirs/des/giannini/ggl/bfd_maglim_new2/'
+out_main = '/global/cfs/cdirs/des/giannini/ggl/bfd_2023-10-16_diffrnd/'
+
+" Bins to run "
+# the lens bins to run
+l_bins = [0]
+# l_bins = [0,1,2,3,4,5]
+# the source bins to run
+s_bins = [0]
+# s_bins = [0,1,2,3]
+
+" Source catalog "
+# bdf or metadetect
+source_cat = 'bfd' 
 
 
 " Define redshift bins for lens and source galaxies "
@@ -42,39 +54,32 @@ zs_bins = [
 # {'bin0': 37687150, 'bin1': 37220369, 'bin2': 37766153, 'bin3': 37420019}
 
 
-" Bins to run "
-# the lens bins to run
-l_bins = [0]
-# l_bins = [0,1,2,3,4,5]
-# the source bins to run
-s_bins = [0,1,2,3]
-
-source_cat = 'bfd'
-
-" LSS weights "
-# whether LSS weights will be applied to gamma_t
-use_LSSweight = False
-
 " Lens, source and random-point data files "
 # lens galaxies
 # data_lens = '/global/cfs/projectdirs/des/nweaverd/des_y6/maglim_plusplus/y6maglim_VIPERS_a18_b4_v2.0_pzcols_wisecols.fits'
-data_lens = '/global/cfs/cdirs/des/y6kp-cats/maglim_2023-10-16.hdf5'
+# data_lens = '/global/cfs/cdirs/des/y6kp-cats/maglim_2023-10-16.hdf5'
+data_lens = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
+
 # data_lens = '/global/cfs/cdirs/des/giannini/mag_lim_lens_sample_combined_jointmask_sample_4ggl.fits'
 
 # source galaxies
-response = ['/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/Response_bin0.txt',
-            '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/Response_bin1.txt', 
-            '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/Response_bin2.txt', 
-            '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/Response_bin3.txt']
+response = ['/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin1.txt',
+            '/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin2.txt', 
+            '/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin3.txt', 
+            '/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin4.txt']
 
 # source galaxies
 # data_source = ['/global/cfs/cdirs/des/giannini/cats.yaml']
-data_source = '/global/cfs/cdirs/des/y6kp-cats/metadetect_2023-10-16.hdf5'
-data_source_bfd = ['/global/cfs/cdirs/des/giannini/ggl/v5a_sompz_jointmask/bfd_bin0.fits', 
-                   '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz_jointmask/bfd_bin1.fits',
-                   '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz_jointmask/bfd_bin2.fits',
-                   '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz_jointmask/bfd_bin3.fits']
+# data_source = '/global/cfs/cdirs/des/y6kp-cats/metadetect_2023-10-16.hdf5'
+data_source = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
+data_source_bfd = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
+# data_source_bfd = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/bfd_2023-10-16.hdf5'
+# data_source_bfd = ['/global/cfs/cdirs/des/giannini/ggl/v5a_sompz_jointmask/bfd_bin0.fits', 
+                   # '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz_jointmask/bfd_bin1.fits',
+                   # '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz_jointmask/bfd_bin2.fits',
+                   # '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz_jointmask/bfd_bin3.fits']
 
+            
 # data_source = ['/global/cfs/cdirs/des/y6-shear-catalogs/Y6A2_METADETECT_V5a/metadetect_desdmv5a_cutsv5.h5']
 # data_source = ['/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/metadetect_bin0.fits',
                # '/global/cfs/cdirs/des/giannini/ggl/v5a_sompz/metadetect_bin1.fits', 
@@ -83,8 +88,15 @@ data_source_bfd = ['/global/cfs/cdirs/des/giannini/ggl/v5a_sompz_jointmask/bfd_b
 
 # random points
 # data_randoms = '/global/cfs/cdirs/des/giannini/Y3_maglim_randoms.fits'
-data_randoms = '/global/cfs/cdirs/des/y6kp-cats/randoms_2023-10-16.hdf5'
+# data_randoms = '/global/cfs/cdirs/des/y6kp-cats/randoms_2023-10-16.hdf5'
+data_randoms = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
 
+
+
+
+" LSS weights "
+# whether LSS weights will be applied to gamma_t
+use_LSSweight = True
 
 " Boost factor "
 use_boosts = True
@@ -97,7 +109,7 @@ rand_fact = 30
 
 " Treecorr settings "
 # number of Jackknife regions
-n_jck = 150
+n_jck = 200
 
 # resolution of grid (make it a power of 2)
 nside = 4096

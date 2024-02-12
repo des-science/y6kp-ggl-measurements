@@ -42,6 +42,12 @@ class GGL_setup(object):
 
         return
 
+    
+    
+    
+    
+    
+    
     def load_lens_Y6_maglim(self, path, zl_bin=None):
         """
         Loads lens galaxy data from file
@@ -49,12 +55,14 @@ class GGL_setup(object):
         Options:
         - Y6 MagLim
         """
-        
+                         
         # read data for lenses
-        maglim = h5.File(path)
-        ra =  np.array(maglim['tomo_bin_{}'.format(zl_bin)]['RA'])
-        dec = np.array(maglim['tomo_bin_{}'.format(zl_bin)]['DEC'])
-        w = np.ones(len(ra))
+        maglim = h5.File(path, 'r')
+        ra =  np.array(maglim['desy6kp//maglim/tomo_bin_{}'.format(zl_bin)]['RA'])
+        dec = np.array(maglim['desy6kp//maglim/tomo_bin_{}'.format(zl_bin)]['DEC'])
+        weights = joblib.load('/global/cfs/cdirs/des/giannini/ggl/lss_weights_oct2022.pkl')
+        w = weights[zl_bin]
+        # w = np.ones(len(ra))
         # w = maglim_bin['W']
 
         maglim.close()
@@ -84,8 +92,7 @@ class GGL_setup(object):
         
         return ra, dec, w
     
-    
-    
+
     def load_lens_Y3_maglim_orig(self, data_file, zl_lims=None):
         """
         Loads lens galaxy data from file
@@ -112,6 +119,8 @@ class GGL_setup(object):
     
     
     
+    
+    
     def load_randoms_Y6(self, path, zl_bin=None):
         """
         Loads random points data from file
@@ -120,9 +129,10 @@ class GGL_setup(object):
         - Y6 lens randoms
         """
         # read data for lenses
-        randoms = h5.File(path)
-        ra =  np.array(randoms['tomo_bin_{}'.format(zl_bin)]['RA'])
-        dec = np.array(randoms['tomo_bin_{}'.format(zl_bin)]['DEC'])
+                                                
+        randoms = h5.File(path, 'r')
+        ra =  np.array(randoms['desy6kp/ran/tomo_bin_{}'.format(zl_bin)]['RA'])[1::1000]
+        dec = np.array(randoms['desy6kp/ran/tomo_bin_{}'.format(zl_bin)]['DEC'])[1::1000]
 
         randoms.close()
         del randoms
@@ -147,9 +157,7 @@ class GGL_setup(object):
         
         return ra, dec
     
-    
-    
-    
+
     def load_randoms_Y3_maglim_old(self, data_file, zl_lims=None):
         """
         Loads random points data from file
@@ -178,30 +186,47 @@ class GGL_setup(object):
     
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+        #  BFD
     
     def load_source_bfd(self, path, zs_bin=None):
         """
-        Loads Y6 source galaxy data
+        Loads Y6 source BFD galaxy data
+        
+        """
+            
+        bfd = h5.File(path, 'r')
+        print ('Loads Y6 source BFD galaxy data')
+
+        ra_s =  np.array(bfd['desy6kp/bfd']['tomo_bin_{}'.format(zs_bin)]['ra'])
+        dec_s = np.array(bfd['desy6kp/bfd']['tomo_bin_{}'.format(zs_bin)]['dec'])
+        e1_s =  np.array(bfd['desy6kp/bfd']['tomo_bin_{}'.format(zs_bin)]['e1'])
+        e2_s =  np.array(bfd['desy6kp/bfd']['tomo_bin_{}'.format(zs_bin)]['e2'])
+        w_g =   np.ones(len(ra_s))
+        R_g = 1.   # has to stay like this, this is BFD!!
+        
+        bfd.close()
+        del bfd
+        gc.collect()
+        
+        return ra_s, dec_s, e1_s, e2_s, R_g, w_g
+    
+ 
+ 
+    def load_source_bfd_fits(self, path, zs_bin=None):
+        """
+        Loads Y6 source BFD galaxy data
         
         """
             
         bfd = pf.open(path)
-        
+        print ('Loads Y6 source BFD galaxy data')
+
         ra_s =  np.array(bfd[1].data['ra_s'])
         dec_s = np.array(bfd[1].data['dec_s'])
         e1_s =  np.array(bfd[1].data['e1_s'])
         e2_s =  np.array(bfd[1].data['e2_s'])
         w_g =   np.array(bfd[1].data['w'])
+        # w_g =   np.ones(len(bfd[1].data['w']))
         R_g = 1.
         
         bfd.close()
@@ -210,22 +235,30 @@ class GGL_setup(object):
         
         return ra_s, dec_s, e1_s, e2_s, R_g, w_g
     
-    
-    
+        
+        
+        
+        
+        
+        
+        
+        
+        #   METADETECT
     
     def load_source_metadetect(self, path, r_path, zs_bin=None):
         """
-        Loads Y6 source galaxy data
+        Loads Y6 source METADETECT galaxy data
         
         """
             
-        mdet = h5.File(path)
-        
-        ra_s =  np.array(mdet['noshear']['tomo_bin_{}'.format(zs_bin)]['ra'])
-        dec_s = np.array(mdet['noshear']['tomo_bin_{}'.format(zs_bin)]['dec'])
-        e1_s =  np.array(mdet['noshear']['tomo_bin_{}'.format(zs_bin)]['gauss_g_1'])
-        e2_s =  np.array(mdet['noshear']['tomo_bin_{}'.format(zs_bin)]['gauss_g_2'])
-        w_g =   np.array(mdet['noshear']['tomo_bin_{}'.format(zs_bin)]['w'])
+        mdet = h5.File(path, 'r')
+        print ('Loads Y6 source METADETECT galaxy data')
+        ra_s =  np.array(mdet['desy6kp/mdet/noshear']['tomo_bin_{}'.format(zs_bin)]['ra'])
+        dec_s = np.array(mdet['desy6kp/mdet/noshear']['tomo_bin_{}'.format(zs_bin)]['dec'])
+        e1_s =  np.array(mdet['desy6kp/mdet/noshear']['tomo_bin_{}'.format(zs_bin)]['gauss_g_1'])
+        e2_s =  np.array(mdet['desy6kp/mdet/noshear']['tomo_bin_{}'.format(zs_bin)]['gauss_g_2'])
+        w_g =   np.array(mdet['desy6kp/mdet/noshear']['tomo_bin_{}'.format(zs_bin)]['w'])
+        # w_g =   np.ones(len(ra_s))
 
         resp = np.loadtxt(r_path)
         R_g = resp[0]
@@ -517,6 +550,7 @@ class GGL_setup(object):
             sum_w_r = len(ra_rand)
         else:
             sum_w_r = 0
+            
         if use_boosts:
             boost = self.boost_factor_calculate(sum_w_l, sum_w_r, ng.weight, rg.weight)
             gamma_t *= boost
@@ -540,6 +574,9 @@ class GGL_setup(object):
                 ng.xi_im, xi_im_rand, ng.npairs, xi_npairs_rand, ng.weight, xi_weight_rand, 
                 Rg, sum_w_l, sum_w_r, boost)
 
+    
+    
+    
     def get_gammat_and_covariance(self, ra_l, dec_l, ra_s, dec_s, ra_rand=None, dec_rand=None, params=None, 
                                   units='deg', sep_units='arcmin', low_mem=False, weights=None, 
                                   use_randoms=False, use_boosts=False):
@@ -650,6 +687,7 @@ class GGL_setup(object):
 
         # random-point subtraction for gamma_t and gamma_x
         if use_randoms:
+            #correct for response
             gammat_rand = rg.xi/Rg
             gammax_rand = rg.xi_im/Rg
             xi_im_rand = rg.xi_im
