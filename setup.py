@@ -7,12 +7,9 @@ import numpy as np
 import os
 import sys
 import yaml
-import catalog_utils
 import treecorr
 import h5py as h5
 from astropy.io import fits
-import astropy.io.fits as pf
-from destest import destest
 import healsparse
 import joblib
 import healpy as hp
