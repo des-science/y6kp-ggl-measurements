@@ -9,6 +9,10 @@ import numpy as np
 import gc
 from mpi4py import MPI
 
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+
 
 class GGL(object):
 
@@ -284,274 +288,268 @@ class GGL(object):
     
     
     
+    def run_gammat_and_cov_parallel(self):
+                    
+                
+        """
+        Run code to get gamma_t and its covariance using only Treecorr
+
+        output
+        ------
+        results are saved in file
+        """
+        # output directory for gamma_t
+        path_out_gt = self.par.path_out_gt
+        # print ('path_out_gt ----------->', path_out_gt)
+        if path_out_gt[-1] != '/': path_out_gt+='/'
+        print ('path_out_gt ----------->', path_out_gt)
+        if not os.path.exists(path_out_gt):
+            os.makedirs(path_out_gt)
+
+        # output directory for gamma_x
+        path_out_gx = self.par.path_out_gx
+        if path_out_gx[-1] != '/': path_out_gx+='/'
+        if not os.path.exists(path_out_gx):
+            os.makedirs(path_out_gx)
+
+        # output directory for boost factors
+        path_out_boost = self.par.path_out_boost
+        if path_out_boost[-1] != '/': path_out_boost+='/'
+        if not os.path.exists(path_out_boost):
+            os.makedirs(path_out_boost)
+
+        # setup output path for extra info
+        path_out_extra = self.par.path_out_extra_gt
+        if path_out_extra[-1] != '/': path_out_extra+='/'
+        if not os.path.exists(path_out_extra):
+            os.makedirs(path_out_extra)
+
+        # setup output path for randoms
+        path_out_rand = self.par.path_out_rand
+        if path_out_rand[-1] != '/': path_out_rand+='/'
+        if not os.path.exists(path_out_rand):
+            os.makedirs(path_out_rand)
+        #
+        path_out_gt_rand = self.par.path_out_gt_rand
+        if path_out_gt_rand[-1] != '/': path_out_gt_rand+='/'
+        if not os.path.exists(path_out_gt_rand):
+            os.makedirs(path_out_gt_rand)
+        #
+        path_out_gx_rand = self.par.path_out_gx_rand
+        if path_out_gx_rand[-1] != '/': path_out_gx_rand+='/'
+        if not os.path.exists(path_out_gx_rand):
+            os.makedirs(path_out_gx_rand)
+
+        # setup output path for gamma_t Jackknife covariance
+        path_JK_cov_gt = self.par.path_JK_cov_gt
+        if path_JK_cov_gt[-1] != '/': path_JK_cov_gt+='/'
+        if not os.path.exists(path_JK_cov_gt):
+            os.makedirs(path_JK_cov_gt)
+
+        # setup output path for random-point gamma_t Jackknife covariance
+        path_JK_cov_gt_rand = self.par.path_JK_cov_gt_rand
+        if path_JK_cov_gt_rand[-1] != '/': path_JK_cov_gt_rand+='/'
+        if not os.path.exists(path_JK_cov_gt_rand):
+            os.makedirs(path_JK_cov_gt_rand)
+
+        # setup output path for gamma_t Jackknife covariance
+        path_JK_cov_gx = self.par.path_JK_cov_gx
+        if path_JK_cov_gx[-1] != '/': path_JK_cov_gx+='/'
+        if not os.path.exists(path_JK_cov_gx):
+            os.makedirs(path_JK_cov_gx)
+
+        # setup output path for gamma_t Jackknife covariance
+        path_JK_cov_bf = self.par.path_JK_cov_bf
+        if path_JK_cov_bf[-1] != '/': path_JK_cov_bf+='/'
+        if not os.path.exists(path_JK_cov_bf):
+            os.makedirs(path_JK_cov_bf)
+
+        # setup output path for gamma_t shot noise variance
+        path_out_shot_gt = self.par.path_out_shot_gt
+        if path_out_shot_gt[-1] != '/': path_out_shot_gt+='/'
+        if not os.path.exists(path_out_shot_gt):
+            os.makedirs(path_out_shot_gt)
+
+        # print feedback
+        print( "Working on gamma_t calculation with bin slop=%.3f and resolution=%d:"%(self.par.bin_slop,self.par.nside) )
+        print( "Running treecorr with theta=[%.1f,%.1f] over %d angular bins"%(self.par.theta_lims[0],self.par.theta_lims[1],self.par.ang_nbins) )
+
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
+        size = comm.Get_size()
+
+        # Define the total number of lens and source bins
+        num_lens_bins = 6
+        num_source_bins = 4
+
+        # print ('rank', rank)
+        # print ('size', size)
+
+        # Calculate the chunks per process
+        chunks_per_process = (num_lens_bins * num_source_bins) // size
+
+        # Calculate the start and end chunk for this process
+        start_chunk = rank * chunks_per_process
+        end_chunk = start_chunk + chunks_per_process
+
+        # print("Chunks per process:", chunks_per_process)
+        # print("Start chunk:", start_chunk)
+        # print("End chunk:", end_chunk)
+
+        # Iterate over the assigned chunks
+        for chunk in range(start_chunk, end_chunk):
+                lzind = chunk // num_source_bins
+                szind = chunk % num_source_bins
+                # Your existing code for this chunk
+                print('lens ', lzind, 'source ', szind)
+                sys.stdout.flush()
     
-    
-    
-    
-#     def run_gammat_and_cov_parallel(self):
-#         """
-#         Run code to get gamma_t and its covariance using only Treecorr
+                zl_min, zl_max = self.par.zl_bins[lzind]           
+                zs_min, zs_max = self.par.zs_bins[szind]
 
-#         output
-#         ------
-#         results are saved in file
-#         """
-#         # output directory for gamma_t
-#         path_out_gt = self.par.path_out_gt
-#         print ('path_out_gt ----------->', path_out_gt)
-#         if path_out_gt[-1] != '/': path_out_gt+='/'
-#         print ('path_out_gt ----------->', path_out_gt)
-#         if not os.path.exists(path_out_gt):
-#             os.makedirs(path_out_gt)
+                # give feedback on progress
+                print( "  Doing: lens bin %d [%.2f,%.2f] x source bin %d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max) )
+                # gamma_t output directory
+                gammat_out = path_out_gt+'/gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                gammax_out = path_out_gx+'/gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                extra_out = path_out_extra+'/gammat_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                extra_rand_out = path_out_extra+'/gammat_rand_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                randoms_gt_out = path_out_gt_rand+'/gammat_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                randoms_gx_out = path_out_gx_rand+'/gammax_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                boosts_out = path_out_boost+'/boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                cov_gammat_out = path_JK_cov_gt+'/cov_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                cov_gammat_rand_out = path_JK_cov_gt_rand+'/cov_gammat_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                cov_gammax_out = path_JK_cov_gx+'/cov_gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                cov_boosts_out = path_JK_cov_bf+'/cov_boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                err_gammat_out = path_JK_cov_gt+'/err_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                shot_gammat_out = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
 
-#         # output directory for gamma_x
-#         path_out_gx = self.par.path_out_gx
-#         if path_out_gx[-1] != '/': path_out_gx+='/'
-#         if not os.path.exists(path_out_gx):
-#             os.makedirs(path_out_gx)
-
-#         # output directory for boost factors
-#         path_out_boost = self.par.path_out_boost
-#         if path_out_boost[-1] != '/': path_out_boost+='/'
-#         if not os.path.exists(path_out_boost):
-#             os.makedirs(path_out_boost)
-
-#         # setup output path for extra info
-#         path_out_extra = self.par.path_out_extra_gt
-#         if path_out_extra[-1] != '/': path_out_extra+='/'
-#         if not os.path.exists(path_out_extra):
-#             os.makedirs(path_out_extra)
-
-#         # setup output path for randoms
-#         path_out_rand = self.par.path_out_rand
-#         if path_out_rand[-1] != '/': path_out_rand+='/'
-#         if not os.path.exists(path_out_rand):
-#             os.makedirs(path_out_rand)
-#         #
-#         path_out_gt_rand = self.par.path_out_gt_rand
-#         if path_out_gt_rand[-1] != '/': path_out_gt_rand+='/'
-#         if not os.path.exists(path_out_gt_rand):
-#             os.makedirs(path_out_gt_rand)
-#         #
-#         path_out_gx_rand = self.par.path_out_gx_rand
-#         if path_out_gx_rand[-1] != '/': path_out_gx_rand+='/'
-#         if not os.path.exists(path_out_gx_rand):
-#             os.makedirs(path_out_gx_rand)
-
-#         # setup output path for gamma_t Jackknife covariance
-#         path_JK_cov_gt = self.par.path_JK_cov_gt
-#         if path_JK_cov_gt[-1] != '/': path_JK_cov_gt+='/'
-#         if not os.path.exists(path_JK_cov_gt):
-#             os.makedirs(path_JK_cov_gt)
-
-#         # setup output path for random-point gamma_t Jackknife covariance
-#         path_JK_cov_gt_rand = self.par.path_JK_cov_gt_rand
-#         if path_JK_cov_gt_rand[-1] != '/': path_JK_cov_gt_rand+='/'
-#         if not os.path.exists(path_JK_cov_gt_rand):
-#             os.makedirs(path_JK_cov_gt_rand)
-
-#         # setup output path for gamma_t Jackknife covariance
-#         path_JK_cov_gx = self.par.path_JK_cov_gx
-#         if path_JK_cov_gx[-1] != '/': path_JK_cov_gx+='/'
-#         if not os.path.exists(path_JK_cov_gx):
-#             os.makedirs(path_JK_cov_gx)
-
-#         # setup output path for gamma_t Jackknife covariance
-#         path_JK_cov_bf = self.par.path_JK_cov_bf
-#         if path_JK_cov_bf[-1] != '/': path_JK_cov_bf+='/'
-#         if not os.path.exists(path_JK_cov_bf):
-#             os.makedirs(path_JK_cov_bf)
-
-#         # setup output path for gamma_t shot noise variance
-#         path_out_shot_gt = self.par.path_out_shot_gt
-#         if path_out_shot_gt[-1] != '/': path_out_shot_gt+='/'
-#         if not os.path.exists(path_out_shot_gt):
-#             os.makedirs(path_out_shot_gt)
-
-#         # print feedback
-#         print( "Working on gamma_t calculation with bin slop=%.3f and resolution=%d:"%(self.par.bin_slop,self.par.nside) )
-#         print( "Running treecorr with theta=[%.1f,%.1f] over %d angular bins"%(self.par.theta_lims[0],self.par.theta_lims[1],self.par.ang_nbins) )
-
-#         # run code to get gamma_t
-#         for lzind in self.par.l_bins:
-#             print ('lens bin ', lzind)
-#             # lens redshift cuts
-#             zl_min, zl_max = self.par.zl_bins[lzind]           
+                print ('self.par.out_main', self.par.out_main)
             
-#             number_of_works=4 #self.par.s_bins
-#             #number_of_works = 2  #to uncomment for tests
-#             print ('number_of_works', number_of_works)
-#             run_count=0
-#             while run_count<(number_of_works):
-#                 print ('run count -------------', run_count)
-#                 comm = MPI.COMM_WORLD
-#                 try: 
-#                     rank = comm.Get_rank()
-#                     size = comm.Get_size()
-#                     # print("Hello! I'm rank %d from %d running in total..." % (comm.rank, comm.size))
-#                     print("Hello! I'm rank %d from %d running in total..." % (rank, size))
-#                     print("working on chunk {}".format(run_count+rank))
-#                     # print("working on chunk {}".format(run_count+comm.rank))
-#                     #sys.stdout.flush()
-                    
-#                     # for szind in self.par.s_bins:
-#                     # source redshift cuts
-#                     szind = run_count+rank
-#                     # szind = run_count+comm.rank
-                    
-#                     zs_min, zs_max = self.par.zs_bins[szind]
-#                     print ('SZIND', szind)
-#                     # source redshift cuts
-#                     print ('self.par.zs_bins[szind]', self.par.zs_bins[szind])
+                # load data and setup current bin
+                self.setup_run(source_cat=self.par.source_cat,
+                               path=self.par.out_main, 
+                               lens_file=self.par.data_lens,
+                               randoms_file=self.par.data_randoms, 
+                               source_file=self.par.data_source,
+                               source_file_bfd=self.par.data_source_bfd,
+                               response=self.par.response[szind],
+                               lens_bin=lzind, source_bin=szind, 
+                               zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
 
-#                     # give feedback on progress
-#                     print( "  Doing: lens bin %d [%.2f,%.2f] x source bin %d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max) )
-#                     # gamma_t output directory
-#                     gammat_out = path_out_gt+'/gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-#                     gammax_out = path_out_gx+'/gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-#                     extra_out = path_out_extra+'/gammat_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-#                     extra_rand_out = path_out_extra+'/gammat_rand_extra_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-#                     randoms_gt_out = path_out_gt_rand+'/gammat_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-#                     randoms_gx_out = path_out_gx_rand+'/gammax_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-#                     boosts_out = path_out_boost+'/boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-#                     cov_gammat_out = path_JK_cov_gt+'/cov_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-#                     cov_gammat_rand_out = path_JK_cov_gt_rand+'/cov_gammat_rand_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-#                     cov_gammax_out = path_JK_cov_gx+'/cov_gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-#                     cov_boosts_out = path_JK_cov_bf+'/cov_boost_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-#                     err_gammat_out = path_JK_cov_gt+'/err_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-#                     shot_gammat_out = path_out_shot_gt+'/shot_noise_gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                print('Number of lenses=',len(self.ra_l))
 
-#                     print ('AAAAAAAAAAAAAAAAAAAAAA self.par.out_main', self.par.out_main)
-#                     # load data and setup current bin
-#                     self.setup_run(path=self.par.out_main, 
-#                                    lens_file=self.par.data_lens,
-#                     # self.setup_run(lens_file=self.par.data_lens[lzind],
-#                                    randoms_file=self.par.data_randoms, 
-#                                    # randoms_file=self.par.data_randoms[lzind], 
-#                                    # source_file=self.par.data_source, 
-#                                    source_file=self.par.data_source,
-#                                    lens_bin=lzind, source_bin=szind, 
-#                                    zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
+                # random points
+                if self.par.use_randoms or self.par.use_boosts:
+                    print('Number of randoms=',len(self.ra_rand))
 
-#                     print('Number of lenses=',len(self.ra_l))
+                else:
+                    print('Will not use random points')
 
-#                     # random points
-#                     if self.par.use_randoms or self.par.use_boosts:
-#                         print('Number of randoms=',len(self.ra_rand))
-#                     else:
-#                         print('Will not use random points')
+                # parameters to parse to treecorr
+                params = [self.e1_s,self.e2_s,self.R_g,self.w_g]
+                print ('-------> params', params)
+                print ('-------> self.R_g', self.R_g)
+                print ('-------> self.w_g', self.w_g)
+                
 
-#                     # parameters to parse to treecorr
-#                     params = [self.e1_s,self.e2_s,self.R_g,self.w_g]
-#                     print ('-------> params', params)
-                    
-#                     # get gamma_t for defined parameters
-#                     (theta_res, gammat_res, gammat_total, gammat_rand, gammax_res, gammax_total, gammax_rand, 
-#                      cov_gammat, shot_noise_gammat, cov_boost, cov_gammax, cov_gammat_rand,
-#                      xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
-#                      Rg, sum_w_l, sum_w_r, 
-#                      boosts) = self.ggl_setup.get_gammat_and_covariance(self.ra_l, self.dec_l, self.ra_s, self.dec_s, 
-#                                                                         ra_rand=self.ra_rand, dec_rand=self.dec_rand, 
-#                                                                         params=params,low_mem=self.par.treecorr_low_mem,                                                                     weights=self.weight_lens,                                                                                           use_randoms=self.par.use_randoms,use_boosts=self.par.use_boosts)
+                # get gamma_t for defined parameters
+                (theta_res, gammat_res, gammat_total, gammat_rand, gammax_res, gammax_total, gammax_rand, 
+                 cov_gammat, shot_noise_gammat, cov_boost, cov_gammax, cov_gammat_rand,
+                 xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
+                 Rg, sum_w_l, sum_w_r, 
+                 boosts) = self.ggl_setup.get_gammat_and_covariance(self.ra_l, self.dec_l, self.ra_s, self.dec_s, ra_rand=self.ra_rand, dec_rand=self.dec_rand, params=params,low_mem=self.par.treecorr_low_mem, weights=self.weight_lens,use_randoms=self.par.use_randoms,use_boosts=self.par.use_boosts)
 
-# #                     # save covariances
-# #                     #---gamma_t
-# #                     with open(cov_gammat_out,'wb') as f:
-# #                         for line in cov_gammat.T:
-# #                             np.savetxt(f, [line])
-# #                     gt_err = np.sqrt(np.diag(cov_gammat))
-# #                     np.savetxt(err_gammat_out, np.c_[theta_res,gt_err], header='theta, gammat_err')
-# #                     np.savetxt(shot_gammat_out, np.c_[theta_res,shot_noise_gammat], header='theta, gammat_shot_noise')
-# #                     #---boost factors
-# #                     with open(cov_boosts_out,'wb') as f:
-# #                         for line in cov_boost.T:
-# #                             np.savetxt(f, [line])
-# #                     #---gamma_x
-# #                     with open(cov_gammax_out,'wb') as f:
-# #                         for line in cov_gammax.T:
-# #                             np.savetxt(f, [line])
-# #                     #---randoms points
-# #                     with open(cov_gammat_rand_out,'wb') as f:
-# #                         for line in cov_gammat_rand.T:
-# #                             np.savetxt(f, [line])
+                # save covariances
+                #---gamma_t
+                with open(cov_gammat_out,'wb') as f:
+                    for line in cov_gammat.T:
+                        np.savetxt(f, [line])
+                gt_err = np.sqrt(np.diag(cov_gammat))
+                np.savetxt(err_gammat_out, np.c_[theta_res,gt_err], header='theta, gammat_err')
+                np.savetxt(shot_gammat_out, np.c_[theta_res,shot_noise_gammat], header='theta, gammat_shot_noise')
+                #---boost factors
+                with open(cov_boosts_out,'wb') as f:
+                    for line in cov_boost.T:
+                        np.savetxt(f, [line])
+                #---gamma_x
+                with open(cov_gammax_out,'wb') as f:
+                    for line in cov_gammax.T:
+                        np.savetxt(f, [line])
+                #---randoms points
+                with open(cov_gammat_rand_out,'wb') as f:
+                    for line in cov_gammat_rand.T:
+                        np.savetxt(f, [line])
 
-# #                     # save results in file
-# #                     #---gamma_t
-# #                     np.savetxt(gammat_out, np.c_[theta_res,gammat_res], header='theta, gamma_t')
-# #                     np.savetxt(randoms_gt_out, np.c_[theta_res,gammat_rand], header='theta, gamma_t')
-# #                     #---gamma_x
-# #                     np.savetxt(gammax_out, np.c_[theta_res,gammax_res], header='theta, gamma_x')
-# #                     np.savetxt(randoms_gx_out, np.c_[theta_res,gammax_rand], header='theta, gamma_x')
-# #                     #---boost factors
-# #                     np.savetxt(boosts_out, np.c_[theta_res,boosts], header='theta, boost')
-# #                     #---extra stuff
-# #                     np.savetxt(extra_out, np.c_[xi_im,xi_npairs,xi_weight,Rg*np.ones(len(theta_res))], 
-# #                                                 header='xi_im, xi_npair, xi_weight, Rg')
-# #                     np.savetxt(extra_rand_out, np.c_[xi_im_rand,xi_npairs_rand,xi_weight_rand,
-# #                                                      Rg*np.ones(len(theta_res)),sum_w_l*np.ones(len(theta_res)),sum_w_r*np.ones(len(theta_res))], 
-# #                                                      header='xi_im, xi_npair, xi_weight, Rg, sum_w_l, sum_w_r,')
+                # save results in file
+                #---gamma_t
+                np.savetxt(gammat_out, np.c_[theta_res,gammat_res], header='theta, gamma_t')
+                np.savetxt(randoms_gt_out, np.c_[theta_res,gammat_rand], header='theta, gamma_t')
+                #---gamma_x
+                np.savetxt(gammax_out, np.c_[theta_res,gammax_res], header='theta, gamma_x')
+                np.savetxt(randoms_gx_out, np.c_[theta_res,gammax_rand], header='theta, gamma_x')
+                #---boost factors
+                np.savetxt(boosts_out, np.c_[theta_res,boosts], header='theta, boost')
+                #---extra stuff
+                np.savetxt(extra_out, np.c_[xi_im,xi_npairs,xi_weight,Rg*np.ones(len(theta_res))], 
+                                            header='xi_im, xi_npair, xi_weight, Rg')
+                np.savetxt(extra_rand_out, np.c_[xi_im_rand,xi_npairs_rand,xi_weight_rand,
+                                                 Rg*np.ones(len(theta_res)),sum_w_l*np.ones(len(theta_res)),sum_w_r*np.ones(len(theta_res))], 
+                                                 header='xi_im, xi_npair, xi_weight, Rg, sum_w_l, sum_w_r,')
 
-# #                     # save results with RP subtraction and boost factors applied
-# #                     #---gamma_t
-# #                     if self.par.use_boosts or self.par.use_randoms:
-# #                         if path_out_gt[-1]=='/':
-# #                             path_out_gt_final = path_out_gt[:-1]
-# #                         else:
-# #                             path_out_gt_final = path_out_gt
-# #                         if self.par.use_boosts:
-# #                             path_out_gt_final += '_bf'
-# #                         if self.par.use_randoms:
-# #                             path_out_gt_final += '_rp'
-# #                         path_out_gt_final += '/'
-# #                         gammat_total_out = path_out_gt_final+'gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-# #                         # setup output path
-# #                         if not os.path.exists(path_out_gt_final):
-# #                             os.makedirs(path_out_gt_final)
-# #                         np.savetxt(gammat_total_out, np.c_[theta_res,gammat_total], header='theta, gamma_t')
-# #                     else:
-# #                         if not np.all(gammat_total/gammat_res==1.):
-# #                             errmsg = '!!!Something is wrong, no boost or randoms, but final gammat is not equal to the basic gammat measurement'
-# #                             raise Exception(errmsg)
-# #                     #---gamma_x
-# #                     if self.par.use_randoms:
-# #                         if path_out_gx[-1]=='/':
-# #                             path_out_gx_final = path_out_gx[:-1]
-# #                         else:
-# #                             path_out_gx_final = path_out_gx
-# #                             path_out_gx_final += '_rp'
-# #                         path_out_gx_final += '/'
-# #                         gammax_total_out = path_out_gx_final+'gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
-# #                         if not os.path.exists(path_out_gx_final):
-# #                             os.makedirs(path_out_gx_final)
-# #                         np.savetxt(gammax_total_out, np.c_[theta_res,gammax_total], header='theta, gamma_x')
-# #                     else:
-# #                         if not np.all(gammax_total/(xi_im/Rg)==1.):
-# #                             errmsg = '!!!Something is wrong, no randoms, but final gammax is not equal to the basic gammax measurement'
-# #                             raise Exception(errmsg)
-
-# #                     # give feedback on progress
-# #                     print( "  Results saved in: %s"%gammat_out )
-# #                     print( "--Done\n" )
-
-# #                     # clear up memory
-# #                     del self.ra_l, self.dec_l, self.ra_s, self.dec_s
-# #                     del self.e1_s,self.e2_s,self.R_g,self.w_g
-# #                     del self.ra_rand, self.dec_rand
-# #                     del self.weight_lens
+                # save results with RP subtraction and boost factors applied
+                #---gamma_t
+                if self.par.use_boosts or self.par.use_randoms:
+                    if path_out_gt[-1]=='/':
+                        path_out_gt_final = path_out_gt[:-1]
+                    else:
+                        path_out_gt_final = path_out_gt
+                    if self.par.use_boosts:
+                        path_out_gt_final += '_bf'
+                    if self.par.use_randoms:
+                        path_out_gt_final += '_rp'
+                    path_out_gt_final += '/'
+                    gammat_total_out = path_out_gt_final+'gammat_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                    # setup output path
+                    if not os.path.exists(path_out_gt_final):
+                        os.makedirs(path_out_gt_final)
+                    np.savetxt(gammat_total_out, np.c_[theta_res,gammat_total], header='theta, gamma_t')
+                else:
+                    if not np.all(gammat_total/gammat_res==1.):
+                        errmsg = '!!!Something is wrong, no boost or randoms, but final gammat is not equal to the basic gammat measurement'
+                        raise Exception(errmsg)
+                #---gamma_x
+                if self.par.use_randoms:
+                    if path_out_gx[-1]=='/':
+                        path_out_gx_final = path_out_gx[:-1]
+                    else:
+                        path_out_gx_final = path_out_gx
+                        path_out_gx_final += '_rp'
+                    path_out_gx_final += '/'
+                    gammax_total_out = path_out_gx_final+'gammax_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                    if not os.path.exists(path_out_gx_final):
+                        os.makedirs(path_out_gx_final)
+                    np.savetxt(gammax_total_out, np.c_[theta_res,gammax_total], header='theta, gamma_x')
+                else:
+                    if not np.all(gammax_total/(xi_im/Rg)==1.):
+                        errmsg = '!!!Something is wrong, no randoms, but final gammax is not equal to the basic gammax measurement'
+                        raise Exception(errmsg)
             
-#                 except:
-#                     print ('nothing happens')        
+                # give feedback on progress
+                print( "  Results saved in: %s"%gammat_out )
+                print( "--Done\n" )
+
+                # clear up memory
+                del self.ra_l, self.dec_l, self.ra_s, self.dec_s
+                del self.e1_s,self.e2_s,self.R_g,self.w_g
+                del self.ra_rand, self.dec_rand
+                del self.weight_lens
                 
-#                 run_count+=size
-#                 # run_count+=comm.size
-#                 comm.bcast(run_count,root = 0)
-#                 comm.Barrier() 
-                
-#         print( "Done calculating gamma_t \n" )
-#         return
-                    
-                
-                
+                gc.collect()
+
+
+        print( "Done calculating gamma_t \n" )
+        return          
                 
                 
                 
@@ -704,9 +702,7 @@ class GGL(object):
                  cov_gammat, shot_noise_gammat, cov_boost, cov_gammax, cov_gammat_rand,
                  xi_im, xi_im_rand, xi_npairs, xi_npairs_rand, xi_weight, xi_weight_rand, 
                  Rg, sum_w_l, sum_w_r, 
-                 boosts) = self.ggl_setup.get_gammat_and_covariance(self.ra_l, self.dec_l, self.ra_s, self.dec_s, 
-                                                                    ra_rand=self.ra_rand, dec_rand=self.dec_rand, 
-                                                                    params=params,low_mem=self.par.treecorr_low_mem,                                                                           weights=self.weight_lens,                                                                                                   use_randoms=self.par.use_randoms,                                                                                           use_boosts=self.par.use_boosts)
+                 boosts) = self.ggl_setup.get_gammat_and_covariance(self.ra_l, self.dec_l, self.ra_s, self.dec_s, ra_rand=self.ra_rand, dec_rand=self.dec_rand, params=params,low_mem=self.par.treecorr_low_mem, weights=self.weight_lens,use_randoms=self.par.use_randoms,use_boosts=self.par.use_boosts)
 
                 # save covariances
                 #---gamma_t
