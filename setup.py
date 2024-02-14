@@ -36,16 +36,7 @@ class GGL_setup(object):
         
         import params as par
         self.par = par
-        
-        # Save the content of params.py to a text file        
-        params_file_path = os.path.join(input_dir, 'params.py')
-        with open(params_file_path, 'r') as f:
-            params_content = f.read()
-        if not os.path.exists(self.par.out_main):
-            os.makedirs(self.par.out_main)
-        with open(self.par.out_main+'/params_content.txt', 'w') as f:
-            f.write(params_content)
-            
+                    
         return
 
     
