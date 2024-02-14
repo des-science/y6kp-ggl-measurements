@@ -10,7 +10,7 @@ here = os.path.abspath(__file__)
 sys.path.append(here)
 
 " Main output folder "
-out_main = '/global/cfs/cdirs/des/giannini/ggl/test/'
+out_main = '/global/cfs/cdirs/des/giannini/ggl/test_parallel2/'
 
 " Bins to run "
 # the lens bins to run
@@ -61,6 +61,12 @@ data_source_bfd = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-
 
 # random points
 data_randoms = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
+
+# Input datavector for substitution of ggl measurement
+dv_input = '/global/cfs/cdirs/des/giannini/blinding/data_vectors/2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean.fits'
+
+# Output datavector 
+dv_output = '/global/cfs/cdirs/des/giannini/y6-3x2pt/blinding/data_vectors/2pt_y3dv_y6_ggl_maglim_metadet__2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean_jan24.fits'
 
 
 

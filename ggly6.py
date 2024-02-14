@@ -8,6 +8,7 @@ import sys
 import numpy as np
 import gc
 from mpi4py import MPI
+from astropy.io import fits
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -66,7 +67,7 @@ class GGL(object):
              self.e1_s, self.e2_s, 
              # self.R_g, self.w_g) = self.ggl_setup.load_source_metacal_5sels(source_file, zs_bin=source_bin)
              self.R_g, self.w_g) = self.ggl_setup.load_source_metadetect(source_file, response, zs_bin=source_bin)
-                    # file = pf.open(par.out_main+'/metadetect_bin{}.fits'.format(zs_bin))
+                    # file = fits.open(par.out_main+'/metadetect_bin{}.fits'.format(zs_bin))
             if not self.par.use_response:
                 print("Warning: Will set metadetect response to 1")
                 self.R_g = 1.
@@ -290,7 +291,6 @@ class GGL(object):
     
     def run_gammat_and_cov_parallel(self):
                     
-                
         """
         Run code to get gamma_t and its covariance using only Treecorr
 
@@ -379,8 +379,8 @@ class GGL(object):
         size = comm.Get_size()
 
         # Define the total number of lens and source bins
-        num_lens_bins = 6
-        num_source_bins = 4
+        num_lens_bins = len(self.par.l_bins)
+        num_source_bins = len(self.par.s_bins)
 
         # print ('rank', rank)
         # print ('size', size)
@@ -547,6 +547,26 @@ class GGL(object):
                 
                 gc.collect()
 
+                
+        # Save the content of params.py to a text file        
+        params_dict = {key: value for key, value in vars(self.par).items() if not key.startswith('__') and not callable(value)}
+        with open(self.par.out_main+'/params_content.txt', 'w') as f:
+            for key, value in params_dict.items():
+                f.write(f"{key} = {value}\n")
+
+        if((len(self.par.l_bins) == 6) & (len(self.par.s_bins) == 4) & self.par.use_boosts & self.par.use_randoms):
+            print ("Saving 2pt file")
+            gammat_all = []
+            for l in self.par.l_bins:
+                for s in self.par.s_bins:
+                    asd = np.loadtxt(self.par.out_main + '/gammat_bf_rp/gammat_l{0}_s{1}.txt'.format(l+1, s+1))
+                    gammat_all.append(asd[:,1])
+            gammat_all = np.concatenate(gammat_all)
+
+            dv = fits.open(self.par.dv_input)
+            dv[4].data['VALUE'] = gammat_all
+            dv.writeto(self.par.dv_output, overwrite=True)
+            print( "2pt file saved in: %s"%self.par.dv_output )
 
         print( "Done calculating gamma_t \n" )
         return          
@@ -791,7 +811,27 @@ class GGL(object):
                 
                 gc.collect()
 
+                
+        # Save the content of params.py to a text file        
+        params_dict = {key: value for key, value in vars(self.par).items() if not key.startswith('__') and not callable(value)}
+        with open(self.par.out_main+'/params_content.txt', 'w') as f:
+            for key, value in params_dict.items():
+                f.write(f"{key} = {value}\n")
 
+        if((len(self.par.l_bins) == 6) & (len(self.par.s_bins) == 4) & self.par.use_boosts & self.par.use_randoms):
+            print ("Saving 2pt file")
+            gammat_all = []
+            for l in self.par.l_bins:
+                for s in self.par.s_bins:
+                    asd = np.loadtxt(self.par.out_main + '/gammat_bf_rp/gammat_l{0}_s{1}.txt'.format(l+1, s+1))
+                    gammat_all.append(asd[:,1])
+            gammat_all = np.concatenate(gammat_all)
+
+            dv = fits.open(self.par.dv_input)
+            dv[4].data['VALUE'] = gammat_all
+            dv.writeto(self.par.dv_output, overwrite=True)
+            print( "2pt file saved in: %s"%self.par.dv_output )
+            
         print( "Done calculating gamma_t \n" )
         return
     
