@@ -125,8 +125,8 @@ class GGL_setup(object):
         # read data for lenses
                                                 
         randoms = h5.File(path, 'r')
-        ra =  np.array(randoms['desy6kp/ran/tomo_bin_{}'.format(zl_bin)]['RA'])[1::1000]
-        dec = np.array(randoms['desy6kp/ran/tomo_bin_{}'.format(zl_bin)]['DEC'])[1::1000]
+        ra =  np.array(randoms['desy6kp/ran/tomo_bin_{}'.format(zl_bin)]['RA'])
+        dec = np.array(randoms['desy6kp/ran/tomo_bin_{}'.format(zl_bin)]['DEC'])
 
         randoms.close()
         del randoms
