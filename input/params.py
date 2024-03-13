@@ -3,28 +3,24 @@
 Main input file for Y6KP GGL
 ----------------------------
 """
-import os
-import sys
 
-here = os.path.abspath(__file__)
-sys.path.append(here)
+" Mode to run NG correlations "
+run_parallel = True
+compute_covariance = True
 
 " Main output folder "
-out_main = '/global/cfs/cdirs/des/giannini/ggl/test_parallel2/'
+out_main = '/global/cfs/cdirs/des/elisa/y6_ggl_run-pipe/mdet/'
 
 " Bins to run "
 # the lens bins to run
-# l_bins = [0]
 l_bins = [0,1,2,3,4,5]
 
 # the source bins to run
-# s_bins = [0]
 s_bins = [0,1,2,3]
 
 " Source catalog "
 # bdf or metadetect
 source_cat = 'metadetect' 
-
 
 " Define redshift bins for lens and source galaxies "
 # lens redsift bins
@@ -46,18 +42,25 @@ zs_bins = [
           ]
 
 " Lens, source and random-point data files "
+
 # lens galaxies
 data_lens = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
 
 # source galaxies
-response = ['/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin1.txt',
+data_response = ['/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin1.txt',
             '/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin2.txt', 
             '/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin3.txt', 
             '/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin4.txt']
 
 # source galaxies
 data_source = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
-data_source_bfd = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
+
+# source galaxies - temporary: the bins assignment in the mastercat is wrong 
+data_source_bfd = '/global/cfs/cdirs/des/y6-shear-catalogs/BFD_v2/BFD_v2_6_22_23_blinded.fits'
+data_source_bfd_binning = '/global/cfs/cdirs/des/elisa/y6_ggl_bfd/new_som/tomo_bin_assignments.pkl'
+data_source_bfd_mask = '/pscratch/sd/e/erykoff/des_y6_masks/y6-combined-hleda-gaiafull-des-stars-hsmap131k-mdet-v1-and-joint_lss_shear_maglim_v3_mask.hsp'
+ggl_bfd_approximate = True
+###
 
 # random points
 data_randoms = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
@@ -66,9 +69,7 @@ data_randoms = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-
 dv_input = '/global/cfs/cdirs/des/giannini/blinding/data_vectors/2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean.fits'
 
 # Output datavector 
-dv_output = '/global/cfs/cdirs/des/giannini/y6-3x2pt/blinding/data_vectors/2pt_y3dv_y6_ggl_maglim_metadet__2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean_jan24.fits'
-
-
+dv_output = out_main+'/2pt_NG_y6_maglim_%s_UNBLINDED.fits'%(source_cat)
 
 " LSS weights "
 # whether LSS weights will be applied to gamma_t
@@ -109,9 +110,7 @@ ang_nbins = 20
 # low memory - reduces memory usage, sacrificing speed
 treecorr_low_mem = False
 
-
 " Output directory for randoms and Jackknife patching "
-path_out_rand = out_main+'/randoms_%dxlenses/'%(rand_fact)
 path_out_JK = out_main+'/Jackknife/'
 path_JK_info = path_out_JK+'/info/'
 
@@ -128,7 +127,7 @@ path_out_extra_gt = out_main_gt+'/gammat_extra/'
 path_out_gx = out_main_gt+'/gammax/'
 path_out_gx_rand = out_main_gt+'/gammax_randoms/'
 path_JK_cov_gx = path_out_JK+'/gammax_covariance/'
-#
+
 path_JK_gt = path_out_JK+'/gammat_JK/'
 path_JK_gx = path_out_JK+'/gammax_JK/'
 path_JK_rand = path_out_JK+'/gammat_randoms_JK/'
