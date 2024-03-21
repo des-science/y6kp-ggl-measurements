@@ -1,0 +1,97 @@
+### config file for GGL run ###
+
+# mode to run correlations
+run_parallel : True
+compute_covariance : True
+
+# output folder
+dir_out : '/global/cfs/cdirs/des/elisa/y6_ggl_run-pipe_new/bfd_approx/'
+
+# lens bins to run
+l_bins : [0,1,2,3,4,5]
+
+# source bins to run
+s_bins : [0,1,2,3]
+
+# lens redsift bins
+zl_bins : [
+            [0.20, 0.40], 
+            [0.40, 0.55], 
+            [0.55, 0.70], 
+            [0.70, 0.85],
+            [0.85, 0.95],
+            [0.95, 1.05],
+          ]
+
+# source redshift bins
+zs_bins : [
+           [0.000, 0.405], 
+           [0.405, 0.665], 
+           [0.665, 0.960], 
+           [0.96, 2.0],
+          ]
+
+# lens catalog: maglim, maglim_y3
+lens_cat : 'maglim' 
+
+# source catalog: metadetect, metacal, bfd
+source_cat : 'bfd' 
+
+# lens galaxies
+data_lens_maglim : '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
+data_lens_maglimy3 : '/global/cfs/cdirs/des/www/y3_cats/Y3_mastercat_02_05_21.h5'
+# add redmagic --> data_maglim, data_metacal ... OR file_*
+
+# LSS weights
+data_LSSweights : '/global/cfs/cdirs/des/giannini/ggl/lss_weights_oct2022.pkl'
+
+# source galaxies
+data_source_metadetect : '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
+data_source_metacal : '/global/u1/e/elegnani/y6kp-ggl-measurements/input/cats.yaml'
+data_source_bfd : '/global/cfs/cdirs/des/y6-shear-catalogs/BFD_v2/BFD_v2_6_22_23_blinded.fits'
+ggl_bfd_approximate : True
+### temporary: bfd bins assignment in the mastercat is wrong 
+data_source_bfd_binning : '/global/cfs/cdirs/des/elisa/y6_ggl_bfd/new_som/tomo_bin_assignments.pkl'
+data_source_bfd_mask : '/pscratch/sd/e/erykoff/des_y6_masks/y6-combined-hleda-gaiafull-des-stars-hsmap131k-mdet-v1-and-joint_lss_shear_maglim_v3_mask.hsp'
+###
+
+# random points
+data_randoms_maglim : '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
+data_randoms_maglimy3 : '/global/cfs/cdirs/des/y6-gglensing/Y3_maglim_randoms.fits'
+
+# Input datavector for substitution of ggl measurement
+dv_input : '/global/cfs/cdirs/des/giannini/blinding/data_vectors/2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean.fits'
+
+# Output datavector 
+dv_output : out_main+'/2pt_NG_y6_maglim_%s_UNBLINDED.fits'%(source_cat)
+
+# Options for data
+use_LSSweight : True
+use_shearweight : True
+use_response : True
+
+# Boost factors
+use_boost : True
+
+# Random point subtraction
+use_randoms : True
+# factor of randoms/lenses
+rand_fact : 30
+
+# number of Jackknife regions
+n_jck : 200
+
+# resolution of grid (make it a power of 2)
+nside : 4096
+
+# allowed bin slop for treecorr
+bin_slop : 0.0 #0.1 # supposed to be 0.0
+
+# limits of theta in arcmins
+theta_lims : [2.5, 250.]
+
+# number of theta bins
+ang_nbins : 20
+
+# low memory - reduces memory usage, sacrificing speed
+treecorr_low_mem : False
