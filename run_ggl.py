@@ -90,8 +90,8 @@ class run_GGL(object):
         printlog('Sum weights lenses = {:f}'.format(np.sum(self.w_l)), bins_file)
         
         if (self.par['source_cat'] == 'bfd') & (self.par['ggl_bfd_approximate'] == False):
-            printlog('Average Q1 = {:f}'.format(np.average(self.Q1, weights=self.w_s)), bins_file)
-            printlog('Average Q2 = {:f}'.format(np.average(self.Q2, weights=self.w_s)), bins_file)
+            printlog('Average Q1 = {:f}'.format(np.average(self.Q0, weights=self.w_s)), bins_file)
+            printlog('Average Q2 = {:f}'.format(np.average(self.Q1, weights=self.w_s)), bins_file)
         else:
             printlog('Response = {:f}'.format(self.R), bins_file)
             printlog('Average e1 = {:f}'.format(np.average(self.e1, weights=self.w_s)), bins_file)
@@ -191,7 +191,7 @@ class run_GGL(object):
         if (self.par['source_cat'] == 'bfd') & (self.par['ggl_bfd_approximate'] == False):
             
             # run BFD ggl measurements for current bins pair
-            ggl.get_gammat_bfd(self.ra_l, self.dec_l, self.w_l, self.ra_s, self.dec_s, self.w_s, 
+            ggl.get_ggl_bfd(self.ra_l, self.dec_l, self.w_l, self.ra_s, self.dec_s, self.w_s, 
                                self.Q0, self.Q1, self.R00, self.R01, self.R11,
                                self.ra_r, self.dec_r, units='deg', 
                                theta_lims=self.par['theta_lims'], nbins=self.par['ang_nbins'], sep_units='arcmin',
@@ -202,7 +202,7 @@ class run_GGL(object):
         
         else:
             # run ggl measurements for current bins pair
-            ggl.get_gammat(self.ra_l, self.dec_l, self.w_l, self.ra_s, self.dec_s, self.w_s, 
+            ggl.get_ggl(self.ra_l, self.dec_l, self.w_l, self.ra_s, self.dec_s, self.w_s, 
                            self.e1, self.e2, self.R,
                            self.ra_r, self.dec_r, units='deg',
                            theta_lims=self.par['theta_lims'], nbins=self.par['ang_nbins'], sep_units='arcmin',

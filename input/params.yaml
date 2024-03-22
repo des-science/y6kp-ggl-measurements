@@ -5,7 +5,7 @@ run_parallel : True
 compute_covariance : True
 
 # output folder
-dir_out : '/global/cfs/cdirs/des/elisa/y6_ggl_run-pipe_new/bfd_approx/'
+dir_out : /global/cfs/cdirs/des/elisa/y6_ggl_run-pipe_new/bfd/
 
 # lens bins to run
 l_bins : [0,1,2,3,4,5]
@@ -32,38 +32,40 @@ zs_bins : [
           ]
 
 # lens catalog: maglim, maglim_y3
-lens_cat : 'maglim' 
+lens_cat : maglim 
 
 # source catalog: metadetect, metacal, bfd
-source_cat : 'bfd' 
+source_cat : bfd 
+
+mastercat_y6 : &mastercat_y6_ /global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5
 
 # lens galaxies
-data_lens_maglim : '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
-data_lens_maglimy3 : '/global/cfs/cdirs/des/www/y3_cats/Y3_mastercat_02_05_21.h5'
+data_lens_maglim : *mastercat_y6_
+data_lens_maglimy3 : /global/cfs/cdirs/des/www/y3_cats/Y3_mastercat_02_05_21.h5
 # add redmagic --> data_maglim, data_metacal ... OR file_*
 
 # LSS weights
-data_LSSweights : '/global/cfs/cdirs/des/giannini/ggl/lss_weights_oct2022.pkl'
+data_LSSweights : /global/cfs/cdirs/des/giannini/ggl/lss_weights_oct2022.pkl
 
 # source galaxies
-data_source_metadetect : '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
-data_source_metacal : '/global/u1/e/elegnani/y6kp-ggl-measurements/input/cats.yaml'
-data_source_bfd : '/global/cfs/cdirs/des/y6-shear-catalogs/BFD_v2/BFD_v2_6_22_23_blinded.fits'
-ggl_bfd_approximate : True
+data_source_metadetect : *mastercat_y6_
+data_source_metacal : /global/u1/e/elegnani/y6kp-ggl-measurements/input/cats.yaml
+data_source_bfd : /global/cfs/cdirs/des/y6-shear-catalogs/BFD_v2/BFD_v2_6_22_23_blinded.fits
+ggl_bfd_approximate : False
 ### temporary: bfd bins assignment in the mastercat is wrong 
-data_source_bfd_binning : '/global/cfs/cdirs/des/elisa/y6_ggl_bfd/new_som/tomo_bin_assignments.pkl'
-data_source_bfd_mask : '/pscratch/sd/e/erykoff/des_y6_masks/y6-combined-hleda-gaiafull-des-stars-hsmap131k-mdet-v1-and-joint_lss_shear_maglim_v3_mask.hsp'
+data_source_bfd_binning : /global/cfs/cdirs/des/elisa/y6_ggl_bfd/new_som/tomo_bin_assignments.pkl
+data_source_bfd_mask : /pscratch/sd/e/erykoff/des_y6_masks/y6-combined-hleda-gaiafull-des-stars-hsmap131k-mdet-v1-and-joint_lss_shear_maglim_v3_mask.hsp
 ###
 
 # random points
-data_randoms_maglim : '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
-data_randoms_maglimy3 : '/global/cfs/cdirs/des/y6-gglensing/Y3_maglim_randoms.fits'
+data_randoms_maglim : *mastercat_y6_
+data_randoms_maglimy3 : /global/cfs/cdirs/des/y6-gglensing/Y3_maglim_randoms.fits
 
 # Input datavector for substitution of ggl measurement
-dv_input : '/global/cfs/cdirs/des/giannini/blinding/data_vectors/2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean.fits'
+dv_input : /global/cfs/cdirs/des/giannini/blinding/data_vectors/2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean.fits
 
 # Output datavector 
-dv_output : out_main+'/2pt_NG_y6_maglim_%s_UNBLINDED.fits'%(source_cat)
+dv_output : /global/cfs/cdirs/des/elisa/y6_ggl_run-pipe_new/bfd/2pt_NG_y6_maglim_bfd_UNBLINDED.fits
 
 # Options for data
 use_LSSweight : True

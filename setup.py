@@ -108,7 +108,7 @@ def load_source_bfd(file_name, binning_file_name, mask_file_name, zbin):
     R01 = logpqr[:,4]
     R11 = logpqr[:,5]
             
-    e1, e2 = approx_e_bfd(logpqr)
+    e1, e2 = approx_e_bfd(np.copy(logpqr))
         
     ### no weights in BFD ?
     w = np.ones(len(ra))
