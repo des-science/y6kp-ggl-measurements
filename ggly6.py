@@ -51,7 +51,8 @@ class GGL(object):
         print("Reading lens data for redshift bin [%.2f,%.2f] (index %d) from %s..."%(zl_lims[0],zl_lims[1],lens_bin+1,lens_file))
         print ('lens_file', lens_file)
         # read lens galaxy data
-        self.ra_l, self.dec_l, self.weight_lens = self.ggl_setup.load_lens_Y6_maglim(lens_file, zl_bin=lens_bin)
+        self.ra_l, self.dec_l, self.weight_lens = self.ggl_setup.load_lens_Y6_maglim_all_bins(lens_file, zl_bin=lens_bin) #Loads all bins for psf test
+        #self.ra_l, self.dec_l, self.weight_lens = self.ggl_setup.load_lens_Y6_maglim(lens_file, zl_bin=lens_bin)
         # self.ra_l, self.dec_l, self.weight_lens = self.ggl_setup.load_lens_Y3_maglim(lens_file, zl_lims=zl_lims)
 
         if not self.par.use_LSSweight:
@@ -64,9 +65,9 @@ class GGL(object):
             print ('source_file', source_file)
             # read source galaxy data
             (self.ra_s, self.dec_s, 
-             self.e1_s, self.e2_s, 
+             self.e1_s, self.e2_s) = self.ggl_setup.load_source_metadetect_old(source_file, zs_bin=source_bin)
              # self.R_g, self.w_g) = self.ggl_setup.load_source_metacal_5sels(source_file, zs_bin=source_bin)
-             self.R_g, self.w_g) = self.ggl_setup.load_source_metadetect(source_file, response, zs_bin=source_bin)
+             #self.R_g, self.w_g) 
                     # file = fits.open(par.out_main+'/metadetect_bin{}.fits'.format(zs_bin))
             if not self.par.use_response:
                 print("Warning: Will set metadetect response to 1")

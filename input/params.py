@@ -10,16 +10,16 @@ here = os.path.abspath(__file__)
 sys.path.append(here)
 
 " Main output folder "
-out_main = '/global/cfs/cdirs/des/giannini/ggl/test_parallel2/'
+out_main = '/global/cfs/projectdirs/des/awhyley/ggl/psf_residuals/output/shape_g'
 
 " Bins to run "
 # the lens bins to run
-# l_bins = [0]
-l_bins = [0,1,2,3,4,5]
+l_bins = [0]
+#l_bins = [0,1,2,3,4,5]
 
 # the source bins to run
-# s_bins = [0]
-s_bins = [0,1,2,3]
+s_bins = [0]
+#s_bins = [0,1,2,3]
 
 " Source catalog "
 # bdf or metadetect
@@ -28,14 +28,15 @@ source_cat = 'metadetect'
 
 " Define redshift bins for lens and source galaxies "
 # lens redsift bins
-zl_bins = [
-            [0.20, 0.40], 
-            [0.40, 0.55], 
-            [0.55, 0.70], 
-            [0.70, 0.85],
-            [0.85, 0.95],
-            [0.95, 1.05],
-          ]
+#zl_bins = [
+#            [0.20, 0.40], 
+#            [0.40, 0.55], 
+#            [0.55, 0.70], 
+#            [0.70, 0.85],
+##            [0.85, 0.95],
+#            [0.95, 1.05],
+#          ]
+zl_bins = [[0.20, 1.05]]
 
 # source redshift bins
 zs_bins = [
@@ -47,7 +48,7 @@ zs_bins = [
 
 " Lens, source and random-point data files "
 # lens galaxies
-data_lens = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
+data_lens = '/global/cfs/cdirs/des/y6kp-cats/2024-02-06/desy6kp_cats_2024-02-06.hdf5'
 
 # source galaxies
 response = ['/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin1.txt',
@@ -56,33 +57,33 @@ response = ['/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin1.tx
             '/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin4.txt']
 
 # source galaxies
-data_source = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
+data_source = '/global/cfs/projectdirs/des/awhyley/ggl/psf_residuals/psf_shape_resid_g.fits' #Change for each band and size/shape
 data_source_bfd = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
 
 # random points
-data_randoms = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
+data_randoms = '/global/cfs/cdirs/des/y6kp-cats/2024-02-06/desy6kp_cats_2024-02-06.hdf5'
 
 # Input datavector for substitution of ggl measurement
 dv_input = '/global/cfs/cdirs/des/giannini/blinding/data_vectors/2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean.fits'
 
 # Output datavector 
-dv_output = '/global/cfs/cdirs/des/giannini/y6-3x2pt/blinding/data_vectors/2pt_y3dv_y6_ggl_maglim_metadet__2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean_jan24.fits'
+dv_output = '/global/cfs/projectdirs/des/awhyley/ggl/psf_residuals/output_by_bin/psf_dv_shape_g.fits' #Doesn't matter for psf test
 
 
 
 " LSS weights "
 # whether LSS weights will be applied to gamma_t
-use_LSSweight = True
+use_LSSweight = False
 
 " Shear weights "
 # whether shear weights will be applied to gamma_t
-use_shearweight = True
+use_shearweight = False
 
 " Boost factor "
 use_boosts = True
 
 " Reponse "
-use_response = True
+use_response = False
 
 " Random point subtraction "
 # use random subtraction
@@ -101,10 +102,10 @@ nside = 4096
 bin_slop = 0.1 # supposed to be 0.0
 
 # limits of theta in arcmins
-theta_lims = [2.5, 250.]
+theta_lims = [2.5, 995.26792638]
 
 # number of theta bins
-ang_nbins = 20
+ang_nbins = 26
 
 # low memory - reduces memory usage, sacrificing speed
 treecorr_low_mem = False

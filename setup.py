@@ -65,6 +65,34 @@ class GGL_setup(object):
         
         return ra, dec, w
     
+    def load_lens_Y6_maglim_all_bins(self, path, zl_bin=None):
+        """
+        Loads lens galaxy data from file
+
+        Options:
+        - Y6 MagLim
+        """
+                         
+        # read data for lenses
+        maglim = h5.File(path, 'r')
+        ra = np.array([])
+        dec = np.array([])
+        for b in range(6):
+            ra = np.append(ra, np.array(maglim['desy6kp//maglim/tomo_bin_{}'.format(b)]['RA']))
+            print(len(np.array(maglim['desy6kp//maglim/tomo_bin_{}'.format(b)]['RA'])))
+            dec = np.append(dec, np.array(maglim['desy6kp//maglim/tomo_bin_{}'.format(b)]['DEC']))
+        weights = joblib.load('/global/cfs/cdirs/des/giannini/ggl/lss_weights_oct2022.pkl')
+        w = weights[zl_bin]
+        # w = np.ones(len(ra))
+        # w = maglim_bin['W']
+        
+        print("ra length = " + str(len(ra)))
+        maglim.close()
+        del maglim
+        gc.collect()
+        
+        return ra, dec, w
+    
     
     def load_lens_Y6_maglim_old(self, path, zl_bin=None):
         """
@@ -125,8 +153,8 @@ class GGL_setup(object):
         # read data for lenses
                                                 
         randoms = h5.File(path, 'r')
-        ra =  np.array(randoms['desy6kp/ran/tomo_bin_{}'.format(zl_bin)]['RA'])
-        dec = np.array(randoms['desy6kp/ran/tomo_bin_{}'.format(zl_bin)]['DEC'])
+        ra =  np.array(randoms['desy6kp/ran/tomo_bin_{}'.format(zl_bin)]['ra'])
+        dec = np.array(randoms['desy6kp/ran/tomo_bin_{}'.format(zl_bin)]['dec'])
 
         randoms.close()
         del randoms
@@ -265,6 +293,7 @@ class GGL_setup(object):
 
     
     
+    #Editted to load star data for psf residual tests
     
     def load_source_metadetect_old(self, path, zs_bin=None):
         """
@@ -272,15 +301,16 @@ class GGL_setup(object):
         
         """
             
-        resp = np.loadtxt(path+'/Response_bin{}.txt'.format(zs_bin))
-        file = pf.open(path+'/metadetect_bin{}.fits'.format(zs_bin))
+        #resp = np.loadtxt(path+'/Response_bin{}.txt'.format(zs_bin))
+        #file = pf.open(path+'/metadetect_bin{}.fits'.format(zs_bin))
+        file = fits.open(path)
         
         ra_s = file[1].data['ra_s']
         dec_s = file[1].data['dec_s']
         e1_s = file[1].data['e1_s']
         e2_s = file[1].data['e2_s']
-        w_g = file[1].data['w_g']
-        R_g = resp[0]
+        #w_g = file[1].data['w_g']
+        #R_g = resp[0]
         
 #         mm['ra_s'] = ra_s 
 #         mm['dec_s'] = dec_s
@@ -305,7 +335,7 @@ class GGL_setup(object):
         file.close()
     
         # return source['ra'] , source['dec'], source['e1'], source['e2'], R_g, w_g
-        return ra_s, dec_s, e1_s, e2_s, R_g, w_g
+        return ra_s, dec_s, e1_s, e2_s#, R_g, w_g
 
     
     
@@ -644,7 +674,7 @@ class GGL_setup(object):
             else:
                 func = lambda corrs: corrs[0].xi / corrs[0].Rg
                 corrs = [ng]
-        cov_jk_gt = treecorr.estimate_multi_cov(corrs, 'jackknife', func)
+        cov_jk_gt = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
 
         # get gammax covariance
         if use_randoms:
@@ -653,20 +683,20 @@ class GGL_setup(object):
         else:
             func = lambda corrs: corrs[0].xi_im/corrs[0].Rg
             corrs = [ng]
-        cov_jk_gx = treecorr.estimate_multi_cov(corrs, 'jackknife', func)
+        cov_jk_gx = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
 
         # get boost factor covariance
         if use_boosts:
             func = lambda corrs: (corrs[0].weight/np.sum(corrs[2].weight)) / (corrs[1].weight/np.sum(corrs[3].weight))
             corrs = [ng,rg,nn_lp,nn_rp]
-            cov_jk_boost = treecorr.estimate_multi_cov(corrs, 'jackknife', func)
+            cov_jk_boost = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
         else:
             cov_jk_boost = np.zeros((len(theta),len(theta)))
 
         # get covariance of randoms points
         corrs = [rg]
         func = lambda corrs: corrs[0].xi/corrs[0].Rg
-        cov_jk_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func)
+        cov_jk_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
 
         return (theta, gamma_t, gammat_tot, gammat_rand, gamma_x, gammax_tot, gammax_rand, 
                 cov_jk_gt, ng.varxi, cov_jk_boost, cov_jk_gx, cov_jk_rand,
