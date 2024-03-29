@@ -420,65 +420,26 @@ def get_ggl_bfd(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
             ### rg.Rg = Rg*np.ones(len(theta)) # no Rg in BFD ?
 
             if use_boost:
-                func = lambda corrs: (corrs[0].weight/np.sum(corrs[6].weight)) / (corrs[3].weight/np.sum(corrs[7].weight)) * np.real((corrs[1].xi * corrs[0].xi 
-                                        + 1j * corrs[0].xi_im - corrs[2].xi 
-                                        + 1j * corrs[2].xi_im * np.conj(corrs[0].xi 
-                                        + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 
-                                        - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
-                - np.real((corrs[4].xi * corrs[3].xi 
-                                        + 1j * corrs[3].xi_im - corrs[5].xi 
-                                        + 1j * corrs[5].xi_im * np.conj(corrs[3].xi 
-                                        + 1j * corrs[3].xi_im)) / (np.abs(corrs[4].xi)**2 
-                                        - np.abs(corrs[5].xi + 1j * corrs[5].xi_im)**2))
+                func = lambda corrs: (corrs[0].weight/np.sum(corrs[6].weight)) / (corrs[3].weight/np.sum(corrs[7].weight)) * np.real((corrs[1].xi * corrs[0].xi + 1j * corrs[0].xi_im - corrs[2].xi + 1j * corrs[2].xi_im * np.conj(corrs[0].xi + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2)) - np.real((corrs[4].xi * corrs[3].xi + 1j * corrs[3].xi_im - corrs[5].xi + 1j * corrs[5].xi_im * np.conj(corrs[3].xi + 1j * corrs[3].xi_im)) / (np.abs(corrs[4].xi)**2 - np.abs(corrs[5].xi + 1j * corrs[5].xi_im)**2))
                 corrs = [ng, nk, nq, rg, rk, rq, nn_lp, nn_rp]
             else:
-                func = lambda corrs: np.real((corrs[1].xi * corrs[0].xi 
-                                        + 1j * corrs[0].xi_im - corrs[2].xi 
-                                        + 1j * corrs[2].xi_im * np.conj(corrs[0].xi 
-                                        + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 
-                                        - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
-                - np.real((corrs[4].xi * corrs[3].xi 
-                                        + 1j * corrs[3].xi_im - corrs[5].xi 
-                                        + 1j * corrs[5].xi_im * np.conj(corrs[3].xi 
-                                        + 1j * corrs[3].xi_im)) / (np.abs(corrs[4].xi)**2 
-                                        - np.abs(corrs[5].xi + 1j * corrs[5].xi_im)**2))
+                func = lambda corrs: np.real((corrs[1].xi * corrs[0].xi + 1j * corrs[0].xi_im - corrs[2].xi + 1j * corrs[2].xi_im * np.conj(corrs[0].xi + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2)) - np.real((corrs[4].xi * corrs[3].xi + 1j * corrs[3].xi_im - corrs[5].xi + 1j * corrs[5].xi_im * np.conj(corrs[3].xi + 1j * corrs[3].xi_im)) / (np.abs(corrs[4].xi)**2 - np.abs(corrs[5].xi + 1j * corrs[5].xi_im)**2))
                 corrs = [ng, nk, nq, rg, rk, rq]
         else:
             if use_boost:
-                func = lambda corrs: (corrs[0].weight/np.sum(corrs[6].weight)) / (corrs[3].weight/np.sum(corrs[7].weight)) * np.real((corrs[1].xi * corrs[0].xi 
-                                        + 1j * corrs[0].xi_im - corrs[2].xi 
-                                        + 1j * corrs[2].xi_im * np.conj(corrs[0].xi 
-                                        + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 
-                                        - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
+                func = lambda corrs: (corrs[0].weight/np.sum(corrs[6].weight)) / (corrs[3].weight/np.sum(corrs[7].weight)) * np.real((corrs[1].xi * corrs[0].xi + 1j * corrs[0].xi_im - corrs[2].xi + 1j * corrs[2].xi_im * np.conj(corrs[0].xi + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
                 corrs = [ng, nk, nq, rg, rk, rq, nn_lp, nn_rp]
             else:
-                func = lambda corrs: np.real((corrs[1].xi * corrs[0].xi 
-                                        + 1j * corrs[0].xi_im - corrs[2].xi 
-                                        + 1j * corrs[2].xi_im * np.conj(corrs[0].xi 
-                                        + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 
-                                        - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
+                func = lambda corrs: np.real((corrs[1].xi * corrs[0].xi + 1j * corrs[0].xi_im - corrs[2].xi  + 1j * corrs[2].xi_im * np.conj(corrs[0].xi + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
                 corrs = [ng, nk, nq]
         cov_gammat = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
 
         # get gammax covariance
         if use_randoms:
-            func = lambda corrs: np.imag((corrs[1].xi * corrs[0].xi 
-                                        + 1j * corrs[0].xi_im - corrs[2].xi 
-                                        + 1j * corrs[2].xi_im * np.conj(corrs[0].xi 
-                                        + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 
-                                        - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
-            - np.imag((corrs[4].xi * corrs[3].xi 
-                                        + 1j * corrs[3].xi_im - corrs[5].xi 
-                                        + 1j * corrs[5].xi_im * np.conj(corrs[3].xi 
-                                        + 1j * corrs[3].xi_im)) / (np.abs(corrs[4].xi)**2 
-                                        - np.abs(corrs[5].xi + 1j * corrs[5].xi_im)**2))
+            func = lambda corrs: np.imag((corrs[1].xi * corrs[0].xi + 1j * corrs[0].xi_im - corrs[2].xi + 1j * corrs[2].xi_im * np.conj(corrs[0].xi + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2)) - np.imag((corrs[4].xi * corrs[3].xi + 1j * corrs[3].xi_im - corrs[5].xi + 1j * corrs[5].xi_im * np.conj(corrs[3].xi + 1j * corrs[3].xi_im)) / (np.abs(corrs[4].xi)**2 - np.abs(corrs[5].xi + 1j * corrs[5].xi_im)**2))
             corrs = [ng, nk, nq, rg, rk, rq]
         else:
-            func = lambda corrs: np.imag((corrs[1].xi * corrs[0].xi 
-                                        + 1j * corrs[0].xi_im - corrs[2].xi 
-                                        + 1j * corrs[2].xi_im * np.conj(corrs[0].xi 
-                                        + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 
-                                        - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
+            func = lambda corrs: np.imag((corrs[1].xi * corrs[0].xi + 1j * corrs[0].xi_im - corrs[2].xi + 1j * corrs[2].xi_im * np.conj(corrs[0].xi + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
             corrs = [ng, nk, nq]
         cov_gammax = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
         
@@ -490,11 +451,7 @@ def get_ggl_bfd(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
             
         # get covariance of randoms points
         if use_randoms:
-            func = lambda corrs: np.real((corrs[1].xi * corrs[0].xi 
-                                        + 1j * corrs[0].xi_im - corrs[2].xi 
-                                        + 1j * corrs[2].xi_im * np.conj(corrs[0].xi 
-                                        + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 
-                                        - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
+            func = lambda corrs: np.real((corrs[1].xi * corrs[0].xi + 1j * corrs[0].xi_im - corrs[2].xi + 1j * corrs[2].xi_im * np.conj(corrs[0].xi + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
             corrs = [rg, rk, rq]
             cov_gammat_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
 

@@ -53,7 +53,7 @@ data_source_metacal : /global/u1/e/elegnani/y6kp-ggl-measurements/input/cats.yam
 data_source_bfd : /global/cfs/cdirs/des/y6-shear-catalogs/BFD_v2/BFD_v2_6_22_23_blinded.fits
 ggl_bfd_approximate : False
 ### temporary: bfd bins assignment in the mastercat is wrong 
-data_source_bfd_binning : /global/cfs/cdirs/des/elisa/y6_ggl_bfd/new_som/tomo_bin_assignments.pkl
+data_source_bfd_binning : /global/cfs/cdirs/des/elisa/y6_ggl_bfd_nopipe/new_som/tomo_bin_assignments.pkl
 data_source_bfd_mask : /pscratch/sd/e/erykoff/des_y6_masks/y6-combined-hleda-gaiafull-des-stars-hsmap131k-mdet-v1-and-joint_lss_shear_maglim_v3_mask.hsp
 ###
 
