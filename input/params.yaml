@@ -5,7 +5,7 @@ run_parallel : True
 compute_covariance : True
 
 # output folder
-dir_out : /global/cfs/cdirs/des/elisa/y6_ggl_run-pipe_new/bfd/
+dir_out : /global/cfs/cdirs/des/elisa/y6_ggl_run-pipe_new/mcal
 
 # lens bins to run
 l_bins : [0,1,2,3,4,5]
@@ -32,16 +32,17 @@ zs_bins : [
           ]
 
 # lens catalog: maglim, maglim_y3
-lens_cat : maglim 
+lens_cat : maglim_y3 
 
 # source catalog: metadetect, metacal, bfd
-source_cat : bfd 
+source_cat : metacal
 
 mastercat_y6 : &mastercat_y6_ /global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5
+mastercat_y3 : &mastercat_y3_ /global/cfs/cdirs/des/www/y3_cats/Y3_mastercat_02_05_21.h5
 
 # lens galaxies
 data_lens_maglim : *mastercat_y6_
-data_lens_maglimy3 : /global/cfs/cdirs/des/www/y3_cats/Y3_mastercat_02_05_21.h5
+data_lens_maglim_y3 : *mastercat_y3_
 # add redmagic --> data_maglim, data_metacal ... OR file_*
 
 # LSS weights
@@ -49,7 +50,7 @@ data_LSSweights : /global/cfs/cdirs/des/giannini/ggl/lss_weights_oct2022.pkl
 
 # source galaxies
 data_source_metadetect : *mastercat_y6_
-data_source_metacal : /global/cfs/cdirs/des/www/y3_cats/Y3_mastercat_02_05_21.h5
+data_source_metacal : *mastercat_y3_
 data_source_bfd : /global/cfs/cdirs/des/y6-shear-catalogs/BFD_v2/BFD_v2_6_22_23_blinded.fits
 ggl_bfd_approximate : False
 ### temporary: bfd bins assignment in the mastercat is wrong 
@@ -59,13 +60,13 @@ data_source_bfd_mask : /pscratch/sd/e/erykoff/des_y6_masks/y6-combined-hleda-gai
 
 # random points
 data_randoms_maglim : *mastercat_y6_
-data_randoms_maglimy3 : /global/cfs/cdirs/des/y6-gglensing/Y3_maglim_randoms.fits
+data_randoms_maglim_y3 : /global/cfs/cdirs/des/y6-gglensing/Y3_maglim_randoms.fits
 
 # Input datavector for substitution of ggl measurement
 dv_input : /global/cfs/cdirs/des/giannini/blinding/data_vectors/2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean.fits
 
 # Output datavector 
-dv_output : /global/cfs/cdirs/des/elisa/y6_ggl_run-pipe_new/bfd/2pt_NG_y6_maglim_bfd_UNBLINDED.fits
+dv_output : /global/cfs/cdirs/des/elisa/y6_ggl_run-pipe_new/mcal/2pt_NG_y6_maglim_mcal_UNBLINDED.fits
 
 # Options for data
 use_LSSweight : True

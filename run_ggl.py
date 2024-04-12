@@ -111,7 +111,7 @@ class run_GGL(object):
         if lens_cat == 'maglim':
             (self.ra_l, self.dec_l, self.w_l) = setup.load_lens_Y6_maglim(self.par['data_lens_maglim'], self.par['data_LSSweights'], l_zbin)
         elif lens_cat == 'maglim_y3':
-            (self.ra_l, self.dec_l, self.w_l) = setup.load_lens_Y3_maglim(self.par['data_lens_maglimy3'], l_zbin)
+            (self.ra_l, self.dec_l, self.w_l) = setup.load_lens_Y3_maglim(self.par['data_lens_maglim_y3'], l_zbin)
         else:
             print('Specify which lens catalog you want to use in the configuration file! Exiting the program')
             sys.exit(0)
@@ -145,7 +145,7 @@ class run_GGL(object):
             if lens_cat == 'maglim':
                 (self.ra_r, self.dec_r) = setup.load_randoms_Y6(self.par['data_randoms_maglim'], l_zbin)
             elif lens_cat == 'maglim_y3':
-                (self.ra_r, self.dec_r) = setup.load_randoms_Y3(self.par['data_randoms_maglimy3'], zl_lims)
+                (self.ra_r, self.dec_r) = setup.load_randoms_Y3(self.par['data_randoms_maglim_y3'], zl_lims)
 
         else:
             print('Will not load randoms points data, as it is not needed in current run')
