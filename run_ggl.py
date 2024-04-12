@@ -111,7 +111,7 @@ class run_GGL(object):
         if lens_cat == 'maglim':
             (self.ra_l, self.dec_l, self.w_l) = setup.load_lens_Y6_maglim(self.par['data_lens_maglim'], self.par['data_LSSweights'], l_zbin)
         elif lens_cat == 'maglim_y3':
-            (self.ra_l, self.dec_l, self.w_l) = setup.load_lens_Y3_maglim(self.par['data_lens_maglim_y3'], l_zbin)
+            (self.ra_l, self.dec_l, self.w_l) = setup.load_lens_Y3_maglim(self.par['data_lens_maglim_y3'], zl_lims)
         else:
             print('Specify which lens catalog you want to use in the configuration file! Exiting the program')
             sys.exit(0)
