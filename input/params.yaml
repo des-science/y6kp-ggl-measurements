@@ -49,7 +49,7 @@ data_LSSweights : /global/cfs/cdirs/des/giannini/ggl/lss_weights_oct2022.pkl
 
 # source galaxies
 data_source_metadetect : *mastercat_y6_
-data_source_metacal : /global/u1/e/elegnani/y6kp-ggl-measurements/input/cats.yaml
+data_source_metacal : /global/cfs/cdirs/des/www/y3_cats/Y3_mastercat_02_05_21.h5
 data_source_bfd : /global/cfs/cdirs/des/y6-shear-catalogs/BFD_v2/BFD_v2_6_22_23_blinded.fits
 ggl_bfd_approximate : False
 ### temporary: bfd bins assignment in the mastercat is wrong 

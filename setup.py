@@ -156,95 +156,76 @@ def load_source_metadetect(file_name, zbin):
         e1 = np.array(f[f'desy6kp/mdet/noshear/tomo_bin_{zbin}/gauss_g_1'])
         e2 = np.array(f[f'desy6kp/mdet/noshear/tomo_bin_{zbin}/gauss_g_2'])
         w = np.array(f[f'desy6kp/mdet/noshear/tomo_bin_{zbin}/w'])
-       
-    R = compute_response(file_name, zbin)
-
-    return ra, dec, e1, e2, R, w
+        
+        # Weighted averages of each of the terms to compute the response
+        e1p = np.average(np.array(f[f'desy6kp/mdet/1p/tomo_bin_{zbin}/gauss_g_1']), 
+                         weights = np.array(f[f'desy6kp/mdet/1p/tomo_bin_{zbin}/w'])) 
+        e1m = np.average(np.array(f[f'desy6kp/mdet/1m/tomo_bin_{zbin}/gauss_g_1']), 
+                         weights = np.array(f[f'desy6kp/mdet/1m/tomo_bin_{zbin}/w'])) 
+        e2p = np.average(np.array(f[f'desy6kp/mdet/2p/tomo_bin_{zbin}/gauss_g_2']), 
+                         weights = np.array(f[f'desy6kp/mdet/2p/tomo_bin_{zbin}/w'])) 
+        e2m = np.average(np.array(f[f'desy6kp/mdet/2m/tomo_bin_{zbin}/gauss_g_2']), 
+                         weights = np.array(f[f'desy6kp/mdet/2m/tomo_bin_{zbin}/w'])) 
     
-def compute_response(file_name, zbin, deltag = 0.01):
-    """Compute Metadetection weighted average response in the zbin redshift bin
-    - deltag: shear applied to each image
-    """
-    
-    with h5.File(file_name, 'r') as f:
-    # Weighted averages of each of the terms
-        e1p = np.average(f[f'desy6kp/mdet/1p/tomo_bin_{zbin}/gauss_g_1'], weights = f[f'desy6kp/mdet/1p/tomo_bin_{zbin}/w']) 
-        e1m = np.average(f[f'desy6kp/mdet/1m/tomo_bin_{zbin}/gauss_g_1'], weights = f[f'desy6kp/mdet/1m/tomo_bin_{zbin}/w']) 
-        e2p = np.average(f[f'desy6kp/mdet/2p/tomo_bin_{zbin}/gauss_g_2'], weights = f[f'desy6kp/mdet/2p/tomo_bin_{zbin}/w']) 
-        e2m = np.average(f[f'desy6kp/mdet/2m/tomo_bin_{zbin}/gauss_g_2'], weights = f[f'desy6kp/mdet/2m/tomo_bin_{zbin}/w']) 
-    
-    # Compute the average response for each component
+    # Compute weighted average response
+    deltag = 0.01 # shear applied to each image
     R11 = (e1p-e1m)/(2*deltag)
     R22 = (e2p-e2m)/(2*deltag)
     
     # Combine the components
     R = (R11+R22)/2.
 
-    return R
+    return ra, dec, e1, e2, R, w
+
+
+def load_source_metacal(file_name, zbin):
+
+    with h5.File(file_name, 'r') as f:
+        
+        select_metacal = np.array(f['index/select'])
+        select_zbin = np.where(np.array(f['catalog/sompz/unsheared/bhat'])[select_metacal]==zbin)[0]
+
+        ra = np.array(f[f'catalog/metacal/unsheared/ra'])[select_metacal][select_zbin]
+        dec = np.array(f[f'catalog/metacal/unsheared/dec'])[select_metacal][select_zbin]
+        e1 = np.array(f[f'catalog/metacal/unsheared/e_1'])[select_metacal][select_zbin]
+        e2 = np.array(f[f'catalog/metacal/unsheared/e_2'])[select_metacal][select_zbin]
+        w = np.array(f[f'catalog/metacal/unsheared/weight'])[select_metacal][select_zbin]
+        
+        select_metacal = np.array(f['index/select_1p'])
+        select_zbin = np.where(np.array(f['catalog/sompz/sheared_1p/bhat'])[select_metacal]==zbin)[0]
+        e1p = np.average(np.array(f[f'catalog/metacal/unsheared/e_1'])[select_metacal][select_zbin],
+                         weights = np.array(f[f'catalog/metacal/sheared_1p/weight'])[select_metacal][select_zbin])
+        
+        select_metacal = np.array(f['index/select_1m'])
+        select_zbin = np.where(np.array(f['catalog/sompz/sheared_1m/bhat'])[select_metacal]==zbin)[0]
+        e1m = np.average(np.array(f[f'catalog/metacal/unsheared/e_1'])[select_metacal][select_zbin],
+                         weights = np.array(f[f'catalog/metacal/sheared_1m/weight'])[select_metacal][select_zbin])
+        
+        select_metacal = np.array(f['index/select_2p'])
+        select_zbin = np.where(np.array(f['catalog/sompz/sheared_2p/bhat'])[select_metacal]==zbin)[0]
+        e2p = np.average(np.array(f[f'catalog/metacal/unsheared/e_2'])[select_metacal][select_zbin],
+                         weights = np.array(f[f'catalog/metacal/sheared_2p/weight'])[select_metacal][select_zbin])
+        
+        select_metacal = np.array(f['index/select_2m'])
+        select_zbin = np.where(np.array(f['catalog/sompz/sheared_2m/bhat'])[select_metacal]==zbin)[0]
+        e2m = np.average(np.array(f[f'catalog/metacal/unsheared/e_2'])[select_metacal][select_zbin],
+                         weights = np.array(f[f'catalog/metacal/sheared_2m/weight'])[select_metacal][select_zbin])
+        
+        deltag = 0.01 # shear applied to each image
+        R11s = (e1p-e1m)/(2*deltag)
+        R22s = (e2p-e2m)/(2*deltag)
+        
+        select_metacal = np.array(f['index/select'])
+        select_zbin = np.where(np.array(f['catalog/sompz/unsheared/bhat'])[select_metacal]==zbin)[0]
+        R11gs = np.array(f[f'catalog/metacal/unsheared/R11'])[select_metacal][select_zbin]
+        R22gs = np.array(f[f'catalog/metacal/unsheared/R22'])[select_metacal][select_zbin]
+        
+        R11 = R11gs + R11s
+        R22 = R22gs + R22s
+        R11 = np.average(R11, weights=np.array(f[f'catalog/metacal/unsheared/weight'])[select_metacal][select_zbin])
+        R22 = np.average(R22, weights=np.array(f[f'catalog/metacal/unsheared/weight'])[select_metacal][select_zbin])
+        R = (R11 + R22)/2.
+        
+    return ra, dec, e1, e2, R, w
+
     
-    """"
-    TO DO
-    def load_source_metacal(self, data_file, zbin=None):
-        
-        # maybe change it so that it reads the mastercat without calling destest
-        
-        # read yaml file that defines all the catalog selections used
-        params = yaml.load(open(data_file), Loader=yaml.FullLoader)
-        params['param_file'] = data_file.split('/')[-1]
-
-        source_selector, source_calibrator = catalog_utils.load_catalog(params, 'mcal', 'mcal', 
-                                                                        params['source_group'], params['source_table'], 
-                                                                        params['source_path'], 
-                                                                        return_calibrator=destest.MetaCalib)
-
-        gold_selector = catalog_utils.load_catalog(params, 'gold', 'mcal', params['gold_group'], params['gold_table'],
-                                                    params['gold_path'], inherit=source_selector)
-
-        pz_selector = catalog_utils.load_catalog(params, 'pz', 'mcal', params['pz_group'], 
-                                                    params['pz_table'], params['pz_path'], inherit=source_selector)
-
-        # dictionary with the unsheared version of each quantity with the 
-        # selections from: unsheared, 1p, 1m, 2p, 2m
-        source_5sels = {}
-        source_5sels['unsheared'] = {}
-        source_5sels['unsheared']['ra'] = [gold_selector.get_col('ra', uncut=True)[0][gold_selector.get_mask()[i]] for i in range(5)]
-        source_5sels['unsheared']['dec'] = [gold_selector.get_col('dec', uncut=True)[0][gold_selector.get_mask()[i]] for i in range(5)]
-        source_5sels['unsheared']['e1'] = [source_selector.get_col('e_1', uncut=True)[0][source_selector.get_mask()[i]] for i in range(5)]
-        source_5sels['unsheared']['e2'] = [source_selector.get_col('e_2', uncut=True)[0][source_selector.get_mask()[i]] for i in range(5)]
-
-        # dictionary with the 5 selections (1p, 1m, 2p, 2m), in which the 
-        # quantities are obtained from sheared images or using fluxes measured
-        # on sheared images
-        source_5sels['sheared'] = {}
-        source_5sels['sheared']['e1'] = source_selector.get_col('e_1')
-        source_5sels['sheared']['e2'] = source_selector.get_col('e_2')
-        # formerly z_g
-        source_5sels['sheared']['som_bin'] = pz_selector.get_col('bhat')
-
-        # dictionary with the unsheared version and selection only
-        source = {}
-        source['ra'] = source_5sels['unsheared']['ra'][0]
-        source['dec'] = source_5sels['unsheared']['dec'][0]
-        source['e1'] = source_5sels['unsheared']['e1'][0]
-        source['e2'] = source_5sels['unsheared']['e2'][0]
-        source['som_bin'] = source_5sels['sheared']['som_bin'][0]
-
-        # masks from redshifts
-        photoz_masks = [
-                        (source_5sels['sheared']['som_bin'][i] >= zs_bin) & \
-                        (source_5sels['sheared']['som_bin'][i] < zs_bin+1) for i in range(5)
-                       ]
-        maskz = photoz_masks[0]
-
-        ra_s = source['ra'][maskz]
-        dec_s = source['dec'][maskz]
-        e1_s = source['e1'][maskz]
-        e2_s = source['e2'][maskz]
-
-        # calibration given the photoz bin
-        R1,_,w_g = source_calibrator.calibrate('e_1', mask=photoz_masks)
-        R2,_,w_g = source_calibrator.calibrate('e_2', mask=photoz_masks)
-        R_g = 0.5*(R1+R2)
-
-        return ra_s, dec_s, e1_s, e2_s, R_g, w_g
-"""

@@ -131,9 +131,8 @@ class run_GGL(object):
                                                                             self.par['data_source_bfd_mask'], s_zbin)
             self.R = 1.0 ### no response in BFD
             
-        ### TO DO
-        #elif self.par['source_cat'] == 'metacal':
-        #    (self.ra_s, self.dec_s, self.e1, self.e2, self.R, self.w_s) = setup.load_source_metacal(self.par['data_source_metacal'], s_zbin)
+        elif self.par['source_cat'] == 'metacal':
+            (self.ra_s, self.dec_s, self.e1, self.e2, self.R, self.w_s) = setup.load_source_metacal(self.par['data_source_metacal'], s_zbin)
 
         else:
             print('Specify which source catalog you want to use in the params.py file! Exiting the program')
