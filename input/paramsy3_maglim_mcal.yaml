@@ -37,29 +37,18 @@ lens_cat : maglim_y3
 # source catalog: metadetect, metacal, bfd
 source_cat : metacal
 
-mastercat_y6 : &mastercat_y6_ /global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5
 mastercat_y3 : &mastercat_y3_ /global/cfs/cdirs/des/www/y3_cats/Y3_mastercat_02_05_21.h5
 
 # lens galaxies
-data_lens_maglim : *mastercat_y6_
 data_lens_maglim_y3 : *mastercat_y3_
-# add redmagic --> data_maglim, data_metacal ... OR file_*
 
 # LSS weights
-data_LSSweights : /global/cfs/cdirs/des/giannini/ggl/lss_weights_oct2022.pkl
+data_LSSweights : 
 
 # source galaxies
-data_source_metadetect : *mastercat_y6_
 data_source_metacal : *mastercat_y3_
-data_source_bfd : /global/cfs/cdirs/des/y6-shear-catalogs/BFD_v2/BFD_v2_6_22_23_blinded.fits
-ggl_bfd_approximate : False
-### temporary: bfd bins assignment in the mastercat is wrong 
-data_source_bfd_binning : /global/cfs/cdirs/des/elisa/y6_ggl_bfd_nopipe/new_som/tomo_bin_assignments.pkl
-data_source_bfd_mask : /pscratch/sd/e/erykoff/des_y6_masks/y6-combined-hleda-gaiafull-des-stars-hsmap131k-mdet-v1-and-joint_lss_shear_maglim_v3_mask.hsp
-###
 
 # random points
-data_randoms_maglim : *mastercat_y6_
 data_randoms_maglim_y3 : /global/cfs/cdirs/des/y6-gglensing/Y3_maglim_randoms.fits
 
 # Input datavector for substitution of ggl measurement
@@ -69,7 +58,7 @@ dv_input : /global/cfs/cdirs/des/giannini/blinding/data_vectors/2pt_NG_final_2pt
 dv_output : /global/cfs/cdirs/des/elisa/y6_ggl/mcal/2pt_NG_y6_maglim_mcal_UNBLINDED.fits
 
 # Options for data
-use_LSSweight : True
+use_LSSweight : False
 use_shearweight : True
 use_response : True
 
@@ -78,17 +67,12 @@ use_boost : True
 
 # Random point subtraction
 use_randoms : True
-# factor of randoms/lenses
-#rand_fact : 30
 
 # number of Jackknife regions
 n_jck : 200
 
-# resolution of grid (make it a power of 2)
-#nside : 4096
-
 # allowed bin slop for treecorr
-bin_slop : 0.0 #0.1 # supposed to be 0.0
+bin_slop : 0.0
 
 # limits of theta in arcmins
 theta_lims : [2.5, 250.]
