@@ -1,0 +1,89 @@
+### config file for GGL run ###
+
+# mode to run correlations
+run_parallel : True
+compute_covariance : True
+
+# output folder
+dir_out : /global/cfs/cdirs/des/elisa/y6_ggl/bfd/
+
+# lens bins to run
+l_bins : [0,1,2,3,4,5]
+
+# source bins to run
+s_bins : [0,1,2,3]
+
+# lens redsift bins
+zl_bins : [
+            [0.20, 0.40], 
+            [0.40, 0.55], 
+            [0.55, 0.70], 
+            [0.70, 0.85],
+            [0.85, 0.95],
+            [0.95, 1.05],
+          ]
+
+# source redshift bins
+zs_bins : [
+           [0.000, 0.405], 
+           [0.405, 0.665], 
+           [0.665, 0.960], 
+           [0.96, 2.0],
+          ]
+
+# lens catalog: maglim, maglim_y3
+lens_cat : maglim 
+
+# source catalog: metadetect, metacal, bfd
+source_cat : bfd 
+
+mastercat_y6 : &mastercat_y6_ /global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5
+
+# lens galaxies
+data_lens_maglim : *mastercat_y6_
+
+# LSS weights
+data_LSSweights : /global/cfs/cdirs/des/giannini/ggl/lss_weights_oct2022.pkl
+
+# source galaxies
+data_source_bfd : /global/cfs/cdirs/des/y6-shear-catalogs/BFD_v2/BFD_v2_6_22_23_blinded.fits
+ggl_bfd_approximate : False
+### temporary: bfd bins assignment in the mastercat is wrong 
+data_source_bfd_binning : /global/cfs/cdirs/des/elisa/y6_ggl_bfd/new_som/tomo_bin_assignments.pkl
+data_source_bfd_mask : /pscratch/sd/e/erykoff/des_y6_masks/y6-combined-hleda-gaiafull-des-stars-hsmap131k-mdet-v1-and-joint_lss_shear_maglim_v3_mask.hsp
+###
+
+# random points
+data_randoms_maglim : *mastercat_y6_
+
+# Input datavector for substitution of ggl measurement
+dv_input : /global/cfs/cdirs/des/giannini/blinding/data_vectors/2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean.fits
+
+# Output datavector 
+dv_output : /global/cfs/cdirs/des/elisa/y6_ggl/bfd/2pt_NG_y6_maglim_bfd_UNBLINDED.fits
+
+# Options for data
+use_LSSweight : True
+use_shearweight : True
+use_response : True
+
+# Boost factors
+use_boost : True
+
+# Random point subtraction
+use_randoms : True
+
+# number of Jackknife regions
+n_jck : 200
+
+# allowed bin slop for treecorr
+bin_slop : 0.0
+
+# limits of theta in arcmins
+theta_lims : [2.5, 250.]
+
+# number of theta bins
+ang_nbins : 20
+
+# low memory - reduces memory usage, sacrificing speed
+treecorr_low_mem : False
