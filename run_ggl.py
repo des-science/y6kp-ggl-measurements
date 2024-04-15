@@ -83,7 +83,6 @@ class run_GGL(object):
         printlog('Sum weights sources = {:f}'.format(np.sum(self.w_s)), bins_file)
         printlog('Sum weights lenses = {:f}'.format(np.sum(self.w_l)), bins_file)
         
-        ### should I print weighted quantities?
         if (self.par['source_cat'] == 'bfd') & (self.par['ggl_bfd_approximate'] == False):
             printlog('Average Q1 = {:f}'.format(np.average(self.Q0, weights=self.w_s)), bins_file)
             printlog('Average Q2 = {:f}'.format(np.average(self.Q1, weights=self.w_s)), bins_file)
@@ -124,7 +123,7 @@ class run_GGL(object):
              self.P, self.Q0, self.Q1, 
             self.R00, self.R01, self.R11, self.w_s) = setup.load_source_bfd(self.par['data_source_bfd'],self.par['data_source_bfd_binning'], 
                                                                             self.par['data_source_bfd_mask'], s_zbin)
-            self.R = 1.0 ### no response in BFD
+            self.R = 1.0
             
         elif self.par['source_cat'] == 'metacal':
             (self.ra_s, self.dec_s, self.e1, self.e2, self.R, self.w_s) = setup.load_source_metacal(self.par['data_source_metacal'], s_zbin)
