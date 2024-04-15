@@ -218,7 +218,7 @@ class run_GGL(object):
     def run_ggl_measurements(self):
         """Run GGL measurement"""
         
-        print('\nComputing GGL with bin slop={:.3f} and resolution={:d}:'.format(self.par['bin_slop']))
+        print('\nComputing GGL with bin slop={:.3f}'.format(self.par['bin_slop']))
         print('Running TreeCorr with theta=[{:.1f},{:.1f}] over {:d} angular bins'.format(
                 self.par['theta_lims'][0], self.par['theta_lims'][1], self.par['ang_nbins']))
         
