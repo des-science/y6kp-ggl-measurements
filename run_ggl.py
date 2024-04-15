@@ -41,9 +41,9 @@ class run_GGL(object):
         gammat = []
         for l_zbin in self.par['l_bins']:
             for s_zbin in self.par['s_bins']:
-                ggl_results = np.genfromtxt(self.par['dir_out']+f'/ggl_l{l_zbin}_s{s_zbin}.txt', skip_header=8)
+                ggl_results = np.genfromtxt(self.par['dir_out']+f'/ggl_l{l_zbin}_s{s_zbin}.txt', names=True)
                 theta.append(ggl_results['theta'])
-                gammat.appen(ggl_results['gammat_bf_rp'])
+                gammat.append(ggl_results['gammat_bf_rp'])
         theta = np.concatenate(theta)                
         gammat = np.concatenate(gammat)
 
@@ -59,11 +59,11 @@ class run_GGL(object):
     
     def save_params(self):
         
-        params_dict = {key: value for key, value in vars(self.par).items()
+        params_dict = {key: value for key, value in self.par.items()
             if not key.startswith('__') and not callable(value)}
         
         params_file_out = self.par['dir_out']+'/params_content.txt'
-        with open(params_file, 'w') as f:
+        with open(params_file_out, 'w') as f:
             for key, value in params_dict.items():
                 f.write(f'{key} = {value}\n')
                 
@@ -218,8 +218,7 @@ class run_GGL(object):
     def run_ggl_measurements(self):
         """Run GGL measurement"""
         
-        print('\nComputing GGL with bin slop={:.3f} and resolution={:d}:'.format(
-                self.par['bin_slop'], self.par['nside']))
+        print('\nComputing GGL with bin slop={:.3f} and resolution={:d}:'.format(self.par['bin_slop']))
         print('Running TreeCorr with theta=[{:.1f},{:.1f}] over {:d} angular bins'.format(
                 self.par['theta_lims'][0], self.par['theta_lims'][1], self.par['ang_nbins']))
         
@@ -257,11 +256,11 @@ class run_GGL(object):
                         
         print('\nDone running GGL measurements')
         
-        if ((len(self.par['l_bins']) == 6) & (len(self.par['s_bins']) == 4) & self.par['use_boost'] & self.par['use_randoms']):
-            self.save_results_2pt_file()
-
         # Save the content of params.py to a text file
         self.save_params()
+        
+        if ((len(self.par['l_bins']) == 6) & (len(self.par['s_bins']) == 4) & self.par['use_boost'] & self.par['use_randoms']):
+            self.save_results_2pt_file()
            
         print('\nWARNING: all the results saved are UNBLINDED, need to run blinding (see README)\n')
 
