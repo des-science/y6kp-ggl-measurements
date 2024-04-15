@@ -70,12 +70,6 @@ class run_GGL(object):
         print(f'Parameters saved in {params_file_out}')
         return
     
-
-    def printlog(self, msg, file_name):
-        print(msg)
-        with open(file_name, 'a+') as f:
-            f.write(f'{msg}\n')
-    
     
     def printlog_bins_info(self, l_zbin, s_zbin):
         
@@ -89,6 +83,7 @@ class run_GGL(object):
         printlog('Sum weights sources = {:f}'.format(np.sum(self.w_s)), bins_file)
         printlog('Sum weights lenses = {:f}'.format(np.sum(self.w_l)), bins_file)
         
+        ### should I print weighted quantities?
         if (self.par['source_cat'] == 'bfd') & (self.par['ggl_bfd_approximate'] == False):
             printlog('Average Q1 = {:f}'.format(np.average(self.Q0, weights=self.w_s)), bins_file)
             printlog('Average Q2 = {:f}'.format(np.average(self.Q1, weights=self.w_s)), bins_file)
