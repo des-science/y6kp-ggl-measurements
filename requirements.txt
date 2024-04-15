@@ -1,0 +1,9 @@
+numpy
+astropy
+treecorr>=5.0.1
+yaml
+h5py
+pickle
+healsparse
+mpi4py
+gc

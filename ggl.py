@@ -1,6 +1,5 @@
 import numpy as np
 import treecorr
-import gc
 
 
 def save_results(ggl_file_out, theta, gammat, gammax, gammat_shot_noise, xi_npairs, xi_weight,
