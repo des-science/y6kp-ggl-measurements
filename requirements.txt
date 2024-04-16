@@ -4,6 +4,7 @@ treecorr>=5.0.1
 yaml
 h5py
 pickle
+pandas
 healsparse
 mpi4py
 gc

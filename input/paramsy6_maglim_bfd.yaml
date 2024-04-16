@@ -60,7 +60,7 @@ data_randoms_maglim : *mastercat_y6_
 dv_input : /global/cfs/cdirs/des/giannini/blinding/data_vectors/2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean.fits
 
 # Output datavector 
-dv_output : /global/cfs/cdirs/des/elisa/y6_ggl/bfd/2pt_NG_y6_maglim_bfd_UNBLINDED.fits
+dv_output : 2pt_NG_y6_maglim_bfd_UNBLINDED.fits
 
 # Options for data
 use_LSSweight : True

@@ -2,6 +2,7 @@ import sys
 import os
 import numpy as np
 import yaml
+import pandas as pd
 from astropy.io import fits
 import gc
 from mpi4py import MPI
@@ -37,23 +38,74 @@ class run_GGL(object):
 
     def save_results_2pt_file(self):
         
+        dir_out = self.par['dir_out']
+        
         theta = []
         gammat = []
         for l_zbin in self.par['l_bins']:
             for s_zbin in self.par['s_bins']:
-                ggl_results = np.genfromtxt(self.par['dir_out']+f'/ggl_l{l_zbin}_s{s_zbin}.txt', names=True)
+                ggl_results = np.genfromtxt(f'{dir_out}/ggl_l{l_zbin}_s{s_zbin}.txt', names=True)
                 theta.append(ggl_results['theta'])
                 gammat.append(ggl_results['gammat_bf_rp'])
         theta = np.concatenate(theta)                
         gammat = np.concatenate(gammat)
 
-        dv_out = self.par['dv_output']
+        dv_out = f'{dir_out}/'+self.par['dv_output']
         with fits.open(self.par['dv_input']) as dv:
             dv[4].data['ANG'] = theta
             dv[4].data['VALUE'] = gammat
             dv.writeto(dv_out, overwrite=True)
         
         print(f'2pt file saved in {dv_out}')
+        return
+    
+    
+    def save_results_pkl_file(self):
+        
+        dir_out = self.par['dir_out']
+        
+        ggl_file0 = f'{dir_out}/ggl_l'+str(self.par['l_bins'][0])+'_s'+str(self.par['s_bins'][0])+'.txt'
+        with open(ggl_file0, 'r') as f:
+            columns = f.readline().split()[1:]
+        ggl_data = pd.DataFrame(columns=columns)
+
+        l_zbin_col = []
+        s_zbin_col = []
+
+        for l_zbin in self.par['l_bins']:
+            for s_zbin in self.par['s_bins']:
+
+                l_zbin_col.append([l_zbin]*self.par['ang_nbins'])
+                s_zbin_col.append([s_zbin]*self.par['ang_nbins'])
+
+                ggl_file = f'{dir_out}/ggl_l{l_zbin}_s{s_zbin}.txt'
+                ggl_data_bin = pd.DataFrame(np.genfromtxt(ggl_file, names=True))
+
+                ggl_data = pd.concat([ggl_data, ggl_data_bin])
+
+        ggl_data['l_zbin'] = np.concatenate(l_zbin_col)
+        ggl_data['s_zbin'] = np.concatenate(s_zbin_col)
+        ggl_data.reset_index()
+        
+        cov_types = ['gammat', 'gammax']
+        if self.par['use_randoms']: cov_types.append('rand')
+        if self.par['use_boost']: cov_types.append('boost')
+        
+        for cov_type in cov_types:
+            err = []
+            for l_zbin in self.par['l_bins']:
+                for s_zbin in self.par['s_bins']:
+                    cov_file = f'{dir_out}/covariance/cov_l{l_zbin}_s{s_zbin}_{cov_type}.txt'
+                    cov = np.loadtxt(cov_file)
+                    err.append(np.sqrt(np.diag(cov.T)))
+        
+            ggl_data[f'err_{cov_type}'] = np.concatenate(err)
+        
+        
+        pickle_out = f'{dir_out}/'+self.par['dv_output'][:-5]+'.pkl'
+        ggl_data.to_pickle(pickle_out)
+        
+        print(f'pkl file saved in {pickle_out}')
         return
     
     
@@ -258,6 +310,9 @@ class run_GGL(object):
         
         # Save the content of params.py to a text file
         self.save_params()
+        
+        # gather all results in a single file
+        self.save_results_pkl_file()
         
         if ((len(self.par['l_bins']) == 6) & (len(self.par['s_bins']) == 4) & self.par['use_boost'] & self.par['use_randoms']):
             self.save_results_2pt_file()

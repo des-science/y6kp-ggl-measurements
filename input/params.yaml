@@ -5,7 +5,7 @@ run_parallel : True
 compute_covariance : True
 
 # output folder
-dir_out : /global/cfs/cdirs/des/elisa/y6_ggl/mcal
+dir_out : /global/cfs/cdirs/des/elisa/y6_ggl/mcal/
 
 # lens bins to run
 l_bins : [0,1,2,3,4,5]
@@ -66,7 +66,7 @@ data_randoms_maglim_y3 : /global/cfs/cdirs/des/y6-gglensing/Y3_maglim_randoms.fi
 dv_input : /global/cfs/cdirs/des/giannini/blinding/data_vectors/2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean.fits
 
 # Output datavector 
-dv_output : /global/cfs/cdirs/des/elisa/y6_ggl/mcal/2pt_NG_y6_maglim_mcal_UNBLINDED.fits
+dv_output : 2pt_NG_y6_maglim_mcal_UNBLINDED.fits
 
 # Options for data
 use_LSSweight : True
