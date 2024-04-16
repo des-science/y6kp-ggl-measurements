@@ -1,5 +1,4 @@
 # Galaxy-galaxy lensing measurements and tests
-Credit: Giulia Giannini, Georgios Zacharegkas, Elisa Legnani ... (add your name here)
 
 DES Y6 pipeline to validate galaxy-galaxy lensing datavectors.
 
@@ -25,5 +24,5 @@ The blinding repo is in https://github.com/des-science/y6-3x2pt/tree/main/blindi
 See the notebook `read_ggl_outputs.ipynb`.
 
 ------
-Please contact Giulia Giannini (giulia.giannini15@gmail.com) or Georgios Zacharegkas (gzacharegkas@uchicago.edu) of Elisa Legnani (elegnani@ifae.es) for comments or questions. 
+Please contact Giulia Giannini (giulia.giannini15@gmail.com) or Georgios Zacharegkas (gzacharegkas@uchicago.edu) or Elisa Legnani (elegnani@ifae.es) for comments or questions. 
 
