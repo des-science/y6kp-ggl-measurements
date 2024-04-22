@@ -292,11 +292,14 @@ class run_GGL(object):
             # Calculate the start and end chunk for this process
             start_chunk = rank * chunks_per_process
             end_chunk = start_chunk + chunks_per_process
-
+            
             # Iterate over the assigned chunks
             for chunk in range(start_chunk, end_chunk):
-                l_zbin = chunk // num_source_bins
-                s_zbin = chunk % num_source_bins
+                l_zbin_id = chunk // num_source_bins
+                s_zbin_id = chunk % num_source_bins
+                
+                l_zbin = self.par['l_bins'][l_zbin_id]
+                s_zbin = self.par['s_bins'][s_zbin_id]
                 
                 self.run_ggl(l_zbin, s_zbin)
         else:
