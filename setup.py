@@ -341,6 +341,59 @@ class GGL_setup(object):
     
     
     
+    def load_mdet_with_sheared_ellipticities(self, path, zs_bin=None):
+        """
+        Loads Y6 METADETECT sheared ellipticities needed for scale-dependant response test
+        
+        """
+            
+        mdet = h5.File(path, 'r')
+        print ('Loads Y6 source METADETECT sheared ellipticities')
+
+        ra1p_s =  np.array(mdet['desy6kp/mdet/1p']['tomo_bin_{}'.format(zs_bin)]['ra'])
+        dec1p_s = np.array(mdet['desy6kp/mdet/1p']['tomo_bin_{}'.format(zs_bin)]['dec'])
+        w1p = np.array(mdet['desy6kp/mdet/1p']['tomo_bin_{}'.format(zs_bin)]['w'])
+        
+        ra1m_s =  np.array(mdet['desy6kp/mdet/1m']['tomo_bin_{}'.format(zs_bin)]['ra'])
+        dec1m_s = np.array(mdet['desy6kp/mdet/1m']['tomo_bin_{}'.format(zs_bin)]['dec'])
+        w1m = np.array(mdet['desy6kp/mdet/1m']['tomo_bin_{}'.format(zs_bin)]['w'])
+        
+        ra2p_s =  np.array(mdet['desy6kp/mdet/2p']['tomo_bin_{}'.format(zs_bin)]['ra'])
+        dec2p_s = np.array(mdet['desy6kp/mdet/2p']['tomo_bin_{}'.format(zs_bin)]['dec'])
+        w2p = np.array(mdet['desy6kp/mdet/2p']['tomo_bin_{}'.format(zs_bin)]['w'])
+        
+        ra2m_s =  np.array(mdet['desy6kp/mdet/2m']['tomo_bin_{}'.format(zs_bin)]['ra'])
+        dec2m_s = np.array(mdet['desy6kp/mdet/2m']['tomo_bin_{}'.format(zs_bin)]['dec'])
+        w2m = np.array(mdet['desy6kp/mdet/2m']['tomo_bin_{}'.format(zs_bin)]['w'])
+        
+        #for diagonal terms
+        g1p_d = np.array(mdet['desy6kp/mdet/1p']['tomo_bin_{}'.format(zs_bin)]['gauss_g_1'])
+        g1m_d = np.array(mdet['desy6kp/mdet/1m']['tomo_bin_{}'.format(zs_bin)]['gauss_g_1'])
+        g2p_d = np.array(mdet['desy6kp/mdet/2p']['tomo_bin_{}'.format(zs_bin)]['gauss_g_2'])
+        g2m_d = np.array(mdet['desy6kp/mdet/2m']['tomo_bin_{}'.format(zs_bin)]['gauss_g_2'])
+        
+        #for non-diagonal terms
+        g1p_nd = np.array(mdet['desy6kp/mdet/1p']['tomo_bin_{}'.format(zs_bin)]['gauss_g_2'])
+        g1m_nd = np.array(mdet['desy6kp/mdet/1m']['tomo_bin_{}'.format(zs_bin)]['gauss_g_2'])
+        g2p_nd = np.array(mdet['desy6kp/mdet/2p']['tomo_bin_{}'.format(zs_bin)]['gauss_g_1'])
+        g2m_nd = np.array(mdet['desy6kp/mdet/2m']['tomo_bin_{}'.format(zs_bin)]['gauss_g_1'])
+        
+        print("LENGTHS")
+        print(len(g1p_d))
+        print(len(g1m_d))
+        print(len(g2p_d))
+        print(len(g2m_d))
+        print(len(w1p))
+
+        mdet.close()
+        del mdet
+        gc.collect()
+        
+        return (ra1p_s, dec1p_s, ra1m_s, dec1m_s, ra2p_s, dec2p_s, ra2m_s, dec2m_s,
+                w1p, w1m, w2p, w2m,
+                g1p_d, g1m_d, g2p_d, g2m_d, g1p_nd, g1m_nd, g2p_nd, g2m_nd)
+    
+    
     
     
     
@@ -598,7 +651,7 @@ class GGL_setup(object):
 
         # get theta, gammat
         theta = np.exp(ng.logr)
-        gamma_t = ng.xi/Rg
+        gamma_t = ng.xi/Rg              #For response test, compute Rg for each theta instead
         gammat_tot = np.copy(gamma_t)
 
         # get imaginary part of xi and gamma_x
@@ -703,3 +756,49 @@ class GGL_setup(object):
                 ng.xi_im, xi_im_rand, ng.npairs, xi_npairs_rand, ng.weight, xi_weight_rand, 
                 Rg, sum_w_l, sum_w_r, boost)
     
+    
+    
+    
+    
+    def NK(self, ra_l, dec_l, ra_s, dec_s, ra_rand=None, dec_rand=None, params=None, 
+                units='deg', sep_units='arcmin', low_mem=False, weights=None, 
+                use_randoms=False, use_boosts=False):
+        
+        # minimum and maximum angular separation
+        theta_min, theta_max = self.par.theta_lims
+
+        # ellipticity for use in NK correlations
+        K, wg = params
+        
+        print("K len")
+        print(len(K))
+        print("ra_s len")
+        print(len(ra_s))
+
+        # generate lens catalogs to correlate and process them
+        nk = treecorr.NKCorrelation(nbins=self.par.ang_nbins, min_sep=theta_min, max_sep=theta_max, sep_units=sep_units, bin_slop=self.par.bin_slop, var_method='jackknife')
+        print ('nk done')
+        
+        if os.path.isfile('jk_centers'):
+            cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights, patch_centers='jk_centers')
+            print ('prepared catalog - loaded jk centers')
+        else:
+            cat_r = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=units, dec_units=units, npatch=self.par.n_jck)
+            print ('prepared random cat')
+            cat_r.write_patch_centers('jk_centers')
+            print ('wrote jk centers')
+            cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights, patch_centers='jk_centers')
+            print ('done lens cat')
+            
+        cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, ra_units=units, dec_units=units,
+                                 k=K, w=wg, patch_centers='jk_centers')
+        print ('done source cat')
+        nk.process(cat_l, cat_s, low_mem=low_mem)
+
+        theta = np.exp(nk.logr)
+        K_ang = nk.xi
+        
+        print("K_ang")
+        print(K_ang)
+        
+        return theta, K_ang

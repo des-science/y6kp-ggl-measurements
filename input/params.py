@@ -10,12 +10,12 @@ here = os.path.abspath(__file__)
 sys.path.append(here)
 
 " Main output folder "
-out_main = '/global/cfs/projectdirs/des/awhyley/ggl/psf_residuals/output/shape_g'
+out_main = '/global/cfs/projectdirs/des/awhyley/ggl/fullscale_070624'
 
 " Bins to run "
 # the lens bins to run
-l_bins = [0]
-#l_bins = [0,1,2,3,4,5]
+#l_bins = [0]
+l_bins = [0,1,2,3,4,5]
 
 # the source bins to run
 s_bins = [0]
@@ -28,15 +28,15 @@ source_cat = 'metadetect'
 
 " Define redshift bins for lens and source galaxies "
 # lens redsift bins
-#zl_bins = [
-#            [0.20, 0.40], 
-#            [0.40, 0.55], 
-#            [0.55, 0.70], 
-#            [0.70, 0.85],
-##            [0.85, 0.95],
-#            [0.95, 1.05],
-#          ]
-zl_bins = [[0.20, 1.05]]
+zl_bins = [
+            [0.20, 0.40], 
+            [0.40, 0.55], 
+            [0.55, 0.70], 
+            [0.70, 0.85],
+            [0.85, 0.95],
+            [0.95, 1.05],
+          ]
+#zl_bins = [[0.20, 1.05]]
 
 # source redshift bins
 zs_bins = [
@@ -57,7 +57,7 @@ response = ['/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin1.tx
             '/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin4.txt']
 
 # source galaxies
-data_source = '/global/cfs/projectdirs/des/awhyley/ggl/psf_residuals/psf_shape_resid_g.fits' #Change for each band and size/shape
+data_source = '/global/cfs/cdirs/des/y6kp-cats/2024-02-06/desy6kp_cats_2024-02-06.hdf5' #Change for each band and size/shape for PSF test
 data_source_bfd = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
 
 # random points
@@ -67,13 +67,13 @@ data_randoms = '/global/cfs/cdirs/des/y6kp-cats/2024-02-06/desy6kp_cats_2024-02-
 dv_input = '/global/cfs/cdirs/des/giannini/blinding/data_vectors/2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean.fits'
 
 # Output datavector 
-dv_output = '/global/cfs/projectdirs/des/awhyley/ggl/psf_residuals/output_by_bin/psf_dv_shape_g.fits' #Doesn't matter for psf test
+dv_output = '/global/cfs/projectdirs/des/awhyley/ggl/fullscale_070624/fullscale_dv.fits' #Doesn't matter for psf test
 
 
 
 " LSS weights "
 # whether LSS weights will be applied to gamma_t
-use_LSSweight = False
+use_LSSweight = True
 
 " Shear weights "
 # whether shear weights will be applied to gamma_t
@@ -83,7 +83,7 @@ use_shearweight = False
 use_boosts = True
 
 " Reponse "
-use_response = False
+use_response = True
 
 " Random point subtraction "
 # use random subtraction
@@ -109,6 +109,9 @@ ang_nbins = 26
 
 # low memory - reduces memory usage, sacrificing speed
 treecorr_low_mem = False
+
+# used for calculating scale dependant response
+calc_scale_dependant_response = False
 
 
 " Output directory for randoms and Jackknife patching "

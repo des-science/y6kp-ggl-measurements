@@ -65,7 +65,7 @@ class GGL(object):
             print ('source_file', source_file)
             # read source galaxy data
             (self.ra_s, self.dec_s, 
-             self.e1_s, self.e2_s) = self.ggl_setup.load_source_metadetect_old(source_file, zs_bin=source_bin)
+             self.e1_s, self.e2_s, self.R_g, self.w_g) = self.ggl_setup.load_source_metadetect(source_file, response, zs_bin=source_bin)  #switch to old for psf test
              # self.R_g, self.w_g) = self.ggl_setup.load_source_metacal_5sels(source_file, zs_bin=source_bin)
              #self.R_g, self.w_g) 
                     # file = fits.open(par.out_main+'/metadetect_bin{}.fits'.format(zs_bin))
@@ -99,6 +99,20 @@ class GGL(object):
             print("Will not load randoms points data, as it is not needed in current run")
             self.ra_rand = None
             self.dec_rand = None
+            
+        # load ellipticity data for response test
+        if self.par.calc_scale_dependant_response:
+            #print("zs lims:")
+            #print(zs_lims[0])
+            (self.ra1p_s, self.dec1p_s, self.ra1m_s, self.dec1m_s, 
+             self.ra2p_s, self.dec2p_s, self.ra2m_s, self.dec2m_s,
+             self.w1p, self.w1m, self.w2p, self.w2m,
+             self.g1p_d, self.g1m_d, self.g2p_d, self.g2m_d, 
+             self.g1p_nd, self.g1m_nd, self.g2p_nd, self.g2m_nd) = self.ggl_setup.load_mdet_with_sheared_ellipticities(source_file, zs_bin=source_bin)
+            #self.w1p = np.ones(len(self.ra1p_s))
+            #self.w1m = np.ones(len(self.ra1m_s))
+            #self.w2p = np.ones(len(self.ra2p_s))
+            #self.w2m = np.ones(len(self.ra2m_s))
 
         print( "Done reading data" )
 
@@ -836,3 +850,212 @@ class GGL(object):
         print( "Done calculating gamma_t \n" )
         return
     
+    
+    
+    
+    def run_nk(self):
+        """
+        Run code to get scale dependant ellipticities for the response test
+
+        output
+        ------
+        results are saved in file
+        """
+        # output directory for gamma_t
+        path_out_gt = self.par.path_out_gt
+        # print ('path_out_gt ----------->', path_out_gt)
+        if path_out_gt[-1] != '/': path_out_gt+='/'
+        print ('path_out_gt ----------->', path_out_gt)
+        if not os.path.exists(path_out_gt):
+            os.makedirs(path_out_gt)
+
+        # output directory for gamma_x
+        path_out_gx = self.par.path_out_gx
+        if path_out_gx[-1] != '/': path_out_gx+='/'
+        if not os.path.exists(path_out_gx):
+            os.makedirs(path_out_gx)
+
+        # output directory for boost factors
+        path_out_boost = self.par.path_out_boost
+        if path_out_boost[-1] != '/': path_out_boost+='/'
+        if not os.path.exists(path_out_boost):
+            os.makedirs(path_out_boost)
+
+        # setup output path for extra info
+        path_out_extra = self.par.path_out_extra_gt
+        if path_out_extra[-1] != '/': path_out_extra+='/'
+        if not os.path.exists(path_out_extra):
+            os.makedirs(path_out_extra)
+
+        # setup output path for randoms
+        path_out_rand = self.par.path_out_rand
+        if path_out_rand[-1] != '/': path_out_rand+='/'
+        if not os.path.exists(path_out_rand):
+            os.makedirs(path_out_rand)
+        #
+        path_out_gt_rand = self.par.path_out_gt_rand
+        if path_out_gt_rand[-1] != '/': path_out_gt_rand+='/'
+        if not os.path.exists(path_out_gt_rand):
+            os.makedirs(path_out_gt_rand)
+        #
+        path_out_gx_rand = self.par.path_out_gx_rand
+        if path_out_gx_rand[-1] != '/': path_out_gx_rand+='/'
+        if not os.path.exists(path_out_gx_rand):
+            os.makedirs(path_out_gx_rand)
+
+        # setup output path for gamma_t Jackknife covariance
+        path_JK_cov_gt = self.par.path_JK_cov_gt
+        if path_JK_cov_gt[-1] != '/': path_JK_cov_gt+='/'
+        if not os.path.exists(path_JK_cov_gt):
+            os.makedirs(path_JK_cov_gt)
+
+        # setup output path for random-point gamma_t Jackknife covariance
+        path_JK_cov_gt_rand = self.par.path_JK_cov_gt_rand
+        if path_JK_cov_gt_rand[-1] != '/': path_JK_cov_gt_rand+='/'
+        if not os.path.exists(path_JK_cov_gt_rand):
+            os.makedirs(path_JK_cov_gt_rand)
+
+        # setup output path for gamma_t Jackknife covariance
+        path_JK_cov_gx = self.par.path_JK_cov_gx
+        if path_JK_cov_gx[-1] != '/': path_JK_cov_gx+='/'
+        if not os.path.exists(path_JK_cov_gx):
+            os.makedirs(path_JK_cov_gx)
+
+        # setup output path for gamma_t Jackknife covariance
+        path_JK_cov_bf = self.par.path_JK_cov_bf
+        if path_JK_cov_bf[-1] != '/': path_JK_cov_bf+='/'
+        if not os.path.exists(path_JK_cov_bf):
+            os.makedirs(path_JK_cov_bf)
+
+        # setup output path for gamma_t shot noise variance
+        path_out_shot_gt = self.par.path_out_shot_gt
+        if path_out_shot_gt[-1] != '/': path_out_shot_gt+='/'
+        if not os.path.exists(path_out_shot_gt):
+            os.makedirs(path_out_shot_gt)
+
+        # print feedback
+        print( "Working on NK calculation with bin slop=%.3f and resolution=%d:"%(self.par.bin_slop,self.par.nside) )
+        print( "Running treecorr with theta=[%.1f,%.1f] over %d angular bins"%(self.par.theta_lims[0],self.par.theta_lims[1],self.par.ang_nbins) )
+
+                
+        # run code to get gamma_t
+        for lzind in self.par.l_bins:
+            print ('lens bin ', lzind)
+            # lens redshift cuts
+            zl_min, zl_max = self.par.zl_bins[lzind]           
+            
+            for szind in self.par.s_bins:
+                print ('SZIND', szind)
+                # source redshift cuts
+                zs_min, zs_max = self.par.zs_bins[szind]
+                # source redshift cuts
+                print ('self.par.zs_bins[szind]', self.par.zs_bins[szind])
+
+                # give feedback on progress
+                print( "  Doing: lens bin %d [%.2f,%.2f] x source bin %d [%.2f,%.2f]"%(lzind+1,zl_min,zl_max,szind+1,zs_min,zs_max) )
+                # output directories
+                g1p_d_out = path_out_gt+'/g1p_d_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                g1m_d_out = path_out_gt+'/g1m_d_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                g2p_d_out = path_out_gt+'/g2p_d_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                g2m_d_out = path_out_gt+'/g2m_d_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                
+                g1p_nd_out = path_out_gt+'/g1p_nd_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                g1m_nd_out = path_out_gt+'/g1m_nd_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                g2p_nd_out = path_out_gt+'/g2p_nd_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+                g2m_nd_out = path_out_gt+'/g2m_nd_l{0}_s{1}.txt'.format(lzind+1,szind+1)
+
+                print ('self.par.out_main', self.par.out_main)
+            
+                # load data and setup current bin
+                self.setup_run(source_cat=self.par.source_cat,
+                               path=self.par.out_main, 
+                               lens_file=self.par.data_lens,
+                               randoms_file=self.par.data_randoms, 
+                               source_file=self.par.data_source,
+                               source_file_bfd=self.par.data_source_bfd,
+                               response=self.par.response[szind],
+                               lens_bin=lzind, source_bin=szind, 
+                               zl_lims=[zl_min,zl_max], zs_lims=[zs_min,zs_max])
+
+                print('Number of lenses=',len(self.ra_l))
+
+                # random points
+                if self.par.use_randoms or self.par.use_boosts:
+                    print('Number of randoms=',len(self.ra_rand))
+
+                else:
+                    print('Will not use random points')
+
+                # parameters to parse to treecorr
+                params = [self.g1p_d,self.w1p]
+                #print ('-------> self.w_g', self.w_g)
+                
+                # get NK corr for defined parameters
+                (theta_res, g1p_d_ang) = self.ggl_setup.NK(self.ra_l, self.dec_l, self.ra1p_s, self.dec1p_s, ra_rand=self.ra_rand, dec_rand=self.dec_rand, params=params,low_mem=self.par.treecorr_low_mem, weights=self.weight_lens,use_randoms=self.par.use_randoms,use_boosts=self.par.use_boosts)
+
+                # save results in file
+                #---g1p_d_ang
+                np.savetxt(g1p_d_out, np.c_[theta_res,g1p_d_ang], header='theta, g1p_d')
+            
+                # give feedback on progress
+                #print( "  Results saved in: %s"%gammat_out )
+                print( "--Done\n" )
+                
+                #Now repeat for the other ellipticities----------------------------------------------
+                
+                params = [self.g1m_d,self.w1m]
+                (theta_res, g1m_d_ang) = self.ggl_setup.NK(self.ra_l, self.dec_l, self.ra1m_s, self.dec1m_s, ra_rand=self.ra_rand, dec_rand=self.dec_rand, params=params,low_mem=self.par.treecorr_low_mem, weights=self.weight_lens,use_randoms=self.par.use_randoms,use_boosts=self.par.use_boosts)
+                np.savetxt(g1m_d_out, np.c_[theta_res,g1m_d_ang], header='theta, g1m_d')
+                
+                params = [self.g2p_d,self.w2p]
+                (theta_res, g2p_d_ang) = self.ggl_setup.NK(self.ra_l, self.dec_l, self.ra2p_s, self.dec2p_s, ra_rand=self.ra_rand, dec_rand=self.dec_rand, params=params,low_mem=self.par.treecorr_low_mem, weights=self.weight_lens,use_randoms=self.par.use_randoms,use_boosts=self.par.use_boosts)
+                np.savetxt(g2p_d_out, np.c_[theta_res,g2p_d_ang], header='theta, g2p_d')
+                
+                params = [self.g2m_d,self.w2m]
+                (theta_res, g2m_d_ang) = self.ggl_setup.NK(self.ra_l, self.dec_l, self.ra2m_s, self.dec2m_s, ra_rand=self.ra_rand, dec_rand=self.dec_rand, params=params,low_mem=self.par.treecorr_low_mem, weights=self.weight_lens,use_randoms=self.par.use_randoms,use_boosts=self.par.use_boosts)
+                np.savetxt(g2m_d_out, np.c_[theta_res,g2m_d_ang], header='theta, g2m_d')
+                
+                #And for the non-diagonal terms------------------------------------------------------
+                
+                params = [self.g1p_nd,self.w1p]
+                (theta_res, g1p_nd_ang) = self.ggl_setup.NK(self.ra_l, self.dec_l, self.ra1p_s, self.dec1p_s, ra_rand=self.ra_rand, dec_rand=self.dec_rand, params=params,low_mem=self.par.treecorr_low_mem, weights=self.weight_lens,use_randoms=self.par.use_randoms,use_boosts=self.par.use_boosts)
+                np.savetxt(g1p_nd_out, np.c_[theta_res,g1p_nd_ang], header='theta, g1p_nd')
+                
+                params = [self.g1m_nd,self.w1m]
+                (theta_res, g1m_nd_ang) = self.ggl_setup.NK(self.ra_l, self.dec_l, self.ra1m_s, self.dec1m_s, ra_rand=self.ra_rand, dec_rand=self.dec_rand, params=params,low_mem=self.par.treecorr_low_mem, weights=self.weight_lens,use_randoms=self.par.use_randoms,use_boosts=self.par.use_boosts)
+                np.savetxt(g1m_nd_out, np.c_[theta_res,g1m_nd_ang], header='theta, g1m_nd')
+                
+                params = [self.g2p_nd,self.w2p]
+                (theta_res, g2p_nd_ang) = self.ggl_setup.NK(self.ra_l, self.dec_l, self.ra2p_s, self.dec2p_s, ra_rand=self.ra_rand, dec_rand=self.dec_rand, params=params,low_mem=self.par.treecorr_low_mem, weights=self.weight_lens,use_randoms=self.par.use_randoms,use_boosts=self.par.use_boosts)
+                np.savetxt(g2p_nd_out, np.c_[theta_res,g2p_nd_ang], header='theta, g2p_nd')
+                
+                params = [self.g2m_nd,self.w2m]
+                (theta_res, g2m_nd_ang) = self.ggl_setup.NK(self.ra_l, self.dec_l, self.ra2m_s, self.dec2m_s, ra_rand=self.ra_rand, dec_rand=self.dec_rand, params=params,low_mem=self.par.treecorr_low_mem, weights=self.weight_lens,use_randoms=self.par.use_randoms,use_boosts=self.par.use_boosts)
+                np.savetxt(g2m_nd_out, np.c_[theta_res,g2m_nd_ang], header='theta, g2m_nd')
+            
+                # give feedback on progress
+                #print( "  Results saved in: %s"%gammat_out )
+                print( "--Done\n" )
+
+                # clear up memory
+                del self.ra_l, self.dec_l, self.ra_s, self.dec_s
+                del self.e1_s,self.e2_s,self.R_g,self.w_g
+                del self.ra_rand, self.dec_rand
+                del self.weight_lens
+                del self.ra1p_s, self.dec1p_s, self.ra1m_s, self.dec1m_s 
+                del self.ra2p_s, self.dec2p_s, self.ra2m_s, self.dec2m_s
+                del self.w1p, self.w1m, self.w2p, self.w2m
+                del self.g1p_d, self.g1m_d, self.g2p_d, self.g2m_d
+                del self.g1p_nd, self.g1m_nd, self.g2p_nd, self.g2m_nd
+                
+                gc.collect()
+
+                
+        # Save the content of params.py to a text file        
+        params_dict = {key: value for key, value in vars(self.par).items() if not key.startswith('__') and not callable(value)}
+        with open(self.par.out_main+'/params_content.txt', 'w') as f:
+            for key, value in params_dict.items():
+                f.write(f"{key} = {value}\n")
+            
+        print( "Done calculating gamma_t \n" )
+        return    
