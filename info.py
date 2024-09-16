@@ -10,5 +10,4 @@ input_dir = './input'
 # options:
 # I)  'gt_only': only run the correlation funtions without covariance
 # II) 'gt_and_cov': run gamma_t measurements with its Jackknife covariance
-# III) 'gt_and_cov_par': run gamma_t measurements with its Jackknife covariance, using MPI -> run using srun -n 24 python run_ggl.py
 NG_mode = 'gt_and_cov'

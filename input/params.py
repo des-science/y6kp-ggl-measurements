@@ -1,3 +1,5 @@
+# new mastercat 2024-05-09
+
 """
 ----------------------------
 Main input file for Y6KP GGL
@@ -10,16 +12,16 @@ here = os.path.abspath(__file__)
 sys.path.append(here)
 
 " Main output folder "
-out_main = '/global/cfs/cdirs/des/giannini/ggl/test_parallel2/'
+out_main = '/global/cfs/cdirs/des/giannini/ggl/2024-09-09_NOjck0/'
 
 " Bins to run "
 # the lens bins to run
-# l_bins = [0]
 l_bins = [0,1,2,3,4,5]
+# l_bins = [0]
 
 # the source bins to run
-# s_bins = [0]
 s_bins = [0,1,2,3]
+# s_bins = [3]
 
 " Source catalog "
 # bdf or metadetect
@@ -47,26 +49,27 @@ zs_bins = [
 
 " Lens, source and random-point data files "
 # lens galaxies
-data_lens = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
-
-# source galaxies
-response = ['/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin1.txt',
-            '/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin2.txt', 
-            '/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin3.txt', 
-            '/global/cfs/cdirs/des/giannini/ggl/mdet_2023-10-16_response_bin4.txt']
-
-# source galaxies
-data_source = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
-data_source_bfd = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
+data_lens = '/global/cfs/cdirs/des/y6kp-cats/2024-07-15/desy6kp_cats_2024-07-15.hdf5'
 
 # random points
-data_randoms = '/global/cfs/cdirs/des/y6kp-cats/2023-10-16/desy6kp_cats_2023-10-16.hdf5'
+data_randoms = '/global/cfs/cdirs/des/y6kp-cats/2024-07-15/desy6kp_cats_2024-07-15.hdf5'
+
+
+# source galaxies
+data_source = '/global/cfs/cdirs/des/giannini/ggl/data/2024-08-26/metadetect_v6_UNBLINDED_2024-08-26.hdf5'
+response = ['/global/cfs/cdirs/des/giannini/ggl/mdet_2024-08-26_response_bin1.txt',
+            '/global/cfs/cdirs/des/giannini/ggl/mdet_2024-08-26_response_bin2.txt', 
+            '/global/cfs/cdirs/des/giannini/ggl/mdet_2024-08-26_response_bin3.txt', 
+            '/global/cfs/cdirs/des/giannini/ggl/mdet_2024-08-26_response_bin4.txt']
+
+#this is wrong but without it it does not run
+data_source_bfd = '/global/cfs/cdirs/des/giannini/ggl/data/2024-08-26/metadetect_v6_UNBLINDED_2024-08-26.hdf5'
 
 # Input datavector for substitution of ggl measurement
 dv_input = '/global/cfs/cdirs/des/giannini/blinding/data_vectors/2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean.fits'
 
 # Output datavector 
-dv_output = '/global/cfs/cdirs/des/giannini/y6-3x2pt/blinding/data_vectors/2pt_y3dv_y6_ggl_maglim_metadet__2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean_jan24.fits'
+dv_output = '/global/cfs/cdirs/des/giannini/y6-3x2pt/blinding/data_vectors/2pt_y3dv_y6_ggl_maglim_metadet__2pt_NG_final_2ptunblind_02_26_21_wnz_maglim_covupdate_nosourcesreals_sompzmean_binslop0.fits'
 
 
 
@@ -88,30 +91,37 @@ use_response = True
 # use random subtraction
 use_randoms = True
 # factor of randoms/lenses
-rand_fact = 30
+# rand_fact = 30
 
 " Treecorr settings "
 # number of Jackknife regions
-n_jck = 200
+n_jck = 250
 
 # resolution of grid (make it a power of 2)
 nside = 4096
 
 # allowed bin slop for treecorr
-bin_slop = 0.1 # supposed to be 0.0
+bin_slop = 0.0 # supposed to be 0.0
+angle_slop = 0.05
 
 # limits of theta in arcmins
-theta_lims = [2.5, 250.]
+# theta_lims = [2.5, 250.]
+theta_lims = [2.5, 995.26792638]
+
+# theta_min = 2.5
+# theta_max = 995.27 # 995.26792638
+# n_theta = 26
 
 # number of theta bins
-ang_nbins = 20
+# ang_nbins = 20
+ang_nbins = 26
 
 # low memory - reduces memory usage, sacrificing speed
 treecorr_low_mem = False
 
 
 " Output directory for randoms and Jackknife patching "
-path_out_rand = out_main+'/randoms_%dxlenses/'%(rand_fact)
+path_out_rand = out_main+'/randoms_lenses/'
 path_out_JK = out_main+'/Jackknife/'
 path_JK_info = path_out_JK+'/info/'
 

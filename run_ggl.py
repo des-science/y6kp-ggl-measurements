@@ -36,6 +36,9 @@ if __name__ == "__main__":
     elif info.NG_mode=='gt_and_cov':
         print('Running gamma_t and Jackknife covariance calculations...')
         run.run_gammat_and_cov()
+    elif info.NG_mode=='gt_and_cov_catalogsonly':
+        print('Running gamma_t and Jackknife covariance calculations...')
+        run.run_gammat_and_cov_catalogsonly()        
     else:
         errmsg = "!!!Error: Requested NG mode not implemented"
         raise Exception(errmsg)
