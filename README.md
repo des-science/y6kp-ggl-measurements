@@ -1,12 +1,11 @@
 # Galaxy-galaxy lensing measurements and tests
-Credit: Giulia Giannini, Georgios Zacharegkas, ... (add your name here)
-
 DES Y6 pipeline to validate galaxy-galaxy lensing datavectors
 
-To execute, run run_ggl.py
+To execute, run python run_ggl.py
+Options to run are listed in info.py
 Make sure you specify settings and file paths in input/params.py
 
-Please contact Giulia Giannini (giulia.giannini15@gmail.com) or Georgios Zacharegkas (gzacharegkas@uchicago.edu) for comments or questions. 
+Please contact Giulia Giannini (giulia.giannini15@gmail.com), Arthur Whyley (arthur.whyley@port.ac.uk), or Georgios Zacharegkas (gzacharegkas@uchicago.edu) for comments or questions. 
 
 When running including all the correction factors, the code will produce a 2pt file which requires blinding. 
 The blinding repo is in https://github.com/des-science/y6-3x2pt/tree/main/blinding

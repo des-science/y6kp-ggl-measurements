@@ -41,8 +41,7 @@ class GGL_setup(object):
 
     
     
-        
-
+    
     def load_lens_Y6_maglim(self, path, zl_bin=None):
         """
         Loads lens galaxy data from file
@@ -50,14 +49,44 @@ class GGL_setup(object):
         Options:
         - Y6 MagLim
         """
+                         
+        # read data for lenses
         maglim = h5.File(path, 'r')
-        ra  = np.array(maglim['desy6kp/maglim/tomo_bin_{}'.format(zl_bin)]['RA'])
-        dec = np.array(maglim['desy6kp/maglim/tomo_bin_{}'.format(zl_bin)]['DEC'])
+        ra =  np.array(maglim['desy6kp//maglim/tomo_bin_{}'.format(zl_bin)]['RA'])
+        dec = np.array(maglim['desy6kp//maglim/tomo_bin_{}'.format(zl_bin)]['DEC'])
         w   = np.array(maglim['desy6kp/maglim/tomo_bin_{}'.format(zl_bin)]['weight'])
 
         # weights = joblib.load('/global/cfs/cdirs/des/giannini/ggl/lss_weights_oct2022.pkl')
         # w = weights[zl_bin]
+
+        maglim.close()
+        del maglim
+        gc.collect()
         
+        return ra, dec, w
+    
+    def load_lens_Y6_maglim_all_bins(self, path, zl_bin=None):
+        """
+        Loads lens galaxy data from file
+
+        Options:
+        - Y6 MagLim
+        """
+                         
+        # read data for lenses
+        maglim = h5.File(path, 'r')
+        ra = np.array([])
+        dec = np.array([])
+        for b in range(6):
+            ra = np.append(ra, np.array(maglim['desy6kp//maglim/tomo_bin_{}'.format(b)]['RA']))
+            print(len(np.array(maglim['desy6kp//maglim/tomo_bin_{}'.format(b)]['RA'])))
+            dec = np.append(dec, np.array(maglim['desy6kp//maglim/tomo_bin_{}'.format(b)]['DEC']))
+        weights = joblib.load('/global/cfs/cdirs/des/giannini/ggl/lss_weights_oct2022.pkl')
+        w = weights[zl_bin]
+        # w = np.ones(len(ra))
+        # w = maglim_bin['W']
+        
+        print("ra length = " + str(len(ra)))
         maglim.close()
         del maglim
         gc.collect()
@@ -132,7 +161,6 @@ class GGL_setup(object):
         gc.collect()
         
         return ra, dec
-    
     
     
     def load_randoms_Y6_maglim_old(self, path):
@@ -263,9 +291,7 @@ class GGL_setup(object):
         
         return ra_s, dec_s, e1_s, e2_s, R_g, w_g
 
-    
-    
-        #   METADETECT
+
     
     def load_source_metadetect_unblinded(self, path, r_path, zs_bin=None):
         """
@@ -292,21 +318,25 @@ class GGL_setup(object):
 
     
     
+    
+    #Editted to load star data for psf residual tests
+    
     def load_source_metadetect_old(self, path, zs_bin=None):
         """
         Loads Y6 source galaxy data
         
         """
             
-        resp = np.loadtxt(path+'/Response_bin{}.txt'.format(zs_bin))
-        file = pf.open(path+'/metadetect_bin{}.fits'.format(zs_bin))
+        #resp = np.loadtxt(path+'/Response_bin{}.txt'.format(zs_bin))
+        #file = pf.open(path+'/metadetect_bin{}.fits'.format(zs_bin))
+        file = fits.open(path)
         
         ra_s = file[1].data['ra_s']
         dec_s = file[1].data['dec_s']
         e1_s = file[1].data['e1_s']
         e2_s = file[1].data['e2_s']
-        w_g = file[1].data['w_g']
-        R_g = resp[0]
+        #w_g = file[1].data['w_g']
+        #R_g = resp[0]
         
 #         mm['ra_s'] = ra_s 
 #         mm['dec_s'] = dec_s
@@ -331,10 +361,63 @@ class GGL_setup(object):
         file.close()
     
         # return source['ra'] , source['dec'], source['e1'], source['e2'], R_g, w_g
-        return ra_s, dec_s, e1_s, e2_s, R_g, w_g
+        return ra_s, dec_s, e1_s, e2_s#, R_g, w_g
 
     
     
+    
+    
+    def load_mdet_with_sheared_ellipticities(self, path, zs_bin=None):
+        """
+        Loads Y6 METADETECT sheared ellipticities needed for scale-dependant response test
+        
+        """
+            
+        mdet = h5.File(path, 'r')
+        print ('Loads Y6 source METADETECT sheared ellipticities')
+
+        ra1p_s =  np.array(mdet['desy6kp/mdet/1p']['tomo_bin_{}'.format(zs_bin)]['ra'])
+        dec1p_s = np.array(mdet['desy6kp/mdet/1p']['tomo_bin_{}'.format(zs_bin)]['dec'])
+        w1p = np.array(mdet['desy6kp/mdet/1p']['tomo_bin_{}'.format(zs_bin)]['w'])
+        
+        ra1m_s =  np.array(mdet['desy6kp/mdet/1m']['tomo_bin_{}'.format(zs_bin)]['ra'])
+        dec1m_s = np.array(mdet['desy6kp/mdet/1m']['tomo_bin_{}'.format(zs_bin)]['dec'])
+        w1m = np.array(mdet['desy6kp/mdet/1m']['tomo_bin_{}'.format(zs_bin)]['w'])
+        
+        ra2p_s =  np.array(mdet['desy6kp/mdet/2p']['tomo_bin_{}'.format(zs_bin)]['ra'])
+        dec2p_s = np.array(mdet['desy6kp/mdet/2p']['tomo_bin_{}'.format(zs_bin)]['dec'])
+        w2p = np.array(mdet['desy6kp/mdet/2p']['tomo_bin_{}'.format(zs_bin)]['w'])
+        
+        ra2m_s =  np.array(mdet['desy6kp/mdet/2m']['tomo_bin_{}'.format(zs_bin)]['ra'])
+        dec2m_s = np.array(mdet['desy6kp/mdet/2m']['tomo_bin_{}'.format(zs_bin)]['dec'])
+        w2m = np.array(mdet['desy6kp/mdet/2m']['tomo_bin_{}'.format(zs_bin)]['w'])
+        
+        #for diagonal terms
+        g1p_d = np.array(mdet['desy6kp/mdet/1p']['tomo_bin_{}'.format(zs_bin)]['gauss_g_1'])
+        g1m_d = np.array(mdet['desy6kp/mdet/1m']['tomo_bin_{}'.format(zs_bin)]['gauss_g_1'])
+        g2p_d = np.array(mdet['desy6kp/mdet/2p']['tomo_bin_{}'.format(zs_bin)]['gauss_g_2'])
+        g2m_d = np.array(mdet['desy6kp/mdet/2m']['tomo_bin_{}'.format(zs_bin)]['gauss_g_2'])
+        
+        #for non-diagonal terms
+        g1p_nd = np.array(mdet['desy6kp/mdet/1p']['tomo_bin_{}'.format(zs_bin)]['gauss_g_2'])
+        g1m_nd = np.array(mdet['desy6kp/mdet/1m']['tomo_bin_{}'.format(zs_bin)]['gauss_g_2'])
+        g2p_nd = np.array(mdet['desy6kp/mdet/2p']['tomo_bin_{}'.format(zs_bin)]['gauss_g_1'])
+        g2m_nd = np.array(mdet['desy6kp/mdet/2m']['tomo_bin_{}'.format(zs_bin)]['gauss_g_1'])
+        
+        print("LENGTHS")
+        print(len(g1p_d))
+        print(len(g1m_d))
+        print(len(g2p_d))
+        print(len(g2m_d))
+        print(len(w1p))
+
+        mdet.close()
+        del mdet
+        gc.collect()
+        
+        return (ra1p_s, dec1p_s, ra1m_s, dec1m_s, ra2p_s, dec2p_s, ra2m_s, dec2m_s,
+                w1p, w1m, w2p, w2m,
+                g1p_d, g1m_d, g2p_d, g2m_d, g1p_nd, g1m_nd, g2p_nd, g2m_nd)
     
     
     
@@ -475,7 +558,7 @@ class GGL_setup(object):
         print(bin_edges)
         theta_min = bin_edges[0]
         theta_max = bin_edges[-1]
-        
+
         # ellipticity (e1,e2) and R_gamma
         e1, e2, Rg, wg = params
 
@@ -513,8 +596,7 @@ class GGL_setup(object):
             sum_w_r = 0
             
         if use_boosts:
-            # boost = self.boost_factor_calculate(sum_w_l, sum_w_r, ng.weight, rg.weight)
-            boost = (sum_w_r/sum_w_l) * (ng.weight/rg.weight)
+            boost = self.boost_factor_calculate(sum_w_l, sum_w_r, ng.weight, rg.weight)
             gamma_t *= boost
         else:
             boost = np.ones(len(theta))
@@ -536,6 +618,7 @@ class GGL_setup(object):
                 ng.xi_im, xi_im_rand, ng.npairs, xi_npairs_rand, ng.weight, xi_weight_rand, 
                 Rg, sum_w_l, sum_w_r, boost)
 
+    
     
     
     def get_gammat_and_covariance(self, ra_l, dec_l, ra_s, dec_s, ra_rand=None, dec_rand=None, params=None, 
@@ -566,7 +649,6 @@ class GGL_setup(object):
         print(bin_edges)
         theta_min = bin_edges[0]
         theta_max = bin_edges[-1]
-
         # ellipticity (e1,e2), R_gamma and weights
         e1, e2, Rg, wg = params
 
@@ -584,7 +666,6 @@ class GGL_setup(object):
         if os.path.isfile('jk_centers'):
             cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights, patch_centers='jk_centers')
             print ('prepared catalog - loaded jk centers')
-
         else:
             cat_r = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=units, dec_units=units, npatch=self.par.n_jck)
             print ('prepared random cat')
@@ -610,17 +691,12 @@ class GGL_setup(object):
                                  g1=(e1), 
                                  g2=(e2), 
                                  w=wg, patch_centers='jk_centers')
-        # cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, ra_units=units, dec_units=units,
-        #                          g1=(e1-np.average(e1, weights=wg)), 
-        #                          g2=(e2-np.average(e2, weights=wg)), 
-        #                          w=wg, patch_centers='jk_centers')
         print ('done source cat')
-
         ng.process(cat_l, cat_s, low_mem=low_mem)
 
         # get theta, gammat
         theta = np.exp(ng.logr)
-        gamma_t = ng.xi/Rg
+        gamma_t = ng.xi/Rg              #For response test, compute Rg for each theta instead
         gammat_tot = np.copy(gamma_t)
 
         # get imaginary part of xi and gamma_x
@@ -650,8 +726,6 @@ class GGL_setup(object):
         # that hold the weights for the boost factor covariance calculations
         if use_boosts:
             # initialize NN correlations for single point cross lenses and randoms
-            # nn_lp = treecorr.NNCorrelation(nbins=self.par.ang_nbins, min_sep=1.e-3, max_sep=1.e5, sep_units='arcmin', bin_slop=self.par.bin_slop, var_method='jackknife')
-            # nn_rp = treecorr.NNCorrelation(nbins=self.par.ang_nbins, min_sep=1.e-3, max_sep=1.e5, sep_units='arcmin', bin_slop=self.par.bin_slop, var_method='jackknife')
             nn_lp = treecorr.NNCorrelation(nbins=self.par.ang_nbins, min_sep=theta_min, max_sep=theta_max, sep_units='arcmin', bin_slop=self.par.bin_slop, var_method='jackknife')
             nn_rp = treecorr.NNCorrelation(nbins=self.par.ang_nbins, min_sep=theta_min, max_sep=theta_max, sep_units='arcmin', bin_slop=self.par.bin_slop, var_method='jackknife')
             # catalog containing single point
@@ -729,61 +803,30 @@ class GGL_setup(object):
     
     
     
-
     
     
-    
-    
-    def get_gammat_and_covariance_catalogsonly(self, ra_l, dec_l, ra_s, dec_s, lzind, szind, ra_rand=None, dec_rand=None, params=None, 
-                                  units='deg', sep_units='arcmin', low_mem=False, weights=None, 
-                                  use_randoms=False, use_boosts=False):
-        """
-        Calculates gamma_t as a function of theta and its Jackknife covariance using only Treecorr
-
-        input
-        -----
-        - ra_l, dec_l: ra and dec of lens galaxies
-        - ra_rand, dec_rand: ra and dec of random points
-        - ra_s, dec_s: ra and dec of source galaxies
-
-        output
-        ------
-        theta, correlation functions, covariances, and extra information
-        """
+    def NK(self, ra_l, dec_l, ra_s, dec_s, ra_rand=None, dec_rand=None, params=None, 
+                units='deg', sep_units='arcmin', low_mem=False, weights=None, 
+                use_randoms=False, use_boosts=False):
+        
         # minimum and maximum angular separation
-        # theta_min, theta_max = self.par.theta_lims
+        theta_min, theta_max = self.par.theta_lims
 
-        # minimum and maximum angular separation
-        nbins = 30 
-        bin_edges = np.geomspace(2.5, 2500, nbins+1)
-        bin_edges = bin_edges[:-4]
-        nbins = 26
-        bin_edges = np.geomspace(2.5, bin_edges[-1], nbins+1)
-        print(bin_edges)
-        theta_min = bin_edges[0]
-        theta_max = bin_edges[-1]
-
-        # ellipticity (e1,e2), R_gamma and weights
-        e1, e2, Rg, wg = params
-
-        # count-shear two-point correlation function(i.e. galaxy-galaxy lensing)
-        print('Rg = ', Rg)
-        print('Num lenses = ', len(ra_l))
-        print('Num sources = ', len(ra_s))
-        print('Average e1 = ', np.average(e1, weights=wg))
-        print('Average e2 = ', np.average(e2, weights=wg))
+        # ellipticity for use in NK correlations
+        K, wg = params
+        
+        print("K len")
+        print(len(K))
+        print("ra_s len")
+        print(len(ra_s))
 
         # generate lens catalogs to correlate and process them
-        ng = treecorr.NGCorrelation(nbins=self.par.ang_nbins, min_sep=theta_min, max_sep=theta_max, sep_units=sep_units, bin_slop=self.par.bin_slop, var_method='jackknife')
-        print ('ng done')
+        nk = treecorr.NKCorrelation(nbins=self.par.ang_nbins, min_sep=theta_min, max_sep=theta_max, sep_units=sep_units, bin_slop=self.par.bin_slop, var_method='jackknife')
+        print ('nk done')
         
         if os.path.isfile('jk_centers'):
             cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights, patch_centers='jk_centers')
             print ('prepared catalog - loaded jk centers')
-            joblib.dump(cat_l, '/global/cfs/cdirs/des/giannini/ggl/code_comp_subproducts/cat_l_{}.pkl'.format(lzind))
-            cat_r = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=units, dec_units=units, patch_centers='jk_centers')
-            joblib.dump(cat_r, '/global/cfs/cdirs/des/giannini/ggl/code_comp_subproducts/cat_r_{}.pkl'.format(lzind))
-
         else:
             cat_r = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=units, dec_units=units, npatch=self.par.n_jck)
             print ('prepared random cat')
@@ -791,28 +834,16 @@ class GGL_setup(object):
             print ('wrote jk centers')
             cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights, patch_centers='jk_centers')
             print ('done lens cat')
-
-
-#         cat_r = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=units, dec_units=units, npatch=self.par.n_jck)
-#         print ('prepared random cat')
-#         # make it save a txt file at the same time. 
-#         np.savetxt('/global/homes/g/giannini/gglensing/y6kp-ggl-measurements/source/test.txt', np.zeros(1))
-        
-#         cat_r.write_patch_centers('jk_centers')
-#         print ('wrote jk centers')
-#         cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights, patch_centers='jk_centers')
-#         print ('done lens cat')
-
-
-        # wg = np.ones(len(dec_s))
+            
         cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, ra_units=units, dec_units=units,
-                                 g1=(e1), 
-                                 g2=(e2), 
-                                 w=wg, patch_centers='jk_centers')
-        # cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, ra_units=units, dec_units=units,
-        #                          g1=(e1-np.average(e1, weights=wg)), 
-        #                          g2=(e2-np.average(e2, weights=wg)), 
-        #                          w=wg, patch_centers='jk_centers')
+                                 k=K, w=wg, patch_centers='jk_centers')
         print ('done source cat')
-        joblib.dump(cat_s, '/global/cfs/cdirs/des/giannini/ggl/code_comp_subproducts/cat_s_{}.pkl'.format(szind))
+        nk.process(cat_l, cat_s, low_mem=low_mem)
+
+        theta = np.exp(nk.logr)
+        K_ang = nk.xi
         
+        print("K_ang")
+        print(K_ang)
+        
+        return theta, K_ang
