@@ -688,8 +688,8 @@ class GGL_setup(object):
 
         # wg = np.ones(len(dec_s))
         cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, ra_units=units, dec_units=units,
-                                 g1=(e1), 
-                                 g2=(e2), 
+                                 g1=(e1-np.average(e1, weights=wg)), 
+                                 g2=(e2-np.average(e2, weights=wg)), 
                                  w=wg, patch_centers='jk_centers')
         print ('done source cat')
         ng.process(cat_l, cat_s, low_mem=low_mem)
