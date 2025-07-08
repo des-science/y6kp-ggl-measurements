@@ -48,7 +48,9 @@ class GGL(object):
         print ('lens_file', lens_file)
         # read lens galaxy data
         # self.ra_l, self.dec_l, self.weight_lens = self.ggl_setup.load_lens_Y6_maglim_all_bins(lens_file, zl_bin=lens_bin) #Loads all bins for psf test
-        self.ra_l, self.dec_l, self.weight_lens = self.ggl_setup.load_lens_Y6_maglim(lens_file, zl_bin=lens_bin)
+        self.ra_l, self.dec_l, self.weight_lens = self.ggl_setup.load_lens_Y6_maglim(lens_file, zl_bin=lens_bin) #fiducial
+        # self.ra_l, self.dec_l, self.weight_lens = self.ggl_setup.load_randoms_as_maglim(lens_file, zl_bin=lens_bin)
+        
         # self.ra_l, self.dec_l, self.weight_lens = self.ggl_setup.load_lens_Y3_maglim(lens_file, zl_lims=zl_lims)
 
         if not self.par.use_LSSweight:
@@ -60,7 +62,8 @@ class GGL(object):
             print("Reading source data for source bin [%.2f,%.2f] (index %d) from %s..."%(zs_lims[0],zs_lims[1],source_bin+1,source_file))
             print ('source_file', source_file)
             # read source galaxy data
-            (self.ra_s, self.dec_s, self.e1_s, self.e2_s, self.R_g, self.w_g) = self.ggl_setup.load_source_metadetect_unblinded(source_file, response, zs_bin=source_bin)
+            (self.ra_s, self.dec_s, self.e1_s, self.e2_s, self.R_g, self.w_g) = self.ggl_setup.load_source_metadetect_unblinded(source_file, response, zs_bin=source_bin) #fiducial
+            # (self.ra_s, self.dec_s, self.e1_s, self.e2_s, self.R_g, self.w_g) = self.ggl_setup.load_PSF_size(source_file, response, zs_bin=source_bin)
             # (self.ra_s, self.dec_s, self.e1_s, self.e2_s, self.R_g, self.w_g) = self.ggl_setup.load_source_metadetect(source_file, response, zs_bin=source_bin) #switch to old for psf test
              # self.R_g, self.w_g) = self.ggl_setup.load_source_metacal_5sels(source_file, zs_bin=source_bin)
              #self.R_g, self.w_g) 
@@ -86,8 +89,9 @@ class GGL(object):
             
         # load random points data
         if self.par.use_randoms or self.par.use_boosts:
-            print("Reading random-point data from %s..."%(randoms_file))
-            self.ra_rand, self.dec_rand = self.ggl_setup.load_randoms_Y6(randoms_file, zl_bin=lens_bin)
+            print("Reading random-point data from %s..."%(randoms_file)) 
+            # self.ra_rand, self.dec_rand = self.ggl_setup.load_alternative_randoms_Y6(randoms_file, zl_bin=lens_bin)
+            self.ra_rand, self.dec_rand = self.ggl_setup.load_randoms_Y6(randoms_file, zl_bin=lens_bin) #FIDUCIAL
             # self.ra_rand, self.dec_rand = self.ggl_setup.load_randoms_Y6_maglim(path)
             # self.ra_rand, self.dec_rand = self.ggl_setup.load_randoms_Y3_maglim(randoms_file, zl_lims=zl_lims)
 
@@ -406,10 +410,14 @@ class GGL(object):
         rank = comm.Get_rank()
          
         jobs = []
-        for i in range(6):
-            for j in range(4):
-                jobs.append([i,j])
+        # for i in range(6):
+        #     for j in range(4):
+        #         jobs.append([i,j])
 
+        for lzind_ind in self.par.l_bins:
+            for szind_ind in self.par.s_bins:
+                jobs.append([lzind_ind,szind_ind])
+                
         run_count = rank 
         
         # =================

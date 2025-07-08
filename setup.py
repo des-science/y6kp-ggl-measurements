@@ -52,8 +52,8 @@ class GGL_setup(object):
                          
         # read data for lenses
         maglim = h5.File(path, 'r')
-        ra =  np.array(maglim['desy6kp//maglim/tomo_bin_{}'.format(zl_bin)]['RA'])
-        dec = np.array(maglim['desy6kp//maglim/tomo_bin_{}'.format(zl_bin)]['DEC'])
+        ra =  np.array(maglim['desy6kp/maglim/tomo_bin_{}'.format(zl_bin)]['RA'])
+        dec = np.array(maglim['desy6kp/maglim/tomo_bin_{}'.format(zl_bin)]['DEC'])
         w   = np.array(maglim['desy6kp/maglim/tomo_bin_{}'.format(zl_bin)]['weight'])
 
         # weights = joblib.load('/global/cfs/cdirs/des/giannini/ggl/lss_weights_oct2022.pkl')
@@ -64,6 +64,29 @@ class GGL_setup(object):
         gc.collect()
         
         return ra, dec, w
+    
+    
+    def load_randoms_as_maglim(self, path, zl_bin=None):
+        """
+        Loads random points data from file
+
+        Options:
+        - Y6 lens randoms
+        """
+        # read data for lenses
+                                                
+        randoms = h5.File(path, 'r')
+        ra =  np.array(randoms['desy6kp/ran_maglim/tomo_bin_0']['ra'])
+        dec = np.array(randoms['desy6kp/ran_maglim/tomo_bin_0']['dec'])
+        w =   np.ones(len(dec))
+        
+        randoms.close()
+        del randoms
+        gc.collect()
+        
+        return ra, dec, w
+    
+
     
     def load_lens_Y6_maglim_all_bins(self, path, zl_bin=None):
         """
@@ -155,6 +178,26 @@ class GGL_setup(object):
         randoms = h5.File(path, 'r')
         ra =  np.array(randoms['desy6kp/ran_maglim/tomo_bin_{}'.format(zl_bin)]['ra'])
         dec = np.array(randoms['desy6kp/ran_maglim/tomo_bin_{}'.format(zl_bin)]['dec'])
+
+        randoms.close()
+        del randoms
+        gc.collect()
+        
+        return ra, dec
+    
+    
+    def load_alternative_randoms_Y6(self, path, zl_bin=None):
+        """
+        Loads random points data from file
+
+        Options:
+        - Y6 lens randoms
+        """
+        # read data for lenses
+                                                
+        randoms = h5.File(path, 'r')
+        ra =  np.array(randoms['tomo_bin_{}'.format(zl_bin)]['ra'])
+        dec = np.array(randoms['tomo_bin_{}'.format(zl_bin)]['dec'])
 
         randoms.close()
         del randoms
@@ -266,7 +309,6 @@ class GGL_setup(object):
         
         
         #   METADETECT
-    
     def load_source_metadetect(self, path, r_path, zs_bin=None):
         """
         Loads Y6 source METADETECT galaxy data
@@ -317,10 +359,58 @@ class GGL_setup(object):
         return ra_s, dec_s, e1_s, e2_s, R_g, w_g
 
     
+
+    def load_PSF_shape(self, path, r_path, zs_bin=None):
+        """
+        Loads Y6 source galaxy data
+        
+        """
+        file = fits.open('/global/cfs/cdirs/des/giannini/ggl/psf_res_shape.fits')
+        #resp = np.loadtxt(path+'/Response_bin{}.txt'.format(zs_bin))
+        #file = pf.open(path+'/metadetect_bin{}.fits'.format(zs_bin))
+        # file = fits.open(path)
+        
+        ra_s = file[1].data['ra_s']
+        dec_s = file[1].data['dec_s']
+        e1_s = file[1].data['e1_s']
+        e2_s = file[1].data['e2_s']
+        w_g = np.ones(len(ra_s))
+        R_g = 1.
+        
+        file.close()
+        del file
+        gc.collect()
     
+        # return source['ra'] , source['dec'], source['e1'], source['e2'], R_g, w_g
+        return ra_s, dec_s, e1_s, e2_s, R_g, w_g
+
+    def load_PSF_size(self, path, r_path, zs_bin=None):
+        """
+        Loads Y6 source galaxy data
+        
+        """
+        file = fits.open('/global/cfs/cdirs/des/giannini/ggl/psf_res_size.fits')
+        #resp = np.loadtxt(path+'/Response_bin{}.txt'.format(zs_bin))
+        #file = pf.open(path+'/metadetect_bin{}.fits'.format(zs_bin))
+        # file = fits.open(path)
+        
+        ra_s = file[1].data['ra_s']
+        dec_s = file[1].data['dec_s']
+        e1_s = file[1].data['e1_s']
+        e2_s = file[1].data['e2_s']
+        w_g = np.ones(len(ra_s))
+        R_g = 1.
+        
+        file.close()
+        del file
+        gc.collect()
     
-    #Editted to load star data for psf residual tests
+        # return source['ra'] , source['dec'], source['e1'], source['e2'], R_g, w_g
+        return ra_s, dec_s, e1_s, e2_s, R_g, w_g
+
     
+    #Editted to load star data for psf residual tests    
+
     def load_source_metadetect_old(self, path, zs_bin=None):
         """
         Loads Y6 source galaxy data
@@ -792,9 +882,12 @@ class GGL_setup(object):
             cov_jk_boost = np.zeros((len(theta),len(theta)))
 
         # get covariance of randoms points
-        corrs = [rg]
-        func = lambda corrs: corrs[0].xi/corrs[0].Rg
-        cov_jk_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
+        if use_randoms:
+            corrs = [rg]
+            func = lambda corrs: corrs[0].xi/corrs[0].Rg
+            cov_jk_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
+        else:
+            cov_jk_rand = np.zeros((len(theta),len(theta)))
 
         return (theta, gamma_t, gammat_tot, gammat_rand, gamma_x, gammax_tot, gammax_rand, 
                 cov_jk_gt, ng.varxi, cov_jk_boost, cov_jk_gx, cov_jk_rand,
