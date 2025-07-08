@@ -862,7 +862,7 @@ class GGL_setup(object):
             else:
                 func = lambda corrs: corrs[0].xi / corrs[0].Rg
                 corrs = [ng]
-        cov_jk_gt = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
+        cov_jk_gt = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
 
         # get gammax covariance
         if use_randoms:
@@ -871,13 +871,13 @@ class GGL_setup(object):
         else:
             func = lambda corrs: corrs[0].xi_im/corrs[0].Rg
             corrs = [ng]
-        cov_jk_gx = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
+        cov_jk_gx = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
 
         # get boost factor covariance
         if use_boosts:
             func = lambda corrs: (corrs[0].weight/np.sum(corrs[2].weight)) / (corrs[1].weight/np.sum(corrs[3].weight))
             corrs = [ng,rg,nn_lp,nn_rp]
-            cov_jk_boost = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
+            cov_jk_boost = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
         else:
             cov_jk_boost = np.zeros((len(theta),len(theta)))
 
@@ -885,7 +885,7 @@ class GGL_setup(object):
         if use_randoms:
             corrs = [rg]
             func = lambda corrs: corrs[0].xi/corrs[0].Rg
-            cov_jk_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
+            cov_jk_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
         else:
             cov_jk_rand = np.zeros((len(theta),len(theta)))
 
