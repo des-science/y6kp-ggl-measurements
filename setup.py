@@ -711,7 +711,7 @@ class GGL_setup(object):
     
     
     
-    def get_gammat_and_covariance(self, ra_l, dec_l, ra_s, dec_s, ra_rand=None, dec_rand=None, params=None, 
+    def get_gammat_and_covariance_old(self, ra_l, dec_l, ra_s, dec_s, ra_rand=None, dec_rand=None, params=None, 
                                   units='deg', sep_units='arcmin', low_mem=False, weights=None, 
                                   use_randoms=False, use_boosts=False):
         """
@@ -894,7 +894,170 @@ class GGL_setup(object):
                 ng.xi_im, xi_im_rand, ng.npairs, xi_npairs_rand, ng.weight, xi_weight_rand, 
                 Rg, sum_w_l, sum_w_r, boost)
     
-    
+
+
+    def get_gammat_and_covariance(self, ra_l, dec_l, ra_s, dec_s, ra_rand=None, dec_rand=None, params=None, 
+                                  units='deg', sep_units='arcmin', low_mem=False, weights=None, 
+                                  use_randoms=False, use_boosts=False):
+        """
+        Calculates gamma_t as a function of theta and its Jackknife covariance using only Treecorr
+
+        input
+        -----
+        - ra_l, dec_l: ra and dec of lens galaxies
+        - ra_rand, dec_rand: ra and dec of random points
+        - ra_s, dec_s: ra and dec of source galaxies
+
+        output
+        ------
+        theta, correlation functions, covariances, and extra information
+        """
+        # minimum and maximum angular separation
+        nbins = 30 
+        bin_edges = np.geomspace(2.5, 2500, nbins+1)
+        bin_edges = bin_edges[:-4]
+        nbins = 26
+        bin_edges = np.geomspace(2.5, bin_edges[-1], nbins+1)
+        print(bin_edges)
+        theta_min = bin_edges[0]
+        theta_max = bin_edges[-1]
+        # ellipticity (e1,e2), R_gamma and weights
+        e1, e2, Rg, wg = params
+
+        # count-shear two-point correlation function(i.e. galaxy-galaxy lensing)
+        print('Rg = ', Rg)
+        print('Num lenses = ', len(ra_l))
+        print('Num sources = ', len(ra_s))
+        print('Average e1 = ', np.average(e1, weights=wg))
+        print('Average e2 = ', np.average(e2, weights=wg))
+
+        # generate lens catalogs to correlate and process them
+        ng = treecorr.NGCorrelation(nbins=self.par.ang_nbins, min_sep=theta_min, max_sep=theta_max, sep_units=sep_units, bin_slop=self.par.bin_slop, var_method='jackknife')
+        print ('ng done')
+        
+        if os.path.isfile('jk_centers'):
+            cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights, patch_centers='jk_centers')
+            print ('prepared catalog - loaded jk centers')
+        else:
+            cat_r = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=units, dec_units=units, npatch=self.par.n_jck)
+            print ('prepared random cat')
+            cat_r.write_patch_centers('jk_centers')
+            print ('wrote jk centers')
+            cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=weights, patch_centers='jk_centers')
+            print ('done lens cat')
+
+        # wg = np.ones(len(dec_s))
+        cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, ra_units=units, dec_units=units,
+                                 g1=(e1-np.average(e1, weights=wg)), 
+                                 g2=(e2-np.average(e2, weights=wg)), 
+                                 w=wg, patch_centers='jk_centers')
+        print ('done source cat')
+        ng.process(cat_l, cat_s, low_mem=low_mem)
+
+        # get theta, gammat
+        theta = np.exp(ng.logr)
+        gamma_t = ng.xi/Rg              #For response test, compute Rg for each theta instead
+        gammat_tot = np.copy(gamma_t)
+
+        # get imaginary part of xi and gamma_x
+        gamma_x = ng.xi_im/Rg
+        gammax_tot = np.copy(gamma_x)
+
+        # generate randoms catalogs to correlate and process them
+        if use_randoms or use_boosts:
+            rg = treecorr.NGCorrelation(nbins=self.par.ang_nbins, min_sep=theta_min, max_sep=theta_max, sep_units=sep_units, bin_slop=self.par.bin_slop, var_method='jackknife')
+            
+            cat_r = treecorr.Catalog(ra=ra_rand, dec=dec_rand, ra_units=units, dec_units=units, patch_centers='jk_centers')
+            rg.process(cat_r, cat_s, low_mem=low_mem)
+
+        # boost factors for gammat
+        sum_w_l = np.sum(weights)
+        if ra_rand is not None:
+            sum_w_r = len(ra_rand)
+        else:
+            sum_w_r = 0
+
+        if use_boosts:
+            # compute LS and RS pair-counts for boost (NCorrelation)
+            nn_lp = treecorr.NNCorrelation(nbins=self.par.ang_nbins, min_sep=theta_min, max_sep=theta_max, sep_units='arcmin', bin_slop=self.par.bin_slop, var_method='jackknife')
+            nn_rp = treecorr.NNCorrelation(nbins=self.par.ang_nbins, min_sep=theta_min, max_sep=theta_max, sep_units='arcmin', bin_slop=self.par.bin_slop, var_method='jackknife')
+            nn_lp.process(cat_l, cat_s, low_mem=low_mem)
+            nn_rp.process(cat_r, cat_s, low_mem=low_mem)
+
+            scaling = sum_w_r / sum_w_l
+            boost = scaling * (nn_lp.weight / nn_rp.weight)
+        else:
+            boost = np.ones(len(theta))
+        gammat_tot *= boost
+
+        # update correlations with responses to use in Jackknife mode
+        ng.Rg = Rg*np.ones(len(theta))
+
+        # random-point subtraction for gamma_t and gamma_x
+        if use_randoms:
+            #correct for response
+            gammat_rand = rg.xi/Rg
+            gammax_rand = rg.xi_im/Rg
+            xi_im_rand = rg.xi_im
+            xi_npairs_rand = rg.npairs
+            xi_weight_rand = rg.weight
+            rg.Rg = Rg*np.ones(len(theta))
+        else:
+            gammat_rand = np.zeros(len(theta))
+            gammax_rand = np.zeros(len(theta))
+            xi_im_rand = np.zeros(len(theta))
+            xi_npairs_rand = np.zeros(len(theta))
+            xi_weight_rand = np.zeros(len(theta))
+        gammat_tot -= gammat_rand
+        gammax_tot -= gammax_rand
+
+        # get gamma_t gammat covariance
+        if use_randoms:
+            if use_boosts:
+                func = lambda corrs: boost * (corrs[0].xi/corrs[0].Rg - corrs[1].xi/corrs[1].Rg)
+                corrs = [ng,rg]
+            else:
+                func = lambda corrs: ( corrs[0].xi/corrs[0].Rg - corrs[1].xi/corrs[1].Rg )
+                corrs = [ng,rg]
+        else:
+            if use_boosts:
+                func = lambda corrs: boost * (corrs[0].xi/corrs[0].Rg)
+                corrs = [ng]
+            else:
+                func = lambda corrs: corrs[0].xi / corrs[0].Rg
+                corrs = [ng]
+        cov_jk_gt = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
+
+        # get gammax covariance
+        if use_randoms:
+            func = lambda corrs: corrs[0].xi_im/corrs[0].Rg - corrs[1].xi_im/corrs[1].Rg
+            corrs = [ng,rg]
+        else:
+            func = lambda corrs: corrs[0].xi_im/corrs[0].Rg
+            corrs = [ng]
+        cov_jk_gx = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
+
+        # get boost factor covariance
+        if use_boosts:
+            func = lambda corrs: (sum_w_r / sum_w_l) * (corrs[0].weight / corrs[1].weight)
+            corrs = [nn_lp, nn_rp]
+            cov_jk_boost = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
+        else:
+            cov_jk_boost = np.zeros((len(theta),len(theta)))
+
+        # get covariance of randoms points
+        if use_randoms:
+            corrs = [rg]
+            func = lambda corrs: corrs[0].xi/corrs[0].Rg
+            cov_jk_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
+        else:
+            cov_jk_rand = np.zeros((len(theta),len(theta)))
+
+        return (theta, gamma_t, gammat_tot, gammat_rand, gamma_x, gammax_tot, gammax_rand, 
+                cov_jk_gt, ng.varxi, cov_jk_boost, cov_jk_gx, cov_jk_rand,
+                ng.xi_im, xi_im_rand, ng.npairs, xi_npairs_rand, ng.weight, xi_weight_rand, 
+                Rg, sum_w_l, sum_w_r, boost)
+
     
     
     
