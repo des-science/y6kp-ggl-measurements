@@ -15,7 +15,7 @@ output['3x2_bf']['label'] = r'3x2pt best-fit'
 
 #data_file = '../../../y6-3x2pt/inference/data_vectors/simulated/sim_best_32pt_lcdm_3x2pt_2025-07-28-20h_UNBLINDED_wmask_nob2.fits'
 data_file = '../../../y6-3x2pt/inference/data_vectors/real/3x2pt_2025-07-28-20h_UNBLINDED_wmask_nob2.fits'
-#data_file = 'sim_y3.fits'
+#data_file = 'sim_y6.fits'
 
 nbins_l = 6
 nbins_s = 4
