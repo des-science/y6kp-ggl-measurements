@@ -163,7 +163,7 @@ def get_ggl(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
         # get boost factors for gammat
         if use_boost:
             sum_w_l = np.sum(w_l)
-            sum_w_r = len(ra_r) ### no weights for randoms ?
+            sum_w_r = len(ra_r)
             boost = boost_factor_calculate(sum_w_l, sum_w_r, ng.weight, rg.weight)
             gammat_tot *= boost
 
@@ -327,9 +327,9 @@ def get_ggl_bfd(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
     # get gammax
     gammax = np.imag(g)
 
-    gammat_shot_noise = ng.varxi ### not sure at all
-    xi_npairs = ng.npairs ### maybe
-    xi_weight = ng.weight ### not sure --> not sure about boost
+    gammat_shot_noise = ng.varxi ### not sure
+    xi_npairs = ng.npairs
+    xi_weight = ng.weight
     
     gammat_tot = None
     gammax_tot = None
@@ -367,7 +367,7 @@ def get_ggl_bfd(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
         # get boost factors for gammat
         if use_boost:
             sum_w_l = np.sum(w_l)
-            sum_w_r = len(ra_r) ### no weights for randoms ?
+            sum_w_r = len(ra_r)
             boost = boost_factor_calculate(sum_w_l, sum_w_r, ng.weight, rg.weight)
             gammat_tot *= boost
             
@@ -375,8 +375,8 @@ def get_ggl_bfd(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
         if use_randoms:
             gammat_rand = np.real(g_rg)
             gammax_rand = np.imag(g_rg)
-            xi_npairs_rand = rg.npairs ### maybe
-            xi_weight_rand = rg.weight  ### not sure
+            xi_npairs_rand = rg.npairs
+            xi_weight_rand = rg.weight
             gammat_tot -= gammat_rand
             gammax_tot -= gammax_rand
 

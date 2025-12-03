@@ -7,12 +7,36 @@ import healsparse as hsp
 
 def load_lens_Y6_maglim(file_name, weights_file_name, zbin):
     """Load ra, dec, weight of Y6 MagLim++ zbin redshift bin from file"""
-                   
+   
     with h5.File(file_name, 'r') as f:
-        ra = np.array(f[f'desy6kp/maglim/tomo_bin_{zbin}/RA'])
-        dec = np.array(f[f'desy6kp/maglim/tomo_bin_{zbin}/DEC'])
+        
+        if zbin != 'all':  
+            ra = np.array(f[f'desy6kp/maglim/tomo_bin_{zbin}/RA'])
+            dec = np.array(f[f'desy6kp/maglim/tomo_bin_{zbin}/DEC'])
+            w = np.array(f[f'desy6kp/maglim/tomo_bin_{zbin}/weight'])
+        else:
+            ra = []
+            dec = []
+            for zi in range(6):
+                ra_i = np.array(f[f'desy6kp/maglim/tomo_bin_{zi}/RA'])
+                dec_i = np.array(f[f'desy6kp/maglim/tomo_bin_{zi}/DEC'])
+                w_i = np.array(f[f'desy6kp/maglim/tomo_bin_{zi}/weight'])
+                ra.append(ra_i)
+                dec.append(dec_i)
+                w.append(w_i)
+            ra = np.array(np.concatenate(ra)) 
+            dec = np.array(np.concatenate(dec))
+            w = np.array(np.concatenate(w))
+    
             
-    w = joblib.load(weights_file_name)[zbin]
+    #if zbin != 'all':   
+    #    w = joblib.load(weights_file_name)[zbin]
+    #else:
+    #    w = []
+    #    for zi in range(6):
+    #        w_i = joblib.load(weights_file_name)[zi]
+    #        w.append(w_i)
+    #    w = np.array(np.concatenate(w))
         
     return ra, dec, w
     
@@ -38,10 +62,19 @@ def load_randoms_Y6(file_name, zbin):
     """Load ra, dec of Y6 Randoms zbin redshift bin from file"""
                                                 
     with h5.File(file_name, 'r') as f:
-        ra = np.array(f[f'desy6kp/ran/tomo_bin_{zbin}/RA'])
-        dec = np.array(f[f'desy6kp/ran/tomo_bin_{zbin}/DEC'])
-
-    ### random weights ?
+        if zbin != 'all':  
+            ra = np.array(f[f'desy6kp/ran_maglim/tomo_bin_{zbin}/ra'])
+            dec = np.array(f[f'desy6kp/ran_maglim/tomo_bin_{zbin}/dec'])
+        else:
+            ra = []
+            dec = []
+            for zbin in range(6):
+                ra_i = np.array(f[f'desy6kp/ran/tomo_bin_{zbin}/ra'])
+                dec_i = np.array(f[f'desy6kp/ran/tomo_bin_{zbin}/dec'])
+                ra.append(ra_i)
+                dec.append(dec_i)
+            ra = np.array(np.concatenate(ra))
+            dec = np.array(np.concatenate(dec))    
 
     return ra, dec
     
@@ -53,8 +86,6 @@ def load_randoms_Y3(file_name, zbin_lims):
         ra = f[1].data['RA']
         dec = f[1].data['DEC']
         z = f[1].data['Z']
-
-    ### random weights ?
 
     zbin = np.where((z>zbin_lims[0]) * (z<zbin_lims[1]))[0]
         
@@ -76,32 +107,39 @@ def load_source_bfd(file_name, binning_file_name, mask_file_name, zbin):
         #    R00 = np.array(f[f'desy6kp/bfd/tomo_bin_{zbin}/R00'])
         #    R01 = np.array(f[f'desy6kp/bfd/tomo_bin_{zbin}/R01'])
         #    R11 = np.array(f[f'desy6kp/bfd/tomo_bin_{zbin}/R11'])
-        
-    with open(binning_file_name, 'rb') as file:
-        tomo_bin = pickle.load(file)
-    mask_bin = np.where(tomo_bin==zbin)[0]
-            
+    #with open(binning_file_name, 'rb') as file:
+    #    tomo_bin = pickle.load(file)
+    #    if zbin != 'all':
+    #        mask_bin = np.where(tomo_bin==zbin)[0]
+    #    else:
+    #        mask_bin = np.where(tomo_bin!=-100)[0]
+
     with fits.open(file_name) as f:
+        mask_bin = f[1].data['tomo']==zbin
+
         ra =  np.array(f[1].data['ra'])[mask_bin]
         dec = np.array(f[1].data['dec'])[mask_bin]
             
     mask = hsp.HealSparseMap.read(mask_file_name)
     mask_bool = mask.get_values_pos(ra, dec)
         
+    ### Temporary: new BFD catalog - no need for logPQR()
     with fits.open(file_name) as f:
-        P = np.array(f[1].data['P'])[mask_bin][mask_bool]
-        Q0 = np.array(f[1].data['Q0'])[mask_bin][mask_bool]
-        Q1 = np.array(f[1].data['Q1'])[mask_bin][mask_bool]
-        R00 = np.array(f[1].data['R00'])[mask_bin][mask_bool]
-        R01 = np.array(f[1].data['R01'])[mask_bin][mask_bool]
-        R11 = np.array(f[1].data['R11'])[mask_bin][mask_bool]
+        # P = np.array(f[1].data['P'])[mask_bin][mask_bool]
+        # Q0 = np.array(f[1].data['Q0'])[mask_bin][mask_bool]
+        # Q1 = np.array(f[1].data['Q1'])[mask_bin][mask_bool]
+        # R00 = np.array(f[1].data['R00'])[mask_bin][mask_bool]
+        # R01 = np.array(f[1].data['R01'])[mask_bin][mask_bool]
+        # R11 = np.array(f[1].data['R11'])[mask_bin][mask_bool]
+        logpqr = np.array(f[1].data['pqr'])[mask_bin][mask_bool]
             
     ra =  ra[mask_bool]
     dec = dec[mask_bool]
             
-    pqr = ((np.vstack([P, Q0, Q1, R00, R01, R11])).T).astype(np.float64)
-    logpqr = logPQR(pqr)
+    #pqr = ((np.vstack([P, Q0, Q1, R00, R01, R11])).T).astype(np.float64)
+    #logpqr = logPQR(pqr)
 
+    P = logpqr[:,0] 
     Q0 = logpqr[:,1]
     Q1 = logpqr[:,2]
     R00 = logpqr[:,3]

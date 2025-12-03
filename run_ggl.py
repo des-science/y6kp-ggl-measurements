@@ -151,8 +151,12 @@ class run_GGL(object):
 
         # load lens data
         lens_cat = self.par['lens_cat']
-        print('Reading {} lens data, redshift bin {:d} [{:.3f},{:.3f}] from {}'.format(
-            lens_cat, l_zbin+1, zl_lims[0], zl_lims[1], self.par[f'data_lens_{lens_cat}']))
+        if l_zbin != 'all':
+            print('Reading {} lens data, redshift bin {:d} [{:.3f},{:.3f}] from {}'.format(
+                lens_cat, l_zbin+1, zl_lims[0], zl_lims[1], self.par[f'data_lens_{lens_cat}']))
+        else:
+            print('Reading {} lens data, all redshift bins [{:.3f},{:.3f}] from {}'.format(
+                lens_cat, zl_lims[0], zl_lims[1], self.par[f'data_lens_{lens_cat}']))
         
         if lens_cat == 'maglim':
             (self.ra_l, self.dec_l, self.w_l) = setup.load_lens_Y6_maglim(self.par['data_lens_maglim'], self.par['data_LSSweights'], l_zbin)
@@ -164,8 +168,12 @@ class run_GGL(object):
 
         # load source data
         source_cat = self.par['source_cat']
-        print('Reading {} source data, redshift bin {:d} [{:.3f},{:.3f}] from {}'.format(
-            source_cat, s_zbin+1, zs_lims[0], zs_lims[1], self.par[f'data_source_{source_cat}']))
+        if s_zbin != 'all':
+            print('Reading {} source data, redshift bin {:d} [{:.3f},{:.3f}] from {}'.format(
+                source_cat, s_zbin+1, zs_lims[0], zs_lims[1], self.par[f'data_source_{source_cat}']))
+        else: 
+            print('Reading {} source data, all redshift bins [{:.3f},{:.3f}] from {}'.format(
+                source_cat, zs_lims[0], zs_lims[1], self.par[f'data_source_{source_cat}']))
             
         if self.par['source_cat'] == 'metadetect':
             (self.ra_s, self.dec_s, self.e1, self.e2, self.R, self.w_s) = setup.load_source_metadetect(self.par['data_source_metadetect'], s_zbin)
@@ -186,7 +194,10 @@ class run_GGL(object):
 
         # load random points data
         if (self.par['use_randoms'] or self.par['use_boost'] or self.par['compute_covariance']):
-            print('Reading {} random-point data, redshift bin {:d} from {}'.format(lens_cat, l_zbin+1, self.par[f'data_randoms_{lens_cat}']))
+            if l_zbin != 'all':
+                print('Reading {} random-point data, redshift bin {:d} from {}'.format(lens_cat, l_zbin+1, self.par[f'data_randoms_{lens_cat}']))
+            else:
+                print('Reading {} random-point data, all redshift bins from {}'.format(lens_cat, self.par[f'data_randoms_{lens_cat}']))
 
             if lens_cat == 'maglim':
                 (self.ra_r, self.dec_r) = setup.load_randoms_Y6(self.par['data_randoms_maglim'], l_zbin)
@@ -217,12 +228,22 @@ class run_GGL(object):
         """Run GGL measurements for a source-lens bins pair"""
 
         # lens redshift cuts
-        zl_min, zl_max = self.par['zl_bins'][l_zbin]
+        if l_zbin != 'all':
+            zl_min, zl_max = self.par['zl_bins'][l_zbin]
+        else:
+            zl_min, zl_max = self.par['zl_bins'][0]
         # source redshift cuts
-        zs_min, zs_max = self.par['zs_bins'][s_zbin]
+        if s_zbin != 'all':
+            zs_min, zs_max = self.par['zs_bins'][s_zbin]
+        else:
+            zs_min, zs_max = self.par['zs_bins'][0]
 
-        print('\nLens bin {:d} [{:.3f},{:.3f}] x source bin {:d} [{:.3f},{:.3f}]'.format(
-            l_zbin+1, zl_min, zl_max, s_zbin+1, zs_min, zs_max))
+        if (l_zbin != 'all') & (s_zbin != 'all'):
+            print('\nLens bin {:d} [{:.3f},{:.3f}] x source bin {:d} [{:.3f},{:.3f}]'.format(
+                l_zbin+1, zl_min, zl_max, s_zbin+1, zs_min, zs_max))
+        else:
+            print('\nAll Lens bins [{:.3f},{:.3f}] x all source bins [{:.3f},{:.3f}]'.format(
+                zl_min, zl_max, zs_min, zs_max))
         sys.stdout.flush()
 
         # load data for current bins pair
