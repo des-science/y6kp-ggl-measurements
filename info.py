@@ -4,7 +4,7 @@ to start running the Y6 GGL measurements pipeline
 """
 # path the the folder containing all the input files
 # input_dir = '...path_to_input_dir...'
-input_dir = './2025-02-03_fid_matchweight'
+input_dir = './2025-10-12_norndsub_matchweight'
 
 # mode to run NG correlations
 # options:
