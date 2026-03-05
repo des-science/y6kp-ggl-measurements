@@ -17,6 +17,7 @@ def load_lens_Y6_maglim(file_name, weights_file_name, zbin):
         else:
             ra = []
             dec = []
+            w = []
             for zi in range(6):
                 ra_i = np.array(f[f'desy6kp/maglim/tomo_bin_{zi}/RA'])
                 dec_i = np.array(f[f'desy6kp/maglim/tomo_bin_{zi}/DEC'])
@@ -68,9 +69,9 @@ def load_randoms_Y6(file_name, zbin):
         else:
             ra = []
             dec = []
-            for zbin in range(6):
-                ra_i = np.array(f[f'desy6kp/ran/tomo_bin_{zbin}/ra'])
-                dec_i = np.array(f[f'desy6kp/ran/tomo_bin_{zbin}/dec'])
+            for zi in range(6):
+                ra_i = np.array(f[f'desy6kp/ran_maglim/tomo_bin_{zi}/ra'])
+                dec_i = np.array(f[f'desy6kp/ran_maglim/tomo_bin_{zi}/dec'])
                 ra.append(ra_i)
                 dec.append(dec_i)
             ra = np.array(np.concatenate(ra))
@@ -119,9 +120,10 @@ def load_source_bfd(file_name, binning_file_name, mask_file_name, zbin):
 
         ra =  np.array(f[1].data['ra'])[mask_bin]
         dec = np.array(f[1].data['dec'])[mask_bin]
-            
-    mask = hsp.HealSparseMap.read(mask_file_name)
-    mask_bool = mask.get_values_pos(ra, dec)
+
+    # no need to mask BFD with the JOINT LSS-shear mask?
+    #mask = hsp.HealSparseMap.read(mask_file_name)
+    #mask_bool = mask.get_values_pos(ra, dec)
         
     ### Temporary: new BFD catalog - no need for logPQR()
     with fits.open(file_name) as f:
@@ -131,10 +133,10 @@ def load_source_bfd(file_name, binning_file_name, mask_file_name, zbin):
         # R00 = np.array(f[1].data['R00'])[mask_bin][mask_bool]
         # R01 = np.array(f[1].data['R01'])[mask_bin][mask_bool]
         # R11 = np.array(f[1].data['R11'])[mask_bin][mask_bool]
-        logpqr = np.array(f[1].data['pqr'])[mask_bin][mask_bool]
+        logpqr = np.array(f[1].data['pqr'])[mask_bin]#[mask_bool]
             
-    ra =  ra[mask_bool]
-    dec = dec[mask_bool]
+    #ra =  ra[mask_bool]
+    #dec = dec[mask_bool]
             
     #pqr = ((np.vstack([P, Q0, Q1, R00, R01, R11])).T).astype(np.float64)
     #logpqr = logPQR(pqr)
