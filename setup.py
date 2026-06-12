@@ -4,6 +4,7 @@ import joblib
 import pickle
 from astropy.io import fits
 import healsparse as hsp
+import os
 
 def load_lens_Y6_maglim(file_name, weights_file_name, zbin):
     """Load ra, dec, weight of Y6 MagLim++ zbin redshift bin from file"""
@@ -28,16 +29,6 @@ def load_lens_Y6_maglim(file_name, weights_file_name, zbin):
             ra = np.array(np.concatenate(ra)) 
             dec = np.array(np.concatenate(dec))
             w = np.array(np.concatenate(w))
-    
-            
-    #if zbin != 'all':   
-    #    w = joblib.load(weights_file_name)[zbin]
-    #else:
-    #    w = []
-    #    for zi in range(6):
-    #        w_i = joblib.load(weights_file_name)[zi]
-    #        w.append(w_i)
-    #    w = np.array(np.concatenate(w))
         
     return ra, dec, w
     
@@ -95,52 +86,24 @@ def load_randoms_Y3(file_name, zbin_lims):
     
 def load_source_bfd(file_name, binning_file_name, mask_file_name, zbin):
     """Load Y6 BFD zbin redshift bin from file"""
-     
-        ### Temporary: : the bins assignment in the mastercat is wrong and e1,e2 in the bfd cat are wrong
-        #with h5.File(file_name, 'r') as f:
-        #    ra = np.array(f[f'desy6kp/bfd/tomo_bin_{zbin}/ra'])
-        #    dec = np.array(f[f'desy6kp/bfd/tomo_bin_{zbin}/dec'])
-        #    e1 = np.array(f[f'desy6kp/bfd/tomo_bin_{zbin}/e1'])
-        #    e2 = np.array(f[f'desy6kp/bfd/tomo_bin_{zbin}/e2'])
-        #    P = np.array(f[f'desy6kp/bfd/tomo_bin_{zbin}/P'])
-        #    Q0 = np.array(f[f'desy6kp/bfd/tomo_bin_{zbin}/Q0'])
-        #    Q1 = np.array(f[f'desy6kp/bfd/tomo_bin_{zbin}/Q1'])
-        #    R00 = np.array(f[f'desy6kp/bfd/tomo_bin_{zbin}/R00'])
-        #    R01 = np.array(f[f'desy6kp/bfd/tomo_bin_{zbin}/R01'])
-        #    R11 = np.array(f[f'desy6kp/bfd/tomo_bin_{zbin}/R11'])
-    #with open(binning_file_name, 'rb') as file:
-    #    tomo_bin = pickle.load(file)
-    #    if zbin != 'all':
-    #        mask_bin = np.where(tomo_bin==zbin)[0]
-    #    else:
-    #        mask_bin = np.where(tomo_bin!=-100)[0]
 
     with fits.open(file_name) as f:
         mask_bin = f[1].data['tomo']==zbin
 
         ra =  np.array(f[1].data['ra'])[mask_bin]
         dec = np.array(f[1].data['dec'])[mask_bin]
-
-    # no need to mask BFD with the JOINT LSS-shear mask?
-    #mask = hsp.HealSparseMap.read(mask_file_name)
-    #mask_bool = mask.get_values_pos(ra, dec)
         
-    ### Temporary: new BFD catalog - no need for logPQR()
     with fits.open(file_name) as f:
-        # P = np.array(f[1].data['P'])[mask_bin][mask_bool]
-        # Q0 = np.array(f[1].data['Q0'])[mask_bin][mask_bool]
-        # Q1 = np.array(f[1].data['Q1'])[mask_bin][mask_bool]
-        # R00 = np.array(f[1].data['R00'])[mask_bin][mask_bool]
-        # R01 = np.array(f[1].data['R01'])[mask_bin][mask_bool]
-        # R11 = np.array(f[1].data['R11'])[mask_bin][mask_bool]
-        logpqr = np.array(f[1].data['pqr'])[mask_bin]#[mask_bool]
-            
-    #ra =  ra[mask_bool]
-    #dec = dec[mask_bool]
-            
-    #pqr = ((np.vstack([P, Q0, Q1, R00, R01, R11])).T).astype(np.float64)
-    #logpqr = logPQR(pqr)
+        logpqr = np.array(f[1].data['pqr'])[mask_bin]
 
+    # mask BFD with the JOINT LSS-shear mask
+    if os.path.exists(mask_file_name):
+        mask = hsp.HealSparseMap.read(mask_file_name)
+        mask_bool = mask.get_values_pos(ra, dec)
+        ra =  ra[mask_bool]
+        dec = dec[mask_bool]
+        logpqr = logpqr[mask_bool]
+            
     P = logpqr[:,0] 
     Q0 = logpqr[:,1]
     Q1 = logpqr[:,2]
@@ -150,7 +113,7 @@ def load_source_bfd(file_name, binning_file_name, mask_file_name, zbin):
             
     e1, e2 = approx_e_bfd(np.copy(logpqr))
         
-    ### no weights in BFD ?
+    # no shear weights in BFD
     w = np.ones(len(ra))
         
     return ra, dec, e1, e2, P, Q0, Q1, R00, R01, R11, w
@@ -183,7 +146,7 @@ def approx_e_bfd(logpqr):
     R = np.array([[r[0], r[1]], [r[1], r[2]]])
     invR = np.linalg.inv(R)
     q *= (len(q[:,0]))
-    e = np.matmul(invR, q.T)  
+    e = np.matmul(invR, q.T)
     return e[0], e[1]
     
 
