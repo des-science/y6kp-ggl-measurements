@@ -109,7 +109,6 @@ def get_ggl(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
             cat_r = treecorr.Catalog(ra=ra_r, dec=dec_r, ra_units=units, dec_units=units, npatch=npatch)
             cat_r.write_patch_centers(patch_centers)
         else:
-            ### seems ok from treecorr repo, or with sources ?
             cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, npatch=npatch)
             cat_l.write_patch_centers(patch_centers)
         
@@ -161,7 +160,7 @@ def get_ggl(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
         gammax_tot = np.copy(gammax)
 
         # get boost factors for gammat
-        if use_boost:
+        if use_boost:  
             sum_w_l = np.sum(w_l)
             sum_w_r = len(ra_r)
             boost = boost_factor_calculate(sum_w_l, sum_w_r, ng.weight, rg.weight)
@@ -193,14 +192,14 @@ def get_ggl(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
         
         # update correlations with responses to use in Jackknife mode
         ng.Rg = Rg*np.ones(len(theta))
-            
+
         # generate fake treecorr correlation objects for lenses and randoms 
         # that hold the weights for the boost factor covariance calculations
         if use_boost:
             # initialize NN correlations for single point cross lenses and randoms
-            nn_lp = treecorr.NNCorrelation(nbins=nbins, min_sep=1.e-3, max_sep=1.e5, 
+            nn_lp = treecorr.NNCorrelation(nbins=1, min_sep=theta_min, max_sep=6000, 
                                             sep_units='arcmin', bin_slop=bin_slop, var_method='jackknife')
-            nn_rp = treecorr.NNCorrelation(nbins=nbins, min_sep=1.e-3, max_sep=1.e5, 
+            nn_rp = treecorr.NNCorrelation(nbins=1, min_sep=theta_min, max_sep=6000, 
                                             sep_units='arcmin', bin_slop=bin_slop, var_method='jackknife')
             # catalog containing single point
             cat_p = treecorr.Catalog(ra=np.array([np.mean(ra_l)]), dec=np.array([np.mean(dec_l)]), ra_units=units, dec_units=units)
@@ -213,20 +212,19 @@ def get_ggl(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
             rg.Rg = Rg*np.ones(len(theta))
 
             if use_boost:
-                func = lambda corrs: ( (corrs[0].weight/np.sum(corrs[2].weight)) / (corrs[1].weight/np.sum(corrs[3].weight)) * corrs[0].xi/corrs[0].Rg - corrs[1].xi/corrs[1].Rg )
+                func = lambda corrs: (corrs[0].weight/np.sum(corrs[2].weight)) / (corrs[1].weight/np.sum(corrs[3].weight)) * corrs[0].xi/corrs[0].Rg - corrs[1].xi/corrs[1].Rg
                 corrs = [ng,rg,nn_lp,nn_rp]
             else:
-                func = lambda corrs: ( corrs[0].xi/corrs[0].Rg - corrs[1].xi/corrs[1].Rg )
+                func = lambda corrs: corrs[0].xi/corrs[0].Rg - corrs[1].xi/corrs[1].Rg
                 corrs = [ng,rg]
         else:
             if use_boost:
-                func = lambda corrs: ( (corrs[0].weight/np.sum(corrs[2].weight)) / (corrs[1].weight/np.sum(corrs[3].weight)) 
-                                        * corrs[0].xi/corrs[0].Rg )
+                func = lambda corrs: (corrs[0].weight/np.sum(corrs[2].weight)) / (corrs[1].weight/np.sum(corrs[3].weight)) * corrs[0].xi/corrs[0].Rg
                 corrs = [ng,rg,nn_lp,nn_rp]
             else:
                 func = lambda corrs: corrs[0].xi / corrs[0].Rg
                 corrs = [ng]
-        cov_gammat = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
+        cov_gammat = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
 
         # get gammax covariance
         if use_randoms:
@@ -235,19 +233,19 @@ def get_ggl(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
         else:
             func = lambda corrs: corrs[0].xi_im/corrs[0].Rg
             corrs = [ng]
-        cov_gammax = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
+        cov_gammax = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
 
         # get boost factor covariance
         if use_boost:
             func = lambda corrs: (corrs[0].weight/np.sum(corrs[2].weight)) / (corrs[1].weight/np.sum(corrs[3].weight))
             corrs = [ng,rg,nn_lp,nn_rp]
-            cov_boost = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
+            cov_boost = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
 
         # get covariance of randoms points
         if use_randoms:
             func = lambda corrs: corrs[0].xi/corrs[0].Rg
             corrs = [rg]
-            cov_gammat_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
+            cov_gammat_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
 
         print('Done Covariance')
 
@@ -262,7 +260,14 @@ def get_ggl(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
             cov_gammat, cov_gammax, cov_boost, cov_gammat_rand)
 
 
-### maybe code better and have just one function get_ggl() for both mdet and bfd
+def bfd_estimator(ng, nk, nq):
+    r = nk.xi 
+    q = nq.xi + 1j * nq.xi_im
+    Q = ng.xi + 1j * ng.xi_im
+    g = (r * Q - q * np.conj(Q)) / (np.abs(r)**2 - np.abs(q)**2)
+    return g
+
+
 def get_ggl_bfd(ra_l, dec_l, w_l, ra_s, dec_s, w_s, 
                Q0, Q1, R00, R01, R11, ra_r, dec_r, units,
                theta_lims, nbins, sep_units, bin_slop, low_mem,
@@ -297,14 +302,13 @@ def get_ggl_bfd(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
             cat_r = treecorr.Catalog(ra=ra_r, dec=dec_r, ra_units=units, dec_units=units, npatch=npatch)
             cat_r.write_patch_centers(patch_centers)
         else:
-            ### seems ok from treecorr repo, or with sources ?
             cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, npatch=npatch)
             cat_l.write_patch_centers(patch_centers)
         
     # generate lens and source catalogs to correlate and process them
     cat_l = treecorr.Catalog(ra=ra_l, dec=dec_l, ra_units=units, dec_units=units, w=w_l, patch_centers=patch_centers)
     
-    cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, ra_units=units, dec_units=units, ### w=w_s ?
+    cat_s = treecorr.Catalog(ra=ra_s, dec=dec_s, ra_units=units, dec_units=units, # w=w_s # no shear weigths in BFD
                             g1=Q0, g2=Q1, k=np.real(r), q1=np.real(q), q2=np.imag(q), patch_centers=patch_centers)
     
     ng = treecorr.NGCorrelation(treecorr_config)
@@ -315,10 +319,7 @@ def get_ggl_bfd(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
     nq.process(cat_l, cat_s, low_mem=low_mem)
     print('Done NG')
     
-    r = nk.xi 
-    q = nq.xi + 1j * nq.xi_im
-    Q = ng.xi + 1j * ng.xi_im
-    g = (r * Q - q * np.conj(Q)) / (np.abs(r)**2 - np.abs(q)**2)
+    g = bfd_estimator(ng, nk, nq)
     
     # get theta, gammat
     theta = np.exp(ng.logr)
@@ -356,10 +357,7 @@ def get_ggl_bfd(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
         rq.process(cat_r, cat_s, low_mem=low_mem)
         print('Done RG')
         
-        r_rg = rk.xi 
-        q_rg = rq.xi + 1j * rq.xi_im
-        Q_rg = rg.xi + 1j * rg.xi_im
-        g_rg = (r_rg * Q_rg - q_rg * np.conj(Q_rg)) / (np.abs(r_rg)**2 - np.abs(q_rg)**2)
+        g_rg = bfd_estimator(rg, rk, rq)
 
         gammat_tot = np.copy(gammat)
         gammax_tot = np.copy(gammax)
@@ -393,19 +391,18 @@ def get_ggl_bfd(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
     cov_gammat_rand = None
     
     # get gammat gammat covariance
-    ### try to find a better way to code this
     if compute_cov:
         
         # update correlations with responses to use in Jackknife mode
-        ### ng.Rg = Rg*np.ones(len(theta)) # no Rg in BFD ?
-            
+        # ng.Rg = Rg*np.ones(len(theta)) # no Rg in BFD
+
         # generate fake treecorr correlation objects for lenses and randoms 
         # that hold the weights for the boost factor covariance calculations
         if use_boost:
             # initialize NN correlations for single point cross lenses and randoms
-            nn_lp = treecorr.NNCorrelation(nbins=nbins, min_sep=1.e-3, max_sep=1.e5, 
+            nn_lp = treecorr.NNCorrelation(nbins=1, min_sep=theta_min, max_sep=6000, 
                                             sep_units='arcmin', bin_slop=bin_slop, var_method='jackknife')
-            nn_rp = treecorr.NNCorrelation(nbins=nbins, min_sep=1.e-3, max_sep=1.e5, 
+            nn_rp = treecorr.NNCorrelation(nbins=1, min_sep=theta_min, max_sep=6000, 
                                             sep_units='arcmin', bin_slop=bin_slop, var_method='jackknife')
             # catalog containing single point
             cat_p = treecorr.Catalog(ra=np.array([np.mean(ra_l)]), dec=np.array([np.mean(dec_l)]), ra_units=units, dec_units=units)
@@ -414,45 +411,44 @@ def get_ggl_bfd(ra_l, dec_l, w_l, ra_s, dec_s, w_s,
             nn_rp.process(cat_r, cat_p, low_mem=low_mem)
         
         # get gammat covariance
-        ### are funcs ok ?
         if use_randoms:
-            ### rg.Rg = Rg*np.ones(len(theta)) # no Rg in BFD ?
+            # rg.Rg = Rg*np.ones(len(theta)) # no Rg in BFD
 
             if use_boost:
-                func = lambda corrs: (corrs[0].weight/np.sum(corrs[6].weight)) / (corrs[3].weight/np.sum(corrs[7].weight)) * np.real((corrs[1].xi * corrs[0].xi + 1j * corrs[0].xi_im - corrs[2].xi + 1j * corrs[2].xi_im * np.conj(corrs[0].xi + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2)) - np.real((corrs[4].xi * corrs[3].xi + 1j * corrs[3].xi_im - corrs[5].xi + 1j * corrs[5].xi_im * np.conj(corrs[3].xi + 1j * corrs[3].xi_im)) / (np.abs(corrs[4].xi)**2 - np.abs(corrs[5].xi + 1j * corrs[5].xi_im)**2))
+                func = lambda corrs: (corrs[0].weight/np.sum(corrs[6].weight)) / (corrs[3].weight/np.sum(corrs[7].weight)) * np.real(bfd_estimator(corrs[0], corrs[1], corrs[2])) - np.real(bfd_estimator(corrs[3], corrs[4], corrs[5]))
                 corrs = [ng, nk, nq, rg, rk, rq, nn_lp, nn_rp]
             else:
-                func = lambda corrs: np.real((corrs[1].xi * corrs[0].xi + 1j * corrs[0].xi_im - corrs[2].xi + 1j * corrs[2].xi_im * np.conj(corrs[0].xi + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2)) - np.real((corrs[4].xi * corrs[3].xi + 1j * corrs[3].xi_im - corrs[5].xi + 1j * corrs[5].xi_im * np.conj(corrs[3].xi + 1j * corrs[3].xi_im)) / (np.abs(corrs[4].xi)**2 - np.abs(corrs[5].xi + 1j * corrs[5].xi_im)**2))
+                func = lambda corrs: np.real(bfd_estimator(corrs[0], corrs[1], corrs[2])) - np.real(bfd_estimator(corrs[3], corrs[4], corrs[5]))
                 corrs = [ng, nk, nq, rg, rk, rq]
         else:
             if use_boost:
-                func = lambda corrs: (corrs[0].weight/np.sum(corrs[6].weight)) / (corrs[3].weight/np.sum(corrs[7].weight)) * np.real((corrs[1].xi * corrs[0].xi + 1j * corrs[0].xi_im - corrs[2].xi + 1j * corrs[2].xi_im * np.conj(corrs[0].xi + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
+                func = lambda corrs: (corrs[0].weight/np.sum(corrs[6].weight)) / (corrs[3].weight/np.sum(corrs[7].weight)) * np.real(bfd_estimator(corrs[0], corrs[1], corrs[2]))
                 corrs = [ng, nk, nq, rg, rk, rq, nn_lp, nn_rp]
             else:
-                func = lambda corrs: np.real((corrs[1].xi * corrs[0].xi + 1j * corrs[0].xi_im - corrs[2].xi  + 1j * corrs[2].xi_im * np.conj(corrs[0].xi + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
+                func = lambda corrs: np.real(bfd_estimator(corrs[0], corrs[1], corrs[2]))
                 corrs = [ng, nk, nq]
-        cov_gammat = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
+        cov_gammat = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
 
         # get gammax covariance
         if use_randoms:
-            func = lambda corrs: np.imag((corrs[1].xi * corrs[0].xi + 1j * corrs[0].xi_im - corrs[2].xi + 1j * corrs[2].xi_im * np.conj(corrs[0].xi + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2)) - np.imag((corrs[4].xi * corrs[3].xi + 1j * corrs[3].xi_im - corrs[5].xi + 1j * corrs[5].xi_im * np.conj(corrs[3].xi + 1j * corrs[3].xi_im)) / (np.abs(corrs[4].xi)**2 - np.abs(corrs[5].xi + 1j * corrs[5].xi_im)**2))
+            func = lambda corrs: np.imag(bfd_estimator(corrs[0], corrs[1], corrs[2])) - np.imag(bfd_estimator(corrs[3], corrs[4], corrs[5]))
             corrs = [ng, nk, nq, rg, rk, rq]
         else:
-            func = lambda corrs: np.imag((corrs[1].xi * corrs[0].xi + 1j * corrs[0].xi_im - corrs[2].xi + 1j * corrs[2].xi_im * np.conj(corrs[0].xi + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
+            func = lambda corrs: np.imag(bfd_estimator(corrs[0], corrs[1], corrs[2]))
             corrs = [ng, nk, nq]
-        cov_gammax = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
+        cov_gammax = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
         
         # get boost factor covariance
         if use_boost:
-            func = lambda corrs: (corrs[0].weight/np.sum(corrs[6].weight)) / (corrs[3].weight/np.sum(corrs[7].weight))
-            corrs = [ng, nk, nq, rg, rk, rq, nn_lp, nn_rp]
-            cov_boost = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
+            func = lambda corrs: (corrs[0].weight/np.sum(corrs[2].weight)) / (corrs[1].weight/np.sum(corrs[3].weight))
+            corrs = [ng,rg,nn_lp, nn_rp]
+            cov_boost = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
             
         # get covariance of randoms points
         if use_randoms:
-            func = lambda corrs: np.real((corrs[1].xi * corrs[0].xi + 1j * corrs[0].xi_im - corrs[2].xi + 1j * corrs[2].xi_im * np.conj(corrs[0].xi + 1j * corrs[0].xi_im)) / (np.abs(corrs[1].xi)**2 - np.abs(corrs[2].xi + 1j * corrs[2].xi_im)**2))
+            func = lambda corrs: np.real(bfd_estimator(corrs[0], corrs[1], corrs[2]))
             corrs = [rg, rk, rq]
-            cov_gammat_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func)
+            cov_gammat_rand = treecorr.estimate_multi_cov(corrs, 'jackknife', func=func, cross_patch_weight='match')
 
         print('Done Covariance')
 
