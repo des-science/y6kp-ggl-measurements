@@ -5,7 +5,7 @@ run_parallel : True
 compute_covariance : True
 
 # output folder
-dir_out : /global/cfs/cdirs/des/elisa/y6_ggl/bfd_newcat/
+dir_out : /global/cfs/cdirs/des/elisa/y6_ggl/bfd_newcat_approx/
 
 # lens bins to run
 l_bins : [0,1,2,3,4,5]
@@ -47,7 +47,7 @@ data_LSSweights : # in mastercat now
 
 # source galaxies
 data_source_bfd : /global/cfs/cdirs/des/mgatti/BFD_targets_June25/BFD_catalog_v5_blinded_with_tomo_masked_withselection_final.fits
-ggl_bfd_approximate : False
+ggl_bfd_approximate : True
 data_source_bfd_binning : #
 data_source_bfd_mask : /global/cfs/cdirs/des/y6kp-cats/final_version/jointmask_DESY6_2024-06-04.hsp
 
